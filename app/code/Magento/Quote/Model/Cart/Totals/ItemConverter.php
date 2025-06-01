@@ -57,7 +57,7 @@ class ItemConverter
         EventManager $eventManager,
         \Magento\Quote\Api\Data\TotalsItemInterfaceFactory $totalsItemFactory,
         DataObjectHelper $dataObjectHelper,
-        \Magento\Framework\Serialize\Serializer\Json $serializer = null
+        ?\Magento\Framework\Serialize\Serializer\Json $serializer = null
     ) {
         $this->configurationPool = $configurationPool;
         $this->eventManager = $eventManager;
@@ -68,10 +68,10 @@ class ItemConverter
     }
 
     /**
-     * Converts a specified rate model to a shipping method data object.
+     * Converts a specified quote item model to a totals item data object.
      *
      * @param \Magento\Quote\Model\Quote\Item $item
-     * @return array
+     * @return \Magento\Quote\Api\Data\TotalsItemInterface
      * @throws \Exception
      */
     public function modelToDataObject($item)

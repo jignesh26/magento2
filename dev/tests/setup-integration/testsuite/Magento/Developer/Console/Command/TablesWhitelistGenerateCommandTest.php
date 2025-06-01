@@ -51,7 +51,7 @@ class TablesWhitelistGenerateCommandTest extends SetupTestCase
     /**
      * {@inheritdoc}
      */
-    public function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
         $this->command = $this->objectManager->create(
@@ -70,6 +70,7 @@ class TablesWhitelistGenerateCommandTest extends SetupTestCase
      *
      * @moduleName Magento_TestSetupDeclarationModule1
      * @moduleName Magento_TestSetupDeclarationModule8
+     * @moduleName Magento_TestSetupDeclarationModule10
      * @throws \Exception
      */
     public function testExecute()
@@ -77,6 +78,7 @@ class TablesWhitelistGenerateCommandTest extends SetupTestCase
         $modules = [
             'Magento_TestSetupDeclarationModule1',
             'Magento_TestSetupDeclarationModule8',
+            'Magento_TestSetupDeclarationModule10',
         ];
 
         $this->cliCommand->install($modules);
@@ -111,10 +113,10 @@ class TablesWhitelistGenerateCommandTest extends SetupTestCase
         $this->assertSame(Cli::RETURN_SUCCESS, $this->tester->getStatusCode());
 
         $this->assertFileExists($whiteListFileName);
-        $this->assertContains('', $this->tester->getDisplay());
+        $this->assertEmpty($this->tester->getDisplay());
 
         $whitelistFileContent = file_get_contents($whiteListFileName);
-        $expectedWhitelistContent = file_get_contents(
+        $expectedWhitelistContent = rtrim(file_get_contents(
             dirname(__DIR__, 2)
             . DIRECTORY_SEPARATOR
             . implode(
@@ -126,7 +128,7 @@ class TablesWhitelistGenerateCommandTest extends SetupTestCase
                     'db_schema_whitelist.json'
                 ]
             )
-        );
+        ), "\n");
         $this->assertEquals($expectedWhitelistContent, $whitelistFileContent);
     }
 }

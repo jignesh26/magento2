@@ -32,7 +32,7 @@ class GroupRepositoryTest extends \PHPUnit\Framework\TestCase
     /** @var  \Magento\Framework\Api\SortOrderBuilder */
     private $sortOrderBuilder;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
         $this->groupRepository = $this->objectManager->create(\Magento\Customer\Api\GroupRepositoryInterface::class);
@@ -58,7 +58,7 @@ class GroupRepositoryTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getGroupsDataProvider()
+    public static function getGroupsDataProvider()
     {
         return [
             [[GroupInterface::ID => 0, GroupInterface::CODE => 'NOT LOGGED IN', GroupInterface::TAX_CLASS_ID => 3]],
@@ -69,11 +69,12 @@ class GroupRepositoryTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
-     * @expectedException \Magento\Framework\Exception\NoSuchEntityException
-     * @expectedExceptionMessage No such entity with id = 9999
      */
     public function testGetGroupException()
     {
+        $this->expectException(\Magento\Framework\Exception\NoSuchEntityException::class);
+        $this->expectExceptionMessage('No such entity with id = 9999');
+
         $this->groupRepository->getById(9999);
     }
 
@@ -130,11 +131,12 @@ class GroupRepositoryTest extends \PHPUnit\Framework\TestCase
 
     /**
      * @magentoDbIsolation enabled
-     * @expectedException \Magento\Framework\Exception\InputException
-     * @expectedExceptionMessage Invalid value of "9999" provided for the taxClassId field.
      */
     public function testUpdateGroupException()
     {
+        $this->expectException(\Magento\Framework\Exception\InputException::class);
+        $this->expectExceptionMessage('Invalid value of "9999" provided for the taxClassId field.');
+
         $group = $this->groupFactory->create()->setId(null)->setCode('New Group')->setTaxClassId(3);
         $groupId = $this->groupRepository->save($group)->getId();
         $this->assertNotNull($groupId);
@@ -173,11 +175,12 @@ class GroupRepositoryTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
-     * @expectedException \Magento\Framework\Exception\NoSuchEntityException
-     * @expectedExceptionMessage No such entity with id = 9999
      */
     public function testDeleteDoesNotExist()
     {
+        $this->expectException(\Magento\Framework\Exception\NoSuchEntityException::class);
+        $this->expectExceptionMessage('No such entity with id = 9999');
+
         $this->assertFalse($this->groupRepository->deleteById(9999));
     }
 
@@ -186,7 +189,7 @@ class GroupRepositoryTest extends \PHPUnit\Framework\TestCase
         $searchResults = $this->groupRepository->getList($this->searchCriteriaBuilder->create());
         /** @var GroupInterface[] $results */
         $results = $searchResults->getItems();
-        $this->assertEquals(4, count($results));
+        $this->assertCount(4, $results);
     }
 
     /**
@@ -215,7 +218,7 @@ class GroupRepositoryTest extends \PHPUnit\Framework\TestCase
         }
     }
 
-    public function searchGroupsDataProvider()
+    public static function searchGroupsDataProvider()
     {
         $builder = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()
             ->create(\Magento\Framework\Api\FilterBuilder::class);
@@ -306,7 +309,7 @@ class GroupRepositoryTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function sortOrderDataProvider()
+    public static function sortOrderDataProvider()
     {
         return [
             [

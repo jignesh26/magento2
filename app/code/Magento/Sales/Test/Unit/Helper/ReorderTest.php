@@ -1,78 +1,77 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\Sales\Test\Unit\Helper;
 
-use \Magento\Sales\Helper\Reorder;
+use Magento\Framework\App\Config;
+use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Framework\App\Helper\Context;
+use Magento\Sales\Api\OrderRepositoryInterface;
+use Magento\Sales\Helper\Reorder;
+use Magento\Sales\Model\Order;
+use Magento\Store\Model\ScopeInterface;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class ReorderTest extends \PHPUnit\Framework\TestCase
+class ReorderTest extends TestCase
 {
     /**
-     * @var \Magento\Sales\Helper\Reorder
+     * @var Reorder
      */
     protected $helper;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject | \Magento\Framework\App\Config\ScopeConfigInterface
+     * @var MockObject|ScopeConfigInterface
      */
     protected $scopeConfigMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject | \Magento\Sales\Model\Store
+     * @var MockObject|\Magento\Store\Model\Store
      */
     protected $storeParam;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject | \Magento\Sales\Model\Order
+     * @var MockObject|\Magento\Sales\Model\Order
      */
     protected $orderMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject | \Magento\Customer\Model\Session
-     */
-    protected $customerSessionMock;
-
-    /**
-     * @var \Magento\Sales\Api\OrderRepositoryInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var OrderRepositoryInterface|MockObject
      */
     protected $repositoryMock;
 
     /**
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->scopeConfigMock = $this->getMockBuilder(\Magento\Framework\App\Config::class)
-            ->setMethods(['getValue'])
+        $this->scopeConfigMock = $this->getMockBuilder(Config::class)
+            ->onlyMethods(['getValue'])
             ->disableOriginalConstructor()
             ->getMock();
-        $contextMock = $this->getMockBuilder(\Magento\Framework\App\Helper\Context::class)
+        $contextMock = $this->getMockBuilder(Context::class)
             ->disableOriginalConstructor()
             ->getMock();
         $contextMock->expects($this->any())
             ->method('getScopeConfig')
             ->willReturn($this->scopeConfigMock);
 
-        $this->customerSessionMock = $this->getMockBuilder(\Magento\Customer\Model\Session::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->repositoryMock = $this->getMockBuilder(\Magento\Sales\Api\OrderRepositoryInterface::class)
+        $this->repositoryMock = $this->getMockBuilder(OrderRepositoryInterface::class)
             ->getMockForAbstractClass();
-        $this->helper = new \Magento\Sales\Helper\Reorder(
+        $this->helper = new Reorder(
             $contextMock,
-            $this->customerSessionMock,
             $this->repositoryMock
         );
 
-        $this->storeParam = $this->getMockBuilder(\Magento\Sales\Model\Store::class)
+        $this->storeParam = $this->getMockBuilder(\Magento\Store\Model\Store::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->orderMock = $this->getMockBuilder(\Magento\Sales\Model\Order::class)
+        $this->orderMock = $this->getMockBuilder(Order::class)
             ->disableOriginalConstructor()
             ->getMock();
     }
@@ -105,7 +104,7 @@ class ReorderTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getScopeConfigValue()
+    public static function getScopeConfigValue()
     {
         return [
             [true],
@@ -125,10 +124,10 @@ class ReorderTest extends \PHPUnit\Framework\TestCase
             ->method('getValue')
             ->with(
                 Reorder::XML_PATH_SALES_REORDER_ALLOW,
-                \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
+                ScopeInterface::SCOPE_STORE,
                 $this->storeParam
             )
-            ->will($this->returnValue($returnValue));
+            ->willReturn($returnValue);
     }
 
     /**
@@ -147,42 +146,19 @@ class ReorderTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
-     * Tests what happens if the customer is not logged in and the store does allow re-orders.
-     *
-     * @return void
-     */
-    public function testCanReorderCustomerNotLoggedIn()
-    {
-        $this->setupOrderMock(true);
-
-        $this->customerSessionMock->expects($this->once())
-            ->method('isLoggedIn')
-            ->will($this->returnValue(false));
-        $this->repositoryMock->expects($this->once())
-            ->method('get')
-            ->with(1)
-            ->willReturn($this->orderMock);
-        $this->assertTrue($this->helper->canReorder(1));
-    }
-
-    /**
      * Tests what happens if the customer is logged in and the order does or does not allow reorders.
      *
      * @param bool $orderCanReorder
      * @return void
      * @dataProvider getOrderCanReorder
      */
-    public function testCanReorderCustomerLoggedInAndOrderCanReorder($orderCanReorder)
+    public function testCanReorder($orderCanReorder)
     {
         $this->setupOrderMock(true);
 
-        $this->customerSessionMock->expects($this->once())
-            ->method('isLoggedIn')
-            ->will($this->returnValue(true));
-
         $this->orderMock->expects($this->once())
             ->method('canReorder')
-            ->will($this->returnValue($orderCanReorder));
+            ->willReturn($orderCanReorder);
         $this->repositoryMock->expects($this->once())
             ->method('get')
             ->with(1)
@@ -201,13 +177,13 @@ class ReorderTest extends \PHPUnit\Framework\TestCase
         $this->setupScopeConfigMock($storeScopeReturnValue);
         $this->orderMock->expects($this->once())
             ->method('getStore')
-            ->will($this->returnValue($this->storeParam));
+            ->willReturn($this->storeParam);
     }
 
     /**
      * @return array
      */
-    public function getOrderCanReorder()
+    public static function getOrderCanReorder()
     {
         return [
             [true],

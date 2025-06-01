@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Backend\Block\Dashboard\Tab\Products;
 
@@ -43,6 +43,8 @@ class Ordered extends \Magento\Backend\Block\Dashboard\Grid
     }
 
     /**
+     * Construct.
+     *
      * @return void
      */
     protected function _construct()
@@ -52,7 +54,7 @@ class Ordered extends \Magento\Backend\Block\Dashboard\Grid
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     protected function _prepareCollection()
     {
@@ -81,7 +83,7 @@ class Ordered extends \Magento\Backend\Block\Dashboard\Grid
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     protected function _prepareColumns()
     {

@@ -7,6 +7,9 @@
 namespace Magento\Config\Console\Command;
 
 use Magento\Config\Model\Config\Backend\Admin\Custom;
+use Magento\Config\Model\Config\PathValidator;
+use Magento\Config\Model\Config\Structure\Converter;
+use Magento\Config\Model\Config\Structure\Data as StructureData;
 use Magento\Directory\Model\Currency;
 use Magento\Framework\App\Config\ConfigPathResolver;
 use Magento\Framework\App\Config\ScopeConfigInterface;
@@ -21,14 +24,14 @@ use Magento\Framework\Stdlib\ArrayManager;
 use Magento\Store\Model\ScopeInterface;
 use Magento\TestFramework\Helper\Bootstrap;
 use Magento\Framework\App\Config\ReinitableConfigInterface;
-use PHPUnit_Framework_MockObject_MockObject as Mock;
+use PHPUnit\Framework\MockObject\MockObject as Mock;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
  * Tests the different flows of config:set command.
  *
- * {@inheritdoc}
+ * @inheritdoc
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  * @magentoDbIsolation enabled
  */
@@ -87,10 +90,12 @@ class ConfigSetCommandTest extends \PHPUnit\Framework\TestCase
     /**
      * @inheritdoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         Bootstrap::getInstance()->reinitialize();
         $this->objectManager = Bootstrap::getObjectManager();
+        $this->extendSystemStructure();
+
         $this->scopeConfig = $this->objectManager->get(ScopeConfigInterface::class);
         $this->reader = $this->objectManager->get(FileReader::class);
         $this->filesystem = $this->objectManager->get(Filesystem::class);
@@ -111,7 +116,7 @@ class ConfigSetCommandTest extends \PHPUnit\Framework\TestCase
     /**
      * @inheritdoc
      */
-    protected function tearDown()
+    protected function tearDown(): void
     {
         $this->filesystem->getDirectoryWrite(DirectoryList::CONFIG)->writeFile(
             $this->configFilePool->getPath(ConfigFilePool::APP_ENV),
@@ -121,6 +126,21 @@ class ConfigSetCommandTest extends \PHPUnit\Framework\TestCase
         $writer = $this->objectManager->get(Writer::class);
         $writer->saveConfig([ConfigFilePool::APP_ENV => $this->config]);
         $this->appConfig->reinit();
+    }
+
+    /**
+     * Add test system structure to main system structure
+     *
+     * @return void
+     */
+    private function extendSystemStructure()
+    {
+        $document = new \DOMDocument();
+        $document->load(__DIR__ . '/../../_files/system.xml');
+        $converter = $this->objectManager->get(Converter::class);
+        $systemConfig = $converter->convert($document);
+        $structureData = $this->objectManager->get(StructureData::class);
+        $structureData->merge($systemConfig);
     }
 
     /**
@@ -159,9 +179,13 @@ class ConfigSetCommandTest extends \PHPUnit\Framework\TestCase
             ]);
         $this->outputMock->expects($this->exactly(2))
             ->method('writeln')
-            ->withConsecutive(
-                ['<info>Value was saved in app/etc/env.php and locked.</info>'],
-                ['<info>Value was saved in app/etc/env.php and locked.</info>']
+            ->willReturnCallback(
+                function ($arg1) {
+                    if ($arg1 == '<info>Value was saved in app/etc/env.php and locked.</info>' ||
+                        $arg1 == '<info>Value was saved in app/etc/env.php and locked.</info>') {
+                        return null;
+                    }
+                }
             );
 
         /** @var ConfigSetCommand $command */
@@ -185,12 +209,14 @@ class ConfigSetCommandTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function runLockDataProvider()
+    public static function runLockDataProvider()
     {
         return [
             ['general/region/display_all', '1'],
             ['general/region/state_required', 'BR,FR', ScopeInterface::SCOPE_WEBSITE, 'base'],
             ['admin/security/use_form_key', '0'],
+            ['general/group/subgroup/field', 'default_value'],
+            ['general/group/subgroup/field', 'website_value', ScopeInterface::SCOPE_WEBSITE, 'base'],
         ];
     }
 
@@ -232,7 +258,7 @@ class ConfigSetCommandTest extends \PHPUnit\Framework\TestCase
             $value,
             $this->scopeConfig->getValue($path, $scope, $scopeCode)
         );
-        $this->assertSame(null, $this->arrayManager->get($configPath, $this->loadConfig()));
+        $this->assertNull($this->arrayManager->get($configPath, $this->loadConfig()));
 
         $this->runCommand($arguments, $optionsLock, '<info>Value was saved in app/etc/env.php and locked.</info>');
         $this->runCommand($arguments, $optionsLock, '<info>Value was saved in app/etc/env.php and locked.</info>');
@@ -280,9 +306,9 @@ class ConfigSetCommandTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function runExtendedDataProvider()
+    public static function runExtendedDataProvider()
     {
-        return $this->runLockDataProvider();
+        return self::runLockDataProvider();
     }
 
     /**
@@ -292,8 +318,7 @@ class ConfigSetCommandTest extends \PHPUnit\Framework\TestCase
      * @param string $scope
      * @param $scopeCode string|null
      * @dataProvider configSetValidationErrorDataProvider
-     *
-     * @magentoDbIsolation enabled
+     * @magentoDbIsolation disabled
      */
     public function testConfigSetValidationError(
         $path,
@@ -307,9 +332,10 @@ class ConfigSetCommandTest extends \PHPUnit\Framework\TestCase
 
     /**
      * Data provider for testConfigSetValidationError
+     *
      * @return array
      */
-    public function configSetValidationErrorDataProvider()
+    public static function configSetValidationErrorDataProvider()
     {
         return [
             //wrong value for URL - checked by backend model of URL field
@@ -399,7 +425,6 @@ class ConfigSetCommandTest extends \PHPUnit\Framework\TestCase
      * Saving values with successful validation
      *
      * @dataProvider configSetValidDataProvider
-     *
      * @magentoDbIsolation enabled
      */
     public function testConfigSetValid()
@@ -414,7 +439,7 @@ class ConfigSetCommandTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function configSetValidDataProvider()
+    public static function configSetValidDataProvider()
     {
         return [
             [Custom::XML_PATH_UNSECURE_BASE_URL, 'http://magento2.local/'],
@@ -422,6 +447,15 @@ class ConfigSetCommandTest extends \PHPUnit\Framework\TestCase
             [Custom::XML_PATH_GENERAL_LOCALE_CODE, 'en_AU', ScopeInterface::SCOPE_STORE, 'default'],
             [Custom::XML_PATH_ADMIN_SECURITY_USEFORMKEY, '0']
         ];
+    }
+
+    /**
+     * Test validate path when field has custom config_path
+     */
+    public function testValidatePathWithCustomConfigPath(): void
+    {
+        $pathValidator = $this->objectManager->get(PathValidator::class);
+        $this->assertTrue($pathValidator->validate('general/group/subgroup/second_field'));
     }
 
     /**

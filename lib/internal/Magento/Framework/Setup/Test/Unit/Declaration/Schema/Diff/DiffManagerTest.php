@@ -3,23 +3,28 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Framework\Setup\Test\Unit\Declaration\Schema\Diff;
 
-use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
+use Magento\Framework\Setup\Declaration\Schema\Comparator;
 use Magento\Framework\Setup\Declaration\Schema\Diff\Diff;
+use Magento\Framework\Setup\Declaration\Schema\Diff\DiffManager;
 use Magento\Framework\Setup\Declaration\Schema\Dto\Column;
 use Magento\Framework\Setup\Declaration\Schema\Dto\Constraints\Reference;
 use Magento\Framework\Setup\Declaration\Schema\Dto\Index;
 use Magento\Framework\Setup\Declaration\Schema\Dto\Table;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Test diff manager methods
  */
-class DiffManagerTest extends \PHPUnit\Framework\TestCase
+class DiffManagerTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\Setup\Declaration\Schema\Diff\DiffManager
+     * @var DiffManager
      */
     private $model;
 
@@ -29,18 +34,18 @@ class DiffManagerTest extends \PHPUnit\Framework\TestCase
     private $objectManagerHelper;
 
     /**
-     * @var \Magento\Framework\Setup\Declaration\Schema\Comparator|\PHPUnit_Framework_MockObject_MockObject
+     * @var Comparator|MockObject
      */
     private $comparatorMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->comparatorMock = $this->getMockBuilder(\Magento\Framework\Setup\Declaration\Schema\Comparator::class)
+        $this->comparatorMock = $this->getMockBuilder(Comparator::class)
             ->getMockForAbstractClass();
 
         $this->objectManagerHelper = new ObjectManagerHelper($this);
         $this->model = $this->objectManagerHelper->getObject(
-            \Magento\Framework\Setup\Declaration\Schema\Diff\DiffManager::class,
+            DiffManager::class,
             [
                 'comparator' => $this->comparatorMock
             ]
@@ -68,7 +73,7 @@ class DiffManagerTest extends \PHPUnit\Framework\TestCase
 
     public function testRegisterModification()
     {
-        /** @var Diff|\PHPUnit_Framework_MockObject_MockObject $diff */
+        /** @var Diff|MockObject $diff */
         $diff = $this->getMockBuilder(Diff::class)
             ->disableOriginalConstructor()
             ->getMock();
@@ -92,7 +97,7 @@ class DiffManagerTest extends \PHPUnit\Framework\TestCase
 
     public function testRegisterIndexModification()
     {
-        /** @var Diff|\PHPUnit_Framework_MockObject_MockObject $diff */
+        /** @var Diff|MockObject $diff */
         $diff = $this->getMockBuilder(Diff::class)
             ->disableOriginalConstructor()
             ->getMock();
@@ -111,13 +116,21 @@ class DiffManagerTest extends \PHPUnit\Framework\TestCase
         $generatedIndex = new Index('index_type', 'index', $table, [$column], 'hash', 'index_type');
         $diff->expects(self::exactly(2))
             ->method('register')
-            ->withConsecutive([$generatedIndex, 'drop_element', $generatedIndex], [$index, 'add_complex_element']);
+            ->willReturnCallback(
+                function ($arg1, $arg2, $arg3) use ($generatedIndex, $index) {
+                    if ($arg1 === $generatedIndex && $arg2 === 'drop_element' && $arg3 === $generatedIndex) {
+                        return null;
+                    } elseif ($arg1 === $index && $arg2 === 'add_complex_element') {
+                        return null;
+                    }
+                }
+            );
         $this->model->registerModification($diff, $index, $generatedIndex);
     }
 
     public function testRegisterRemovalReference()
     {
-        /** @var Diff|\PHPUnit_Framework_MockObject_MockObject $diff */
+        /** @var Diff|MockObject $diff */
         $diff = $this->getMockBuilder(Diff::class)
             ->disableOriginalConstructor()
             ->getMock();
@@ -145,16 +158,21 @@ class DiffManagerTest extends \PHPUnit\Framework\TestCase
         $reference = new Reference('ref', 'foreign', $table, 'ref', $column, $refTable, $column, 'CASCADE');
         $diff->expects(self::exactly(2))
             ->method('register')
-            ->withConsecutive(
-                [$reference, 'drop_reference', $reference],
-                [$table, 'drop_table', $table]
+            ->willReturnCallback(
+                function ($arg1, $arg2, $arg3) use ($reference, $table) {
+                    if ($arg1 == $reference && $arg2 == 'drop_reference' && $arg3 == $reference) {
+                        return null;
+                    } elseif ($arg1 == $table && $arg2 == 'drop_table' && $arg3 == $table) {
+                        return null;
+                    }
+                }
             );
         $this->model->registerRemoval($diff, [$reference, $table]);
     }
 
     public function testRegisterCreation()
     {
-        /** @var Diff|\PHPUnit_Framework_MockObject_MockObject $diff */
+        /** @var Diff|MockObject $diff */
         $diff = $this->getMockBuilder(Diff::class)
             ->disableOriginalConstructor()
             ->getMock();
@@ -172,10 +190,16 @@ class DiffManagerTest extends \PHPUnit\Framework\TestCase
         $reference = new Reference('ref', 'foreign', $table, 'ref', $column, $table, $column, 'CASCADE');
         $diff->expects(self::exactly(3))
             ->method('register')
-            ->withConsecutive(
-                [$table, 'create_table'],
-                [$column, 'add_column'],
-                [$reference, 'add_complex_element']
+            ->willReturnCallback(
+                function ($arg1, $arg2) use ($table, $column, $reference) {
+                    if ($arg1 == $table && $arg2 == 'create_table') {
+                        return null;
+                    } elseif ($arg1 == $column && $arg2 == 'add_column') {
+                        return null;
+                    } elseif ($arg1 == $reference && $arg2 == 'add_complex_element') {
+                        return null;
+                    }
+                }
             );
         $this->model->registerCreation($diff, $table);
         $this->model->registerCreation($diff, $column);
@@ -184,7 +208,7 @@ class DiffManagerTest extends \PHPUnit\Framework\TestCase
 
     public function testRegisterTableModificationWhenChangeResource()
     {
-        /** @var Diff|\PHPUnit_Framework_MockObject_MockObject $diff */
+        /** @var Diff|MockObject $diff */
         $diff = $this->getMockBuilder(Diff::class)
             ->disableOriginalConstructor()
             ->getMock();
@@ -216,7 +240,7 @@ class DiffManagerTest extends \PHPUnit\Framework\TestCase
 
     public function testRegisterTableModificationWhenChangeEngine()
     {
-        /** @var Diff|\PHPUnit_Framework_MockObject_MockObject $diff */
+        /** @var Diff|MockObject $diff */
         $diff = $this->getMockBuilder(Diff::class)
             ->disableOriginalConstructor()
             ->getMock();

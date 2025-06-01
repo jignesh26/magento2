@@ -7,19 +7,21 @@ declare(strict_types=1);
 
 namespace Magento\Elasticsearch\Test\Unit\Model\Adapter\FieldMapper\Product\FieldProvider\FieldName\Resolver;
 
-use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\AttributeAdapter;
-use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
 use Magento\Customer\Model\Session as CustomerSession;
-use Magento\Store\Model\StoreManagerInterface as StoreManager;
+use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\AttributeAdapter;
+use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldName\Resolver\Price;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
 use Magento\Store\Api\Data\StoreInterface;
+use Magento\Store\Model\StoreManagerInterface as StoreManager;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @SuppressWarnings(PHPMD)
  */
-class PriceTest extends \PHPUnit\Framework\TestCase
+class PriceTest extends TestCase
 {
     /**
-     * @var \Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldName\Resolver\Price
+     * @var Price
      */
     private $resolver;
 
@@ -38,21 +40,21 @@ class PriceTest extends \PHPUnit\Framework\TestCase
      *
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->customerSession = $this->getMockBuilder(CustomerSession::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getCustomerGroupId'])
+            ->onlyMethods(['getCustomerGroupId'])
             ->getMock();
         $this->storeManager = $this->getMockBuilder(StoreManager::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getStore'])
+            ->onlyMethods(['getStore'])
             ->getMockForAbstractClass();
 
         $objectManager = new ObjectManagerHelper($this);
 
         $this->resolver = $objectManager->getObject(
-            \Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldName\Resolver\Price::class,
+            Price::class,
             [
                 'customerSession' => $this->customerSession,
                 'storeManager' => $this->storeManager,
@@ -71,7 +73,7 @@ class PriceTest extends \PHPUnit\Framework\TestCase
     {
         $attributeMock = $this->getMockBuilder(AttributeAdapter::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getAttributeCode'])
+            ->onlyMethods(['getAttributeCode'])
             ->getMock();
         $attributeMock->expects($this->any())
             ->method('getAttributeCode')
@@ -81,7 +83,7 @@ class PriceTest extends \PHPUnit\Framework\TestCase
             ->willReturn(1);
         $store = $this->getMockBuilder(StoreInterface::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getWebsiteId'])
+            ->onlyMethods(['getWebsiteId'])
             ->getMockForAbstractClass();
         $store->expects($this->any())
             ->method('getWebsiteId')
@@ -99,7 +101,7 @@ class PriceTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getFieldNameProvider()
+    public static function getFieldNameProvider()
     {
         return [
             ['price', [], 'price_1_2'],

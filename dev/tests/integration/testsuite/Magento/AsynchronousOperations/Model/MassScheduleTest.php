@@ -11,6 +11,8 @@
  */
 namespace Magento\AsynchronousOperations\Model;
 
+use Magento\AsynchronousOperations\Model\ResourceModel\Bulk\Collection as BulkCollection;
+use Magento\Framework\MessageQueue\BulkPublisherInterface;
 use Magento\Framework\Exception\BulkException;
 use Magento\Framework\Phrase;
 use Magento\Framework\Registry;
@@ -26,6 +28,8 @@ use Magento\Framework\ObjectManagerInterface;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ *
+ * @magentoDbIsolation disabled
  */
 class MassScheduleTest extends \PHPUnit\Framework\TestCase
 {
@@ -64,12 +68,15 @@ class MassScheduleTest extends \PHPUnit\Framework\TestCase
      */
     private $skus = [];
 
+    /** @var string */
+    private $logFilePath;
+
     /**
      * @var Registry
      */
     private $registry;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = Bootstrap::getObjectManager();
         $this->registry = $this->objectManager->get(Registry::class);
@@ -118,6 +125,54 @@ class MassScheduleTest extends \PHPUnit\Framework\TestCase
         }
     }
 
+    /**
+     * @dataProvider publisherExceptionDataProvider
+     * @param \Exception $exception
+     */
+    public function testScheduleMassWithExceptionDuringPublishing(\Exception $exception)
+    {
+        $products = [
+            ['product' => $this->getProduct()],
+        ];
+
+        $publisher = $this->createMock(BulkPublisherInterface::class);
+        $publisher->expects($this->atLeastOnce())
+            ->method('publish')
+            ->willThrowException($exception);
+        $bulkManagement = $this->objectManager->create(
+            BulkManagement::class,
+            ['publisher' => $publisher]
+        );
+        $this->massSchedule = $this->objectManager->create(
+            MassSchedule::class,
+            ['bulkManagement' => $bulkManagement]
+        );
+
+        $bulkCollection = $this->objectManager->create(BulkCollection::class);
+        $bulksCount = $bulkCollection->getSize();
+        try {
+            $this->massSchedule->publishMass(
+                'async.magento.catalog.api.productrepositoryinterface.save.post',
+                $products
+            );
+            $this->fail('Publish is not failed when operations are not published.');
+        } catch (\Exception $e) {
+            $bulkCollection = $this->objectManager->create(BulkCollection::class);
+            $this->assertEquals($bulksCount, $bulkCollection->getSize());
+        }
+    }
+
+    /**
+     * @return array
+     */
+    public static function publisherExceptionDataProvider(): array
+    {
+        return [
+            [new \InvalidArgumentException('Unknown publisher type async')],
+            [new \LogicException('Could not find an implementation type for type "async" and connection "amqp".')],
+        ];
+    }
+
     public function sendBulk($products)
     {
         $this->skus = [];
@@ -128,7 +183,10 @@ class MassScheduleTest extends \PHPUnit\Framework\TestCase
         }
         $this->clearProducts();
 
-        $result = $this->massSchedule->publishMass('async.V1.products.POST', $products);
+        $result = $this->massSchedule->publishMass(
+            'async.magento.catalog.api.productrepositoryinterface.save.post',
+            $products
+        );
 
         //assert bulk accepted with no errors
         $this->assertFalse($result->isErrors());
@@ -137,7 +195,7 @@ class MassScheduleTest extends \PHPUnit\Framework\TestCase
         $this->assertCount(count($this->skus), $result->getRequestItems());
     }
 
-    public function tearDown()
+    protected function tearDown(): void
     {
         $this->publisherConsumerController->stopConsumers();
         $this->clearProducts();
@@ -206,7 +264,7 @@ class MassScheduleTest extends \PHPUnit\Framework\TestCase
 
             $expectedErrorMessage = "Data item corresponding to \"product\" " .
                 "must be specified in the message with topic " .
-                "\"async.V1.products.POST\".";
+                "\"async.magento.catalog.api.productrepositoryinterface.save.post\".";
             $this->assertEquals(
                 $expectedErrorMessage,
                 $reasonException->getMessage()
@@ -239,7 +297,7 @@ class MassScheduleTest extends \PHPUnit\Framework\TestCase
         }
     }
 
-    private function getProduct()
+    private static function getProduct()
     {
         /** @var $product \Magento\Catalog\Model\Product */
         $product = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()
@@ -260,20 +318,20 @@ class MassScheduleTest extends \PHPUnit\Framework\TestCase
         return $product;
     }
 
-    public function productDataProvider()
+    public static function productDataProvider()
     {
         return [
             'single_product' => [
-                [['product' => $this->getProduct()]],
+                [['product' => self::getProduct()]],
             ],
             'multiple_products' => [
                 [
-                    ['product' => $this->getProduct()
+                    ['product' => self::getProduct()
                         ->setName('Simple Product 3')
                         ->setSku('unique-simple-product3')
                         ->setMetaTitle('meta title 3')
                     ],
-                    ['product' => $this->getProduct()
+                    ['product' => self::getProduct()
                         ->setName('Simple Product 2')
                         ->setSku('unique-simple-product2')
                         ->setMetaTitle('meta title 2')
@@ -283,16 +341,16 @@ class MassScheduleTest extends \PHPUnit\Framework\TestCase
         ];
     }
 
-    public function productExceptionDataProvider()
+    public static function productExceptionDataProvider()
     {
         return [
             'single_product' => [
-                [['product' => $this->getProduct()]],
+                [['product' => self::getProduct()]],
             ],
             'multiple_products' => [
                 [
-                    ['product' => $this->getProduct()],
-                    ['customer' => $this->getProduct()]
+                    ['product' => self::getProduct()],
+                    ['customer' => self::getProduct()]
                 ]
             ],
         ];

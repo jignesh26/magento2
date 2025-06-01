@@ -3,17 +3,21 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Setup\Test\Unit\Module\I18n\Parser\Adapter\Php\Tokenizer;
 
-use Magento\Setup\Module\I18n\Parser\Adapter\Php\Tokenizer\PhraseCollector;
-use Magento\Setup\Module\I18n\Parser\Adapter\Php\Tokenizer\Token;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
 use Magento\Setup\Module\I18n\Parser\Adapter\Php\Tokenizer;
+use Magento\Setup\Module\I18n\Parser\Adapter\Php\Tokenizer\PhraseCollector;
+use Magento\Setup\Module\I18n\Parser\Adapter\Php\Tokenizer\Token;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \Magento\Setup\Module\I18n\Parser\Adapter\Php\Tokenizer\PhraseCollector
  */
-class PhraseCollectorTest extends \PHPUnit\Framework\TestCase
+class PhraseCollectorTest extends TestCase
 {
     /**
      * @var PhraseCollector
@@ -21,23 +25,23 @@ class PhraseCollectorTest extends \PHPUnit\Framework\TestCase
     protected $phraseCollector;
 
     /**
-     * @var \Magento\Framework\TestFramework\Unit\Helper\ObjectManager
+     * @var ObjectManager
      */
     protected $objectManager;
 
     /**
-     * @var Tokenizer|\PHPUnit_Framework_MockObject_MockObject
+     * @var Tokenizer|MockObject
      */
     protected $tokenizerMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = new ObjectManager($this);
-        $this->tokenizerMock = $this->getMockBuilder(\Magento\Setup\Module\I18n\Parser\Adapter\Php\Tokenizer::class)
+        $this->tokenizerMock = $this->getMockBuilder(Tokenizer::class)
             ->disableOriginalConstructor()
             ->getMock();
         $this->phraseCollector = $this->objectManager->getObject(
-            \Magento\Setup\Module\I18n\Parser\Adapter\Php\Tokenizer\PhraseCollector::class,
+            PhraseCollector::class,
             [
                 'tokenizer' => $this->tokenizerMock
             ]
@@ -63,6 +67,21 @@ class PhraseCollectorTest extends \PHPUnit\Framework\TestCase
         array $isMatchingClassReturnValues,
         array $result
     ) {
+        $nextRealToken = [];
+        foreach ($getNextRealTokenReturnValues as $key => $token) {
+            if (is_callable($token)) {
+                $nextRealToken[$key] = $token($this);
+            } else {
+                $nextRealToken[$key] = $token;
+            }
+        }
+
+        foreach ($getFunctionArgumentsTokensReturnValues as &$returnToken) {
+            if (is_callable($returnToken[0][0])) {
+                $returnToken[0][0] = $returnToken[0][0]($this);
+            }
+        }
+
         $matchingClass = 'Phrase';
 
         $this->tokenizerMock->expects($this->once())
@@ -78,7 +97,7 @@ class PhraseCollectorTest extends \PHPUnit\Framework\TestCase
             ->method('getNextRealToken')
             ->will(call_user_func_array(
                 [$this, 'onConsecutiveCalls'],
-                $getNextRealTokenReturnValues
+                $nextRealToken
             ));
         $this->tokenizerMock->expects($this->any())
             ->method('getFunctionArgumentsTokens')
@@ -102,7 +121,7 @@ class PhraseCollectorTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function testParseDataProvider()
+    public static function testParseDataProvider()
     {
         $file = 'path/to/file.php';
         $line = 110;
@@ -127,20 +146,32 @@ class PhraseCollectorTest extends \PHPUnit\Framework\TestCase
                     true //after ;
                 ],
                 'getNextRealTokenReturnValues' => [
-                    $this->createToken(false, false, false, false, '$phrase1'),
-                    $this->createToken(false, false, false, false, '='),
-                    $this->createToken(false, false, true, false, 'new', $line),
-                    $this->createToken(false, false, false, false, ';'),
-                    $this->createToken(false, false, false, false, '$phrase2'),
-                    $this->createToken(false, false, false, false, '='),
-                    $this->createToken(true, false, false, false, '__', $line),
-                    $this->createToken(false, true, false, false, '('),
-                    $this->createToken(false, false, false, false, ';'),
+                    static fn (self $testCase) => $testCase->createToken(false, false, false, false, '$phrase1'),
+                    static fn (self $testCase) => $testCase->createToken(false, false, false, false, '='),
+                    static fn (self $testCase) => $testCase->createToken(false, false, true, false, 'new', $line),
+                    static fn (self $testCase) => $testCase->createToken(false, false, false, false, ';'),
+                    static fn (self $testCase) => $testCase->createToken(false, false, false, false, '$phrase2'),
+                    static fn (self $testCase) => $testCase->createToken(false, false, false, false, '='),
+                    static fn (self $testCase) => $testCase->createToken(true, false, false, false, '__', $line),
+                    static fn (self $testCase) => $testCase->createToken(false, true, false, false, '('),
+                    static fn (self $testCase) => $testCase->createToken(false, false, false, false, ';'),
                     false
                 ],
                 'getFunctionArgumentsTokensReturnValues' => [
-                    [[$this->createToken(false, false, false, true, '\'Testing\'')]], // 'Testing')
-                    [[$this->createToken(false, false, false, true, '\'More testing\'')]] // 'More testing')
+                    [[static fn (self $testCase) => $testCase->createToken(
+                        false,
+                        false,
+                        false,
+                        true,
+                        '\'Testing\''
+                    )]], // 'Testing')
+                    [[static fn (self $testCase) => $testCase->createToken(
+                        false,
+                        false,
+                        false,
+                        true,
+                        '\'More testing\''
+                    )]] // 'More testing')
                 ],
                 'isMatchingClassReturnValues' => [
                     true // \Magento\Framework\Phrase(
@@ -170,7 +201,7 @@ class PhraseCollectorTest extends \PHPUnit\Framework\TestCase
      * @param bool $isConstantEncapsedString
      * @param string $value
      * @param int|null $line
-     * @return Token|\PHPUnit_Framework_MockObject_MockObject
+     * @return Token|MockObject
      */
     protected function createToken(
         $isEqualFunctionReturnValue,
@@ -180,7 +211,7 @@ class PhraseCollectorTest extends \PHPUnit\Framework\TestCase
         $value,
         $line = null
     ) {
-        $token = $this->getMockBuilder(\Magento\Setup\Module\I18n\Parser\Adapter\Php\Tokenizer\Token::class)
+        $token = $this->getMockBuilder(Token::class)
             ->disableOriginalConstructor()
             ->getMock();
         $token->expects($this->any())
@@ -216,7 +247,7 @@ class PhraseCollectorTest extends \PHPUnit\Framework\TestCase
         $phraseString = "'first part' . ' second part'";
 
         $reflectionMethod = new \ReflectionMethod(
-            \Magento\Setup\Module\I18n\Parser\Adapter\Php\Tokenizer\PhraseCollector::class,
+            PhraseCollector::class,
             '_collectPhrase'
         );
 

@@ -1,55 +1,76 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Mail;
 
+use Magento\Framework\App\ObjectManager;
 use Magento\Framework\Exception\MailException;
 use Magento\Framework\Phrase;
-use Zend\Mail\Message as ZendMessage;
-use Zend\Mail\Transport\Sendmail;
+use Symfony\Component\Mailer\Mailer;
+use Symfony\Component\Mailer\Transport\SendmailTransport;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
+use Psr\Log\LoggerInterface;
 
-class Transport implements \Magento\Framework\Mail\TransportInterface
+/**
+ * Mail transport
+ */
+class Transport implements TransportInterface
 {
     /**
-     * @var Sendmail
+     * @var SendmailTransport
      */
-    private $zendTransport;
+    private SendmailTransport $symfonyTransport;
 
     /**
      * @var MessageInterface
      */
-    private $message;
+    private EmailMessageInterface $message;
 
     /**
-     * @param MessageInterface $message
-     * @param null|string|array|\Traversable $parameters
+     * @var LoggerInterface|null
      */
-    public function __construct(MessageInterface $message, $parameters = null)
+    private ?LoggerInterface $logger;
+
+    /**
+     * @param EmailMessageInterface $message
+     * @param LoggerInterface|null $logger
+     */
+    public function __construct(EmailMessageInterface $message, ?LoggerInterface $logger = null)
     {
-        $this->zendTransport = new Sendmail($parameters);
+        $this->symfonyTransport = new SendmailTransport();
         $this->message = $message;
+        $this->logger = $logger ?: ObjectManager::getInstance()->get(LoggerInterface::class);
     }
 
     /**
      * @inheritdoc
      */
-    public function sendMessage()
+    public function sendMessage(): void
     {
         try {
-            $this->zendTransport->send(
-                ZendMessage::fromString($this->message->getRawMessage())
+            $email = $this->message->getSymfonyMessage();
+            $mailer = new Mailer($this->symfonyTransport);
+            $mailer->send($email);
+        } catch (TransportExceptionInterface $transportException) {
+            $this->logger->error('Transport error while sending email: ' . $transportException->getMessage());
+            throw new MailException(
+                new Phrase('Transport error: Unable to send mail at this time.'),
+                $transportException
             );
         } catch (\Exception $e) {
-            throw new MailException(new Phrase($e->getMessage()), $e);
+            $this->logger->error($e);
+            throw new MailException(new Phrase('Unable to send mail. Please try again later.'), $e);
         }
     }
 
     /**
      * @inheritdoc
      */
-    public function getMessage()
+    public function getMessage(): EmailMessageInterface
     {
         return $this->message;
     }

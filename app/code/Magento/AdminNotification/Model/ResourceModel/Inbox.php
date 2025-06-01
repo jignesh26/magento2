@@ -1,11 +1,13 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\AdminNotification\Model\ResourceModel;
 
 /**
+ * Inbox resource model
+ *
  * @api
  * @since 100.0.2
  */
@@ -77,8 +79,7 @@ class Inbox extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
             'is_read=?',
             0
         );
-        $return = $connection->fetchPairs($select);
-        return $return;
+        return $connection->fetchPairs($select);
     }
 
     /**

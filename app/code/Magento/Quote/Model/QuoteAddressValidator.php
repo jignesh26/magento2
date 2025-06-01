@@ -1,48 +1,57 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Quote\Model;
 
+use Magento\Customer\Api\AddressRepositoryInterface;
+use Magento\Customer\Api\CustomerRepositoryInterface;
+use Magento\Customer\Api\Data\AddressInterface as CustomerAddress;
+use Magento\Customer\Model\Session;
+use Magento\Framework\Exception\InputException;
+use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Exception\NoSuchEntityException;
+use Magento\Quote\Api\Data\AddressInterface;
+use Magento\Quote\Api\Data\CartInterface;
 
 /**
  * Quote shipping/billing address validator service.
  *
+ * @SuppressWarnings(PHPMD.CookieAndSessionMisuse)
  */
 class QuoteAddressValidator
 {
     /**
-     * Address factory.
-     *
-     * @var \Magento\Customer\Api\AddressRepositoryInterface
+     * @var AddressRepositoryInterface
      */
-    protected $addressRepository;
+    protected AddressRepositoryInterface $addressRepository;
 
     /**
-     * Customer repository.
-     *
-     * @var \Magento\Customer\Api\CustomerRepositoryInterface
+     * @var CustomerRepositoryInterface
      */
-    protected $customerRepository;
+    protected CustomerRepositoryInterface $customerRepository;
 
     /**
-     * @var \Magento\Customer\Model\Session
+     * @var Session
+     * @deprecated 101.1.1 This class is not a part of HTML presentation layer and should not use sessions.
+     * @see Session
      */
-    protected $customerSession;
+    protected Session $customerSession;
 
     /**
      * Constructs a quote shipping address validator service object.
      *
-     * @param \Magento\Customer\Api\AddressRepositoryInterface $addressRepository
-     * @param \Magento\Customer\Api\CustomerRepositoryInterface $customerRepository Customer repository.
-     * @param \Magento\Customer\Model\Session $customerSession
+     * @param AddressRepositoryInterface $addressRepository
+     * @param CustomerRepositoryInterface $customerRepository Customer repository.
+     * @param Session $customerSession
      */
     public function __construct(
-        \Magento\Customer\Api\AddressRepositoryInterface $addressRepository,
-        \Magento\Customer\Api\CustomerRepositoryInterface $customerRepository,
-        \Magento\Customer\Model\Session $customerSession
+        AddressRepositoryInterface $addressRepository,
+        CustomerRepositoryInterface $customerRepository,
+        Session $customerSession
     ) {
         $this->addressRepository = $addressRepository;
         $this->customerRepository = $customerRepository;
@@ -50,44 +59,90 @@ class QuoteAddressValidator
     }
 
     /**
+     * Validate address.
+     *
+     * @param AddressInterface $address
+     * @param int|null $customerId
+     * @return void
+     * @throws LocalizedException The specified customer ID or address ID is not valid.
+     * @throws NoSuchEntityException The specified customer ID or address ID is not valid.
+     */
+    private function doValidate(AddressInterface $address, ?int $customerId): void
+    {
+        $customerAddressId = $address->getCustomerAddressId();
+        if ($customerAddressId) {
+            //Existing address cannot belong to a guest
+            if (!$customerId) {
+                throw new NoSuchEntityException(
+                    __('Invalid customer address id %1', $customerAddressId)
+                );
+            }
+
+            $customer = $this->customerRepository->getById($customerId);
+
+            //Validating address ID
+            $this->addressRepository->getById($customerAddressId);
+
+            //Finding available customer's addresses
+            $applicableAddressIds = array_map(function (CustomerAddress $address) {
+                return $address->getId();
+            }, $customer->getAddresses());
+
+            if (!in_array($customerAddressId, $applicableAddressIds)) {
+                throw new NoSuchEntityException(
+                    __('Invalid customer address id %1', $customerAddressId)
+                );
+            }
+        }
+    }
+
+    /**
      * Validates the fields in a specified address data object.
      *
-     * @param \Magento\Quote\Api\Data\AddressInterface $addressData The address data object.
+     * @param AddressInterface $addressData The address data object.
      * @return bool
-     * @throws \Magento\Framework\Exception\InputException The specified address belongs to another customer.
-     * @throws \Magento\Framework\Exception\NoSuchEntityException The specified customer ID or address ID is not valid.
+     * @throws InputException The specified address belongs to another customer.
+     * @throws NoSuchEntityException|LocalizedException The specified customer ID or address ID is not valid.
      */
-    public function validate(\Magento\Quote\Api\Data\AddressInterface $addressData)
+    public function validate(AddressInterface $addressData): bool
     {
-        //validate customer id
-        if ($addressData->getCustomerId()) {
-            $customer = $this->customerRepository->getById($addressData->getCustomerId());
-            if (!$customer->getId()) {
-                throw new \Magento\Framework\Exception\NoSuchEntityException(
-                    __('Invalid customer id %1', $addressData->getCustomerId())
-                );
-            }
-        }
+        $this->doValidate($addressData, $addressData->getCustomerId());
 
-        if ($addressData->getCustomerAddressId()) {
-            try {
-                $this->addressRepository->getById($addressData->getCustomerAddressId());
-            } catch (NoSuchEntityException $e) {
-                throw new \Magento\Framework\Exception\NoSuchEntityException(
-                    __('Invalid address id %1', $addressData->getId())
-                );
-            }
-
-            $applicableAddressIds = array_map(function ($address) {
-                /** @var \Magento\Customer\Api\Data\AddressInterface $address */
-                return $address->getId();
-            }, $this->customerRepository->getById($addressData->getCustomerId())->getAddresses());
-            if (!in_array($addressData->getCustomerAddressId(), $applicableAddressIds)) {
-                throw new \Magento\Framework\Exception\NoSuchEntityException(
-                    __('Invalid customer address id %1', $addressData->getCustomerAddressId())
-                );
-            }
-        }
         return true;
+    }
+
+    /**
+     * Validate address to be used for cart.
+     *
+     * @param CartInterface $cart
+     * @param AddressInterface $address
+     * @return void
+     * @throws InputException The specified address belongs to another customer.
+     * @throws NoSuchEntityException|LocalizedException The specified customer ID or address ID is not valid.
+     */
+    public function validateForCart(CartInterface $cart, AddressInterface $address): void
+    {
+        $this->doValidate($address, $cart->getCustomerIsGuest() ? null : (int) $cart->getCustomer()->getId());
+    }
+
+    /**
+     * Validate address id to be used for cart.
+     *
+     * @param CartInterface $cart
+     * @param AddressInterface $address
+     * @return void
+     * @throws NoSuchEntityException The specified customer ID or address ID is not valid.
+     */
+    public function validateWithExistingAddress(CartInterface $cart, AddressInterface $address): void
+    {
+        // check if address belongs to quote.
+        if ($address->getId() !== null) {
+            $old = $cart->getAddressById($address->getId());
+            if (empty($old)) {
+                throw new NoSuchEntityException(
+                    __('Invalid quote address id %1', $address->getId())
+                );
+            }
+        }
     }
 }

@@ -3,7 +3,7 @@
  * See COPYING.txt for license details.
  */
 
-/* global $break $ $$ FORM_KEY */
+/* global FORM_KEY */
 
 /**
  * @api
@@ -14,7 +14,8 @@ define([
     'uiRegistry',
     'jquery/colorpicker/js/colorpicker',
     'prototype',
-    'jquery/ui'
+    'jquery/ui',
+    'validation'
 ], function (jQuery, mageTemplate, rg) {
     'use strict';
 
@@ -147,6 +148,15 @@ define([
                 },
 
                 /**
+                 * Reset Is Default option
+                 *
+                 */
+                reset: function () {
+                    jQuery('input[name="defaultvisual[]"]').prop('checked', false);
+                    jQuery('input[name="reset_is-default_option"]').val(1);
+                },
+
+                /**
                  * Update items count field
                  */
                 updateItemsCountField: function () {
@@ -225,6 +235,14 @@ define([
                 'add_new_swatch_visual_option_button',
                 'click',
                 swatchVisualOption.add.bind(swatchVisualOption, {}, true)
+            );
+        }
+
+        if ($('reset_default_swatch_visual_option_button')) {
+            Event.observe(
+                'reset_default_swatch_visual_option_button',
+                'click',
+                swatchVisualOption.reset.bind(swatchVisualOption, true)
             );
         }
 
@@ -317,12 +335,12 @@ define([
                         display: 'none'
                     }).appendTo($('body'));
 
-                    this.iframe = $('<iframe />', {
-                        id:  'upload_iframe',
+                    this.iframe = $('<iframe></iframe>', {
+                        id: 'upload_iframe',
                         name: 'upload_iframe'
                     }).appendTo(this.wrapper);
 
-                    this.form = $('<form />', {
+                    this.form = $('<form></form>', {
                         id: 'swatch_form_image_upload',
                         name: 'swatch_form_image_upload',
                         target: 'upload_iframe',
@@ -373,7 +391,7 @@ define([
                     };
 
                 swatchComponents.iframe.off('load');
-                swatchComponents.iframe.load(iframeHandler);
+                swatchComponents.iframe.on('load', iframeHandler);
                 swatchComponents.form.submit();
                 $(this).val('');
             });
@@ -383,7 +401,7 @@ define([
              */
             $(document).on('click', '.btn_choose_file_upload', function () {
                 swatchComponents.inputFile.attr('data-called-by', $(this).attr('id'));
-                swatchComponents.inputFile.click();
+                swatchComponents.inputFile.trigger('click');
             });
 
             /**
@@ -403,8 +421,11 @@ define([
             /**
              * Toggle color upload chooser
              */
-            $(document).on('click', '.swatch_window', function () {
-                $(this).next('div').toggle();
+            $(document).on('click', '.swatches-visual-col', function () {
+                var currentElement = $(this).find('.swatch_sub-menu_container');
+
+                jQuery('.swatch_sub-menu_container').not(currentElement).hide();
+                currentElement.toggle();
             });
         });
     };

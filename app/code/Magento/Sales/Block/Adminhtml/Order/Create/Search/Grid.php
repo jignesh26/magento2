@@ -1,46 +1,46 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2011 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Sales\Block\Adminhtml\Order\Create\Search;
+
+use Magento\Sales\Block\Adminhtml\Order\Create\Search\Grid\DataProvider\ProductCollection;
+use Magento\Framework\App\ObjectManager;
 
 /**
  * Adminhtml sales order create search products block
  *
  * @api
- * @author      Magento Core Team <core@magentocommerce.com>
  * @since 100.0.2
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class Grid extends \Magento\Backend\Block\Widget\Grid\Extended
 {
     /**
-     * Sales config
-     *
      * @var \Magento\Sales\Model\Config
      */
     protected $_salesConfig;
 
     /**
-     * Session quote
-     *
      * @var \Magento\Backend\Model\Session\Quote
      */
     protected $_sessionQuote;
 
     /**
-     * Catalog config
-     *
      * @var \Magento\Catalog\Model\Config
      */
     protected $_catalogConfig;
 
     /**
-     * Product factory
-     *
      * @var \Magento\Catalog\Model\ProductFactory
      */
     protected $_productFactory;
+
+    /**
+     * @var ProductCollection $productCollectionProvider
+     */
+    private $productCollectionProvider;
 
     /**
      * @param \Magento\Backend\Block\Template\Context $context
@@ -50,6 +50,7 @@ class Grid extends \Magento\Backend\Block\Widget\Grid\Extended
      * @param \Magento\Backend\Model\Session\Quote $sessionQuote
      * @param \Magento\Sales\Model\Config $salesConfig
      * @param array $data
+     * @param ProductCollection|null $productCollectionProvider
      */
     public function __construct(
         \Magento\Backend\Block\Template\Context $context,
@@ -58,12 +59,15 @@ class Grid extends \Magento\Backend\Block\Widget\Grid\Extended
         \Magento\Catalog\Model\Config $catalogConfig,
         \Magento\Backend\Model\Session\Quote $sessionQuote,
         \Magento\Sales\Model\Config $salesConfig,
-        array $data = []
+        array $data = [],
+        ?ProductCollection $productCollectionProvider = null
     ) {
         $this->_productFactory = $productFactory;
         $this->_catalogConfig = $catalogConfig;
         $this->_sessionQuote = $sessionQuote;
         $this->_salesConfig = $salesConfig;
+        $this->productCollectionProvider = $productCollectionProvider
+            ?: ObjectManager::getInstance()->get(ProductCollection::class);
         parent::__construct($context, $backendHelper, $data);
     }
 
@@ -80,6 +84,7 @@ class Grid extends \Magento\Backend\Block\Widget\Grid\Extended
         $this->setCheckboxCheckCallback('order.productGridCheckboxCheck.bind(order)');
         $this->setRowInitCallback('order.productGridRowInit.bind(order)');
         $this->setDefaultSort('entity_id');
+        $this->setFilterKeyPressCallback('order.productGridFilterKeyPress');
         $this->setUseAjax(true);
         if ($this->getRequest()->getParam('collapse')) {
             $this->setIsCollapsed(true);
@@ -140,20 +145,18 @@ class Grid extends \Magento\Backend\Block\Widget\Grid\Extended
      */
     protected function _prepareCollection()
     {
+
         $attributes = $this->_catalogConfig->getProductAttributes();
+        $store = $this->getStore();
+
         /* @var $collection \Magento\Catalog\Model\ResourceModel\Product\Collection */
-        $collection = $this->_productFactory->create()->getCollection();
-        $collection->setStore(
-            $this->getStore()
-        )->addAttributeToSelect(
+        $collection = $this->productCollectionProvider->getCollectionForStore($store);
+        $collection->addAttributeToSelect(
             $attributes
-        )->addAttributeToSelect(
-            'sku'
-        )->addStoreFilter()->addAttributeToFilter(
+        );
+        $collection->addAttributeToFilter(
             'type_id',
             $this->_salesConfig->getAvailableProductTypes()
-        )->addAttributeToSelect(
-            'gift_message_available'
         );
 
         $this->setCollection($collection);

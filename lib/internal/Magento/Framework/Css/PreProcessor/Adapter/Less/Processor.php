@@ -1,10 +1,12 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Framework\Css\PreProcessor\Adapter\Less;
 
+use Magento\Framework\App\Filesystem\DirectoryList;
+use Magento\Framework\App\ObjectManager;
 use Magento\Framework\App\State;
 use Magento\Framework\Css\PreProcessor\File\Temporary;
 use Magento\Framework\Phrase;
@@ -16,6 +18,8 @@ use Psr\Log\LoggerInterface;
 
 /**
  * Class Processor
+ *
+ * Process LESS files into CSS
  */
 class Processor implements ContentProcessorInterface
 {
@@ -40,44 +44,62 @@ class Processor implements ContentProcessorInterface
     private $temporaryFile;
 
     /**
+     * @var DirectoryList
+     */
+    private DirectoryList $directoryList;
+
+    /**
      * Constructor
      *
      * @param LoggerInterface $logger
      * @param State $appState
      * @param Source $assetSource
      * @param Temporary $temporaryFile
+     * @param ?DirectoryList $directoryList
      */
     public function __construct(
         LoggerInterface $logger,
         State $appState,
         Source $assetSource,
-        Temporary $temporaryFile
+        Temporary $temporaryFile,
+        ?DirectoryList $directoryList = null,
     ) {
         $this->logger = $logger;
         $this->appState = $appState;
         $this->assetSource = $assetSource;
         $this->temporaryFile = $temporaryFile;
+        $this->directoryList = $directoryList ?: ObjectManager::getInstance()->get(DirectoryList::class);
     }
 
     /**
      * @inheritdoc
-     * @throws ContentProcessorException
      */
     public function processContent(File $asset)
     {
         $path = $asset->getPath();
         try {
+            $mode = $this->appState->getMode();
+            $sourceMapBasePath = sprintf(
+                '%s/pub/',
+                $this->directoryList->getPath(DirectoryList::TEMPLATE_MINIFICATION_DIR),
+            );
+
             $parser = new \Less_Parser(
                 [
                     'relativeUrls' => false,
-                    'compress' => $this->appState->getMode() !== State::MODE_DEVELOPER
+                    'compress' => $mode !== State::MODE_DEVELOPER,
+                    'sourceMap' => $mode === State::MODE_DEVELOPER,
+                    'sourceMapRootpath' => '/',
+                    'sourceMapBasepath' => $sourceMapBasePath,
                 ]
             );
 
             $content = $this->assetSource->getContent($asset);
 
             if (trim($content) === '') {
-                return '';
+                throw new ContentProcessorException(
+                    new Phrase('Compilation from source: LESS file is empty: ' . $path)
+                );
             }
 
             $tmpFilePath = $this->temporaryFile->createFile($path, $content);
@@ -88,8 +110,9 @@ class Processor implements ContentProcessorInterface
             gc_enable();
 
             if (trim($content) === '') {
-                $this->logger->warning('Parsed less file is empty: ' . $path);
-                return '';
+                throw new ContentProcessorException(
+                    new Phrase('Compilation from source: LESS file is empty: ' . $path)
+                );
             } else {
                 return $content;
             }

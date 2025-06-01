@@ -3,9 +3,16 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Cache\Test\Unit\Frontend\Decorator;
 
-class BareTest extends \PHPUnit\Framework\TestCase
+use Magento\Framework\Cache\Frontend\Decorator\Bare;
+use Magento\Framework\Cache\FrontendInterface;
+use Magento\Framework\TestFramework\Unit\Helper\ProxyTesting;
+use PHPUnit\Framework\TestCase;
+
+class BareTest extends TestCase
 {
     /**
      * @param string $method
@@ -15,10 +22,13 @@ class BareTest extends \PHPUnit\Framework\TestCase
      */
     public function testProxyMethod($method, $params, $expectedResult)
     {
-        $frontendMock = $this->createMock(\Magento\Framework\Cache\FrontendInterface::class);
+        if (is_callable($expectedResult)) {
+            $expectedResult = $expectedResult($this);
+        }
+        $frontendMock = $this->getMockForAbstractClass(FrontendInterface::class);
 
-        $object = new \Magento\Framework\Cache\Frontend\Decorator\Bare($frontendMock);
-        $helper = new \Magento\Framework\TestFramework\Unit\Helper\ProxyTesting();
+        $object = new Bare($frontendMock);
+        $helper = new ProxyTesting();
         $result = $helper->invokeWithExpectations($object, $frontendMock, $method, $params, $expectedResult);
         $this->assertSame($expectedResult, $result);
     }
@@ -26,7 +36,7 @@ class BareTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function proxyMethodDataProvider()
+    public static function proxyMethodDataProvider()
     {
         return [
             ['test', ['record_id'], 111],
@@ -34,8 +44,18 @@ class BareTest extends \PHPUnit\Framework\TestCase
             ['save', ['record_value', 'record_id', ['tag'], 555], true],
             ['remove', ['record_id'], true],
             ['clean', [\Zend_Cache::CLEANING_MODE_MATCHING_ANY_TAG, ['tag']], true],
-            ['getBackend', [], $this->createMock(\Zend_Cache_Backend::class)],
-            ['getLowLevelFrontend', [], $this->createMock(\Zend_Cache_Core::class)],
+            ['getBackend', [], static fn (self $testCase) => $testCase->createZendCacheBackendMock()],
+            ['getLowLevelFrontend', [], static fn (self $testCase) => $testCase->createZendCacheCoreMock()],
         ];
+    }
+
+    public function createZendCacheBackendMock()
+    {
+        return $this->createMock(\Zend_Cache_Backend::class);
+    }
+
+    public function createZendCacheCoreMock()
+    {
+        return $this->createMock(\Zend_Cache_Core::class);
     }
 }

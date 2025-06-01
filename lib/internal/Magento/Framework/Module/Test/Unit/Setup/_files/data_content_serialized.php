@@ -1,23 +1,25 @@
-<?php
+<?php declare(strict_types=1);
+
+use Magento\Framework\Module\Setup\Migration;
+
 /**
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
-
 return [
-    '$replaceRules' => [
+    'replaceRules' => [
         [
             'table',
             'field',
-            \Magento\Framework\Module\Setup\Migration::ENTITY_TYPE_MODEL,
-            \Magento\Framework\Module\Setup\Migration::FIELD_CONTENT_TYPE_SERIALIZED,
+            Migration::ENTITY_TYPE_MODEL,
+            Migration::FIELD_CONTENT_TYPE_SERIALIZED,
         ],
     ],
-    '$tableData' => [
+    'tableData' => [
         ['field' => '{"max_text_length":255,"min_text_length":1}'],
         ['field' => '{"model":"some random text"}'],
     ],
-    '$expected' => [
+    'expected' => [
         'updates' => [
             [
                 'table' => 'table',
@@ -27,7 +29,7 @@ return [
             ],
         ],
         'aliases_map' => [
-            \Magento\Framework\Module\Setup\Migration::ENTITY_TYPE_MODEL => [
+            Migration::ENTITY_TYPE_MODEL => [
                 'catalogrule/rule_condition_combine' => 'Magento\CatalogRule\Model\Rule\Condition\Combine',
             ],
         ],

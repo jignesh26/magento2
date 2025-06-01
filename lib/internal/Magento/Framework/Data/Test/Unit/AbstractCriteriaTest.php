@@ -3,17 +3,20 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Data\Test\Unit;
 
 use Magento\Framework\Api\CriteriaInterface;
+use Magento\Framework\Data\Test\Unit\Criteria\Sample;
+use Magento\Framework\DataObject;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\TestCase;
 
-/**
- * Class AbstractCriteriaTest
- */
-class AbstractCriteriaTest extends \PHPUnit\Framework\TestCase
+class AbstractCriteriaTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\Data\Test\Unit\Criteria\Sample
+     * @var Sample
      */
     protected $criteria;
 
@@ -22,10 +25,10 @@ class AbstractCriteriaTest extends \PHPUnit\Framework\TestCase
      *
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
-        $objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
-        $this->criteria = $objectManager->getObject(\Magento\Framework\Data\Test\Unit\Criteria\Sample::class);
+        $objectManager = new ObjectManager($this);
+        $this->criteria = $objectManager->getObject(Sample::class);
     }
 
     /**
@@ -58,6 +61,13 @@ class AbstractCriteriaTest extends \PHPUnit\Framework\TestCase
      */
     public function testAddFilter($name, $field, $condition, $type, array $result)
     {
+        $objectManager = new ObjectManager($this);
+        $result = [
+            'test-filter-name' => $objectManager->getObject(
+                DataObject::class,
+                ['data' => $result]
+            ),
+        ];
         $this->criteria->addFilter($name, $field, $condition, $type);
         $this->assertEquals($result, $this->criteria->toArray()[CriteriaInterface::PART_FILTERS]['list']);
     }
@@ -189,7 +199,7 @@ class AbstractCriteriaTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function dataProviderReset()
+    public static function dataProviderReset()
     {
         return [
             [
@@ -216,11 +226,11 @@ class AbstractCriteriaTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function dataProviderRemoveAllFilters()
+    public static function dataProviderRemoveAllFilters()
     {
         return [
             [
-                'actualResult' => [
+                'actualField' => [
                     'test-filter-name',
                     'test-field-name',
                     'test-condition',
@@ -236,11 +246,11 @@ class AbstractCriteriaTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function dataProviderRemoveFilter()
+    public static function dataProviderRemoveFilter()
     {
         return [
             [
-                'actualResult' => [
+                'actualField' => [
                     'test-filter-name',
                     'test-field-name',
                     'test-condition',
@@ -257,7 +267,7 @@ class AbstractCriteriaTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function dataProviderRemoveAllFields()
+    public static function dataProviderRemoveAllFields()
     {
         return [
             [
@@ -275,7 +285,7 @@ class AbstractCriteriaTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function dataProviderRemoveField()
+    public static function dataProviderRemoveField()
     {
         return [
             [
@@ -313,7 +323,7 @@ class AbstractCriteriaTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function dataProviderSetLimit()
+    public static function dataProviderSetLimit()
     {
         return [
             [
@@ -329,7 +339,7 @@ class AbstractCriteriaTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function dataProviderAddOrder()
+    public static function dataProviderAddOrder()
     {
         return [
             [
@@ -365,9 +375,8 @@ class AbstractCriteriaTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function dataProviderAddFilter()
+    public static function dataProviderAddFilter()
     {
-        $objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
         return [
             [
                 'name' => 'test-filter-name',
@@ -375,17 +384,10 @@ class AbstractCriteriaTest extends \PHPUnit\Framework\TestCase
                 'condition' => 'test-condition',
                 'type' => 'test-type',
                 'result' => [
-                    'test-filter-name' => $objectManager->getObject(
-                        \Magento\Framework\DataObject::class,
-                        [
-                            'data' => [
-                                'name' => 'test-filter-name',
-                                'field' => 'test-field-name',
-                                'condition' => 'test-condition',
-                                'type' => 'test-type',
-                            ]
-                        ]
-                    ),
+                    'name' => 'test-filter-name',
+                    'field' => 'test-field-name',
+                    'condition' => 'test-condition',
+                    'type' => 'test-type',
                 ],
             ]
         ];
@@ -396,7 +398,7 @@ class AbstractCriteriaTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function dataProviderAddField()
+    public static function dataProviderAddField()
     {
         return [
             [

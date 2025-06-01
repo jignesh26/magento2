@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 
 define([
@@ -54,7 +54,7 @@ define([
                 $t('Review & Payments'),
                 this.isVisible,
                 _.bind(this.navigate, this),
-                20
+                this.sortOrder
             );
 
             return this;
@@ -66,9 +66,21 @@ define([
         navigate: function () {
             var self = this;
 
-            getPaymentInformation().done(function () {
-                self.isVisible(true);
-            });
+            if (!self.hasShippingMethod()) {
+                this.isVisible(false);
+                stepNavigator.setHash('shipping');
+            } else {
+                getPaymentInformation().done(function () {
+                    self.isVisible(true);
+                });
+            }
+        },
+
+        /**
+         * @return {Boolean}
+         */
+        hasShippingMethod: function () {
+            return window.checkoutConfig.selectedShippingMethod !== null;
         },
 
         /**

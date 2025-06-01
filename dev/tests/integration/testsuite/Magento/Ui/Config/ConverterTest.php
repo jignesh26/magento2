@@ -22,7 +22,7 @@ class ConverterTest extends \PHPUnit\Framework\TestCase
      */
     private $fixturePath;
 
-    public function setUp()
+    protected function setUp(): void
     {
         $objectManager = Bootstrap::getObjectManager();
         $this->converter = $objectManager->create(Converter::class);
@@ -56,7 +56,7 @@ class ConverterTest extends \PHPUnit\Framework\TestCase
         }
     }
 
-    public function getComponentNameDataProvider()
+    public static function getComponentNameDataProvider()
     {
         return [
             ['action'],

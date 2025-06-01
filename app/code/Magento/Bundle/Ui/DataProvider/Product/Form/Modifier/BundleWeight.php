@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Bundle\Ui\DataProvider\Product\Form\Modifier;
 
@@ -30,7 +30,7 @@ class BundleWeight extends AbstractModifier
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function modifyMeta(array $meta)
     {
@@ -73,15 +73,16 @@ class BundleWeight extends AbstractModifier
             [
                 'imports' => [
                     'disabled' => 'ns = ${ $.ns }, index = ' . static::CODE_WEIGHT_TYPE . ':checked',
+                    '__disableTmpl' => ['disabled' => false],
                 ]
             ]
         );
-        
+
         return $meta;
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function modifyData(array $data)
     {

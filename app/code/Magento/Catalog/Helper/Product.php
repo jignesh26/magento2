@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Helper;
 
@@ -14,14 +14,17 @@ use Magento\Store\Model\Store;
 /**
  * Catalog category helper
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @SuppressWarnings(PHPMD.CookieAndSessionMisuse)
  */
 class Product extends \Magento\Framework\Url\Helper\Data
 {
-    const XML_PATH_PRODUCT_URL_USE_CATEGORY = 'catalog/seo/product_use_categories';
+    public const XML_PATH_PRODUCT_URL_USE_CATEGORY = 'catalog/seo/product_use_categories';
 
-    const XML_PATH_USE_PRODUCT_CANONICAL_TAG = 'catalog/seo/product_canonical_tag';
+    public const XML_PATH_USE_PRODUCT_CANONICAL_TAG = 'catalog/seo/product_canonical_tag';
 
-    const XML_PATH_AUTO_GENERATE_MASK = 'catalog/fields_masks';
+    public const XML_PATH_AUTO_GENERATE_MASK = 'catalog/fields_masks';
+
+    public const XML_PATH_APPLY_TRANSLITERATION_TO_URL = 'catalog/seo/product_url_transliteration';
 
     /**
      * Flag that shows if Magento has to check product to be saleable (enabled and/or inStock)
@@ -46,8 +49,6 @@ class Product extends \Magento\Framework\Url\Helper\Data
     protected $_assetRepo;
 
     /**
-     * Core registry
-     *
      * @var \Magento\Framework\Registry
      */
     protected $_coreRegistry;
@@ -58,8 +59,6 @@ class Product extends \Magento\Framework\Url\Helper\Data
     protected $_attributeConfig;
 
     /**
-     * Catalog session
-     *
      * @var \Magento\Catalog\Model\Session
      */
     protected $_catalogSession;
@@ -268,6 +267,8 @@ class Product extends \Magento\Framework\Url\Helper\Data
     }
 
     /**
+     * Retrieve email to friend url
+     *
      * @param ModelProduct $product
      * @return string
      */
@@ -282,6 +283,8 @@ class Product extends \Magento\Framework\Url\Helper\Data
     }
 
     /**
+     * Get statuses
+     *
      * @return array
      */
     public function getStatuses()
@@ -476,6 +479,7 @@ class Product extends \Magento\Framework\Url\Helper\Data
 
     /**
      * Prepares product options by buyRequest: retrieves values and assigns them as default.
+     *
      * Also parses and adds product management related values - e.g. qty
      *
      * @param ModelProduct $product
@@ -493,6 +497,7 @@ class Product extends \Magento\Framework\Url\Helper\Data
 
     /**
      * Process $buyRequest and sets its options before saving configuration to some product item.
+     *
      * This method is used to attach additional parameters to processed buyRequest.
      *
      * $params holds parameters of what operation must be performed:
@@ -540,8 +545,6 @@ class Product extends \Magento\Framework\Url\Helper\Data
 
     /**
      * Set flag that shows if Magento has to check product to be saleable (enabled and/or inStock)
-     *
-     * For instance, during order creation in the backend admin has ability to add any products to order
      *
      * @param bool $skipSaleableCheck
      * @return Product

@@ -67,8 +67,22 @@ class Download
      * @param array $info
      * @return void
      * @throws \Exception
+     * @deprecated No longer recommended
+     * @see createResponse()
      */
     public function downloadFile($info)
+    {
+        $this->createResponse($info);
+    }
+
+    /**
+     * Returns a file response
+     *
+     * @param array $info
+     * @return \Magento\Framework\App\ResponseInterface
+     * @throws \Exception
+     */
+    public function createResponse($info)
     {
         $relativePath = $info['order_path'];
         if (!$this->_isCanProcessed($relativePath)) {
@@ -80,7 +94,7 @@ class Download
                 );
             }
         }
-        $this->_fileFactory->create(
+        return $this->_fileFactory->create(
             $info['title'],
             ['value' => $this->_rootDir->getRelativePath($relativePath), 'type' => 'filename'],
             $this->rootDirBasePath,
@@ -98,7 +112,7 @@ class Download
     {
         $filePath = $this->_rootDir->getAbsolutePath($relativePath);
         $pathWithFixedSeparator = str_replace('\\', '/', $this->_rootDir->getDriver()->getRealPath($filePath));
-        return (strpos($pathWithFixedSeparator, $relativePath) !== false
+        return (strpos($pathWithFixedSeparator, (string) $relativePath) !== false
             && $this->_rootDir->isFile($relativePath) && $this->_rootDir->isReadable($relativePath))
             || $this->_processDatabaseFile($filePath, $relativePath);
     }

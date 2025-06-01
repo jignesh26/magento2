@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 
 define([
@@ -10,7 +10,7 @@ define([
 ], function (quote, defaultProcessor, customerAddressProcessor) {
     'use strict';
 
-    var processors = [];
+    var processors = {};
 
     processors.default =  defaultProcessor;
     processors['customer-address'] = customerAddressProcessor;

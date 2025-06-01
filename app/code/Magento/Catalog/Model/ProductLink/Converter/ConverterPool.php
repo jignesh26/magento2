@@ -1,11 +1,14 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Catalog\Model\ProductLink\Converter;
 
+/**
+ * Return converter by link type
+ */
 class ConverterPool
 {
     /**
@@ -34,8 +37,6 @@ class ConverterPool
      */
     public function getConverter($linkType)
     {
-        return isset($this->converters[$linkType])
-            ? $this->converters[$linkType]
-            : $this->converters[$this->defaultConverterCode];
+        return $this->converters[$linkType] ?? $this->converters[$this->defaultConverterCode];
     }
 }

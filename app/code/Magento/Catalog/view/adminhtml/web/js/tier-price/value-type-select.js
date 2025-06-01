@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
 
 define([
@@ -19,8 +19,9 @@ define([
          * {@inheritdoc}
          */
         initialize: function () {
-            this._super()
-                .prepareForm();
+            this._super();
+            delete this.prices.__disableTmpl;
+            this.prepareForm();
         },
 
         /**

@@ -1,14 +1,14 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2012 Adobe
+ * All Rights Reserved.
  */
+
+namespace Magento\TestFramework\Event;
 
 /**
  * Database transaction events manager
  */
-namespace Magento\TestFramework\Event;
-
 class Transaction
 {
     /**
@@ -86,21 +86,15 @@ class Transaction
      * Start transaction and fire 'startTransaction' event
      *
      * @param \PHPUnit\Framework\TestCase $test
+     * @SuppressWarnings(PHPMD.UnusedLocalVariable)
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     protected function _startTransaction(\PHPUnit\Framework\TestCase $test)
     {
         if (!$this->_isTransactionActive) {
             $this->_getConnection()->beginTransparentTransaction();
             $this->_isTransactionActive = true;
-            try {
-                $this->_eventManager->fireEvent('startTransaction', [$test]);
-            } catch (\Exception $e) {
-                $test->getTestResultObject()->addFailure(
-                    $test,
-                    new \PHPUnit\Framework\AssertionFailedError((string)$e),
-                    0
-                );
-            }
+            $this->_eventManager->fireEvent('startTransaction', [$test]);
         }
     }
 
@@ -110,8 +104,8 @@ class Transaction
     protected function _rollbackTransaction()
     {
         if ($this->_isTransactionActive) {
-            $this->_getConnection()->rollbackTransparentTransaction();
             $this->_isTransactionActive = false;
+            $this->_getConnection()->rollbackTransparentTransaction();
             $this->_eventManager->fireEvent('rollbackTransaction');
             $this->_getConnection()->closeConnection();
         }

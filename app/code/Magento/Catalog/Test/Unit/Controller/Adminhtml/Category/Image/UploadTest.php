@@ -1,32 +1,37 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Catalog\Test\Unit\Controller\Adminhtml\Category\Image;
 
+use Magento\CardinalCommerce\Model\Response\JwtPayloadValidator;
 use Magento\Catalog\Controller\Adminhtml\Category\Image\Upload as Model;
-use Magento\Framework\App\Request\Http as Request;
 use Magento\Catalog\Model\ImageUploader;
+use Magento\Framework\App\Request\Http as Request;
 use Magento\Framework\Controller\ResultFactory;
 use Magento\Framework\DataObject;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\TestCase;
 
-/**
- * Class UploadTest
- */
-class UploadTest extends \PHPUnit\Framework\TestCase
+class UploadTest extends TestCase
 {
+    /**
+     * @var ObjectManager
+     */
     private $objectManager;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $this->objectManager = new ObjectManager($this);
     }
 
     /**
      * @return array
      */
-    public function executeDataProvider()
+    public static function executeDataProvider()
     {
         return [
             ['image1', 'image1'],
@@ -51,7 +56,7 @@ class UploadTest extends \PHPUnit\Framework\TestCase
 
         $resultFactory->expects($this->once())
             ->method('create')
-            ->will($this->returnValue(new DataObject()));
+            ->willReturn(new DataObject());
 
         $model = $this->objectManager->getObject(Model::class, [
             'request' => $request,
@@ -62,7 +67,7 @@ class UploadTest extends \PHPUnit\Framework\TestCase
         $uploader->expects($this->once())
             ->method('saveFileToTmpDir')
             ->with($savedName)
-            ->will($this->returnValue([]));
+            ->willReturn([]);
 
         $request->setParam('param_name', $name);
 

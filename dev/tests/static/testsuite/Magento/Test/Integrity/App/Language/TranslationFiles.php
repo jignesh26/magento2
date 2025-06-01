@@ -15,7 +15,7 @@ class TranslationFiles extends \PHPUnit\Framework\TestCase
      */
     protected $csvParser;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->csvParser = new \Magento\Framework\File\Csv(new File());
     }
@@ -23,7 +23,7 @@ class TranslationFiles extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getLocalePlacePath()
+    public static function getLocalePlacePath()
     {
         $pathToSource = BP;
         $places = [];

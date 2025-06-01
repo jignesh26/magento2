@@ -1,20 +1,12 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 
-(function (factory) {
-    'use strict';
-
-    if (typeof define === 'function' && define.amd) {
-        define([
-            'jquery',
-            'jquery/ui'
-        ], factory);
-    } else {
-        factory(jQuery);
-    }
-}(function ($) {
+define([
+    'jquery',
+    'jquery-ui-modules/widget'
+], function ($) {
     'use strict';
 
     $.widget('mage.gallery', {
@@ -49,4 +41,4 @@
     });
 
     return $.mage.gallery;
-}));
+});

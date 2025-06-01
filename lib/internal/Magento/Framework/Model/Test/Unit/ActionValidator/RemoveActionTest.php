@@ -3,12 +3,21 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Model\Test\Unit\ActionValidator;
 
-class RemoveActionTest extends \PHPUnit\Framework\TestCase
+use Magento\Catalog\Model\Product;
+use Magento\Framework\Model\ActionValidator\RemoveAction;
+use Magento\Framework\Registry;
+use Magento\Wishlist\Model\Wishlist;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+
+class RemoveActionTest extends TestCase
 {
     /**
-     * @param \PHPUnit_Framework_MockObject_MockObject $modelToCheck
+     * @param MockObject $modelToCheck
      * @param string $protectedModel
      * @param bool $secureArea
      * @param bool $expectedResult
@@ -19,11 +28,17 @@ class RemoveActionTest extends \PHPUnit\Framework\TestCase
      */
     public function testIsAllowed($modelToCheck, $protectedModel, $secureArea, $expectedResult)
     {
-        $registryMock = $this->createMock(\Magento\Framework\Registry::class);
+        if (is_callable($modelToCheck)) {
+            $modelToCheck = $modelToCheck($this);
+        }
+        if (is_callable($protectedModel)) {
+            $protectedModel = $protectedModel($this);
+        }
+        $registryMock = $this->createMock(Registry::class);
         $registryMock->expects($this->once())
-            ->method('registry')->with('isSecureArea')->will($this->returnValue($secureArea));
+            ->method('registry')->with('isSecureArea')->willReturn($secureArea);
 
-        $model = new \Magento\Framework\Model\ActionValidator\RemoveAction(
+        $model = new RemoveAction(
             $registryMock,
             ['class' => $protectedModel]
         );
@@ -33,10 +48,11 @@ class RemoveActionTest extends \PHPUnit\Framework\TestCase
     /**
      * return array
      */
-    public function isAllowedDataProvider()
+    public static function isAllowedDataProvider()
     {
-        $productMock = $this->createMock(\Magento\Catalog\Model\Product::class);
-        $bannerMock = $this->createMock(\Magento\Wishlist\Model\Wishlist::class);
+        $productMock = static fn(self $testCase) => $testCase->createProductMock();
+        $bannerMock = static fn(self $testCase) => $testCase->createWishlistMock()['mock'];
+        $bannerMockClass = static fn(self $testCase) => $testCase->createWishlistMock()['class'];
 
         return [
             [
@@ -47,16 +63,31 @@ class RemoveActionTest extends \PHPUnit\Framework\TestCase
             ],
             [
                 'modelToCheck' => $bannerMock,
-                'protectedModel' => get_class($bannerMock),
+                'protectedModel' => $bannerMockClass,
                 'secureArea' => false,
                 'expectedResult' => false
             ],
             [
                 'modelToCheck' => $bannerMock,
-                'protectedModel' => get_class($bannerMock),
+                'protectedModel' => $bannerMockClass,
                 'secureArea' => true,
                 'expectedResult' => true
             ],
+        ];
+    }
+
+    public function createProductMock()
+    {
+        return $this->createMock(Product::class);
+    }
+
+    public function createWishlistMock()
+    {
+        $wishlistMock = $this->createMock(Wishlist::class);
+        $wishlistMockClass = get_class($wishlistMock);
+        return [
+            'class' => $wishlistMockClass,
+            'mock' => $wishlistMock
         ];
     }
 }

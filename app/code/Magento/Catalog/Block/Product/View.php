@@ -1,12 +1,11 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Block\Product;
 
 use Magento\Catalog\Api\ProductRepositoryInterface;
-use Magento\Catalog\Model\Category;
 
 /**
  * Product View block
@@ -30,7 +29,7 @@ class View extends AbstractProduct implements \Magento\Framework\DataObject\Iden
 
     /**
      * @var \Magento\Framework\Pricing\PriceCurrencyInterface
-     * @deprecated 101.1.0
+     * @deprecated 102.0.0
      */
     protected $priceCurrency;
 
@@ -169,8 +168,7 @@ class View extends AbstractProduct implements \Magento\Framework\DataObject\Iden
     }
 
     /**
-     * Get JSON encoded configuration array which can be used for JS dynamic
-     * price calculation depending on product options
+     * Get JSON encoded configuration which can be used for JS dynamic price calculation depending on product options
      *
      * @return string
      */
@@ -178,34 +176,45 @@ class View extends AbstractProduct implements \Magento\Framework\DataObject\Iden
     {
         /* @var $product \Magento\Catalog\Model\Product */
         $product = $this->getProduct();
+        $tierPrices = [];
+        $priceInfo = $product->getPriceInfo();
+        $tierPricesList = $priceInfo->getPrice('tier_price')->getTierPriceList();
+        foreach ($tierPricesList as $tierPrice) {
+            $tierPriceData = [
+                'qty' => $tierPrice['price_qty'],
+                'price' => $tierPrice['price']->getValue(),
+                'basePrice' => $tierPrice['price']->getBaseAmount()
+            ];
+            $tierPrices[] = $tierPriceData;
+        }
 
         if (!$this->hasOptions()) {
             $config = [
                 'productId' => $product->getId(),
-                'priceFormat' => $this->_localeFormat->getPriceFormat()
+                'priceFormat' => $this->_localeFormat->getPriceFormat(),
+                'tierPrices' => $tierPrices
             ];
             return $this->_jsonEncoder->encode($config);
         }
 
-        $tierPrices = [];
-        $tierPricesList = $product->getPriceInfo()->getPrice('tier_price')->getTierPriceList();
-        foreach ($tierPricesList as $tierPrice) {
-            $tierPrices[] = $tierPrice['price']->getValue();
-        }
         $config = [
-            'productId'   => $product->getId(),
+            'productId'   => (int)$product->getId(),
             'priceFormat' => $this->_localeFormat->getPriceFormat(),
             'prices'      => [
+                'baseOldPrice' => [
+                    'amount'      => $priceInfo->getPrice('regular_price')->getAmount()->getBaseAmount() * 1,
+                    'adjustments' => []
+                ],
                 'oldPrice'   => [
-                    'amount'      => $product->getPriceInfo()->getPrice('regular_price')->getAmount()->getValue(),
+                    'amount'      => $priceInfo->getPrice('regular_price')->getAmount()->getValue() * 1,
                     'adjustments' => []
                 ],
                 'basePrice'  => [
-                    'amount'      => $product->getPriceInfo()->getPrice('final_price')->getAmount()->getBaseAmount(),
+                    'amount'      => $priceInfo->getPrice('final_price')->getAmount()->getBaseAmount() * 1,
                     'adjustments' => []
                 ],
                 'finalPrice' => [
-                    'amount'      => $product->getPriceInfo()->getPrice('final_price')->getAmount()->getValue(),
+                    'amount'      => $priceInfo->getPrice('final_price')->getAmount()->getValue() * 1,
                     'adjustments' => []
                 ]
             ],
@@ -262,6 +271,7 @@ class View extends AbstractProduct implements \Magento\Framework\DataObject\Iden
 
     /**
      * Get default qty - either as preconfigured, or as 1.
+     *
      * Also restricts it by minimal qty.
      *
      * @param null|\Magento\Catalog\Model\Product $product
@@ -322,12 +332,9 @@ class View extends AbstractProduct implements \Magento\Framework\DataObject\Iden
      */
     public function getIdentities()
     {
-        $identities = $this->getProduct()->getIdentities();
-        $category = $this->_coreRegistry->registry('current_category');
-        if ($category) {
-            $identities[] = Category::CACHE_TAG . '_' . $category->getId();
-        }
-        return $identities;
+        $product = $this->getProduct();
+
+        return $product ? $product->getIdentities() : [];
     }
 
     /**

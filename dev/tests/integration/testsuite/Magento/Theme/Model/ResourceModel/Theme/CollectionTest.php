@@ -9,7 +9,7 @@ use Magento\Framework\View\Design\ThemeInterface;
 
 class CollectionTest extends \PHPUnit\Framework\TestCase
 {
-    public static function setUpBeforeClass()
+    public static function setUpBeforeClass(): void
     {
         \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->configure(
             ['preferences' => [\Magento\Theme\Model\Theme::class => \Magento\Theme\Model\Theme\Data::class]]
@@ -68,7 +68,7 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getThemeByFullPathDataProvider()
+    public static function getThemeByFullPathDataProvider()
     {
         return [
             ['test_area/test/default', true],
@@ -100,7 +100,7 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function addAreaFilterDataProvider()
+    public static function addAreaFilterDataProvider()
     {
         return [
             ['area' => 'test_area', 'themeCount' => 1],
@@ -131,7 +131,7 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function addTypeFilterDataProvider()
+    public static function addTypeFilterDataProvider()
     {
         return [
             ['themeType' => ThemeInterface::TYPE_PHYSICAL, 'themeCount' => 1],

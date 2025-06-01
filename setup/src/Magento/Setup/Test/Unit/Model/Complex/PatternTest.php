@@ -3,23 +3,21 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Setup\Test\Unit\Model\Complex;
 
 use Magento\Setup\Model\Complex\Pattern;
+use PHPUnit\Framework\TestCase;
 
-/**
- * Class PatternTest
- *
- */
-class PatternTest extends \PHPUnit\Framework\TestCase
+class PatternTest extends TestCase
 {
     /**
      * Get pattern object
      *
      * @param array $patternData
      *
-     * @return \Magento\Setup\Model\Complex\Pattern
+     * @return Pattern
      */
     protected function getPattern($patternData)
     {
@@ -34,7 +32,7 @@ class PatternTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function patternDataProvider()
+    public static function patternDataProvider()
     {
         $result = [
             0 => [
@@ -53,7 +51,7 @@ class PatternTest extends \PHPUnit\Framework\TestCase
                         'name' => 'yyy %s'
                     ],
                 ],
-                'expectedCount'      => 3,
+                'expectedRowsCount'      => 3,
                 'expectedRowsResult' => [
                     ['id' => '1', 'name' => 'Static', 'calculated' => 10],
                     ['id' => '',  'name' => 'xxx 1',  'calculated' => ''],
@@ -68,7 +66,7 @@ class PatternTest extends \PHPUnit\Framework\TestCase
                         'calculated' => 'calc %s',
                     ],
                 ],
-                'expectedCount' => 1,
+                'expectedRowsCount' => 1,
                 'expectedRowsResult' => [
                     ['id' => '1', 'name' => 'Dynamic 1', 'calculated' => 'calc 1'],
                 ],

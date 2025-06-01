@@ -1,52 +1,78 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 declare(strict_types=1);
 
 namespace Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider;
 
-use Magento\CatalogGraphQl\Model\Category\Hydrator;
-use Magento\Catalog\Api\Data\CategoryInterface;
+use Magento\Catalog\Model\Category;
+use Magento\Catalog\Model\ResourceModel\Category\Collection;
+use Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\CategoryTree\Wrapper\NodeWrapperFactory;
 
 /**
- * Extract data from category tree
+ * Data extractor for category tree processing in GraphQL resolvers.
  */
 class ExtractDataFromCategoryTree
 {
     /**
-     * @var Hydrator
+     * @var NodeWrapperFactory
      */
-    private $categoryHydrator;
+    private $nodeWrapperFactory;
 
     /**
-     * @param Hydrator $categoryHydrator
+     * @param NodeWrapperFactory $nodeWrapperFactory
      */
-    public function __construct(
-        Hydrator $categoryHydrator
-    ) {
-        $this->categoryHydrator = $categoryHydrator;
+    public function __construct(NodeWrapperFactory $nodeWrapperFactory)
+    {
+        $this->nodeWrapperFactory = $nodeWrapperFactory;
     }
 
     /**
-     * Extract data from category tree
+     * Build result tree from collection
      *
-     * @param \Iterator $iterator
+     * @param Collection $collection
+     * @param array $topLevelCategoryIds
      * @return array
      */
-    public function execute(\Iterator $iterator): array
+    public function buildTree(Collection $collection, array $topLevelCategoryIds) : array
     {
+        $wrapper = $this->nodeWrapperFactory->create();
+        /** @var Category $item */
+        foreach ($collection->getItems() as $item) {
+            $wrapper->wrap($item);
+        }
         $tree = [];
-        while ($iterator->valid()) {
-            /** @var CategoryInterface $category */
-            $category = $iterator->current();
-            $iterator->next();
-            $nextCategory = $iterator->current();
-            $tree[$category->getId()] = $this->categoryHydrator->hydrateCategory($category);
-            $tree[$category->getId()]['model'] = $category;
-            if ($nextCategory && (int) $nextCategory->getLevel() !== (int) $category->getLevel()) {
-                $tree[$category->getId()]['children'] = $this->execute($iterator);
+        foreach ($topLevelCategoryIds as $topLevelCategory) {
+            $tree[] = $wrapper->getNodeById($topLevelCategory)->renderArray();
+        }
+        return $this->sortTree($tree);
+    }
+
+    /**
+     * Recursive method to sort tree
+     *
+     * @param array $tree
+     * @return array
+     */
+    private function sortTree(array &$tree): array
+    {
+        foreach ($tree as &$node) {
+            if (!empty($node['children'])) {
+                uasort($node['children'], function ($element1, $element2) {
+                    return ($element1['position'] <=> $element2['position']);
+                });
+                $node['children'] = $this->sortTree($node['children']);
+                if (isset($node['children_count'])) {
+                    $node['children_count'] = count($node['children']);
+                }
+            } elseif (isset($node['children_count'])) {
+                $node['children_count'] = 0;
+            }
+            // redirect_code null will not return , so it will be 0 when there is no redirect error.
+            if (!isset($node['redirect_code'])) {
+                $node['redirect_code'] = 0;
             }
         }
 

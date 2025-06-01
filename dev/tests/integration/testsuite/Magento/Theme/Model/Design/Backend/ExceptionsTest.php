@@ -17,7 +17,7 @@ class ExceptionsTest extends \PHPUnit\Framework\TestCase
     /** @var Json */
     private $serializer;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->exceptions = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(
             \Magento\Theme\Model\Design\Backend\Exceptions::class
@@ -88,7 +88,7 @@ class ExceptionsTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function saveExceptionDataProvider()
+    public static function saveExceptionDataProvider()
     {
         $result = [
             [['search' => 'Opera', 'value' => 'Magento/blank'], '/Opera/i'],
@@ -105,12 +105,13 @@ class ExceptionsTest extends \PHPUnit\Framework\TestCase
 
     /**
      * @var array $value
-     * @expectedException \Magento\Framework\Exception\LocalizedException
      * @dataProvider saveWrongExceptionDataProvider
      * @magentoDbIsolation enabled
      */
     public function testSaveWrongException($value)
     {
+        $this->expectException(\Magento\Framework\Exception\LocalizedException::class);
+
         $this->exceptions->setValue($value);
         $this->exceptions->save();
     }
@@ -118,7 +119,7 @@ class ExceptionsTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function saveWrongExceptionDataProvider()
+    public static function saveWrongExceptionDataProvider()
     {
         $result = [
             [

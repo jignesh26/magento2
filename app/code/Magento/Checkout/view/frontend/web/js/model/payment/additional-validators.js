@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 
 /**
@@ -35,15 +35,17 @@ define([], function () {
          *
          * @returns {Boolean}
          */
-        validate: function () {
+        validate: function (hideError) {
             var validationResult = true;
+
+            hideError = hideError || false;
 
             if (validators.length <= 0) {
                 return validationResult;
             }
 
             validators.forEach(function (item) {
-                if (item.validate() == false) { //eslint-disable-line eqeqeq
+                if (item.validate(hideError) == false) { //eslint-disable-line eqeqeq
                     validationResult = false;
 
                     return false;

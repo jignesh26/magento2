@@ -7,8 +7,11 @@ namespace Magento\Reports\Model\Product\Index;
 
 /**
  * Reports Product Index Abstract Model
+ *
+ * phpcs:disable Magento2.Classes.AbstractApi
  * @api
  * @since 100.0.2
+ * @SuppressWarnings(PHPMD.CookieAndSessionMisuse)
  */
 abstract class AbstractIndex extends \Magento\Framework\Model\AbstractModel
 {
@@ -72,8 +75,8 @@ abstract class AbstractIndex extends \Magento\Framework\Model\AbstractModel
         \Magento\Framework\Session\Generic $reportSession,
         \Magento\Catalog\Model\Product\Visibility $productVisibility,
         \Magento\Framework\Stdlib\DateTime $dateTime,
-        \Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
-        \Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
+        ?\Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
+        ?\Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
         array $data = []
     ) {
         parent::__construct($context, $registry, $resource, $resourceCollection, $data);
@@ -156,7 +159,7 @@ abstract class AbstractIndex extends \Magento\Framework\Model\AbstractModel
     }
 
     /**
-     * On customer loggin merge visitor/customer index
+     * On customer login merge visitor/customer index
      *
      * @return $this
      */

@@ -13,8 +13,7 @@ use Magento\Framework\Setup\Patch\DataPatchInterface;
 use Magento\Framework\Setup\Patch\PatchVersionInterface;
 
 /**
- * Class AddDataForIndia
- * @package Magento\Directory\Setup\Patch\Data
+ * Add Regions for India.
  */
 class AddDataForIndia implements DataPatchInterface, PatchVersionInterface
 {
@@ -29,7 +28,7 @@ class AddDataForIndia implements DataPatchInterface, PatchVersionInterface
     private $dataInstallerFactory;
 
     /**
-     * AddDataForCroatia constructor.
+     * AddDataForIndia constructor.
      *
      * @param ModuleDataSetupInterface $moduleDataSetup
      * @param \Magento\Directory\Setup\DataInstallerFactory $dataInstallerFactory
@@ -43,7 +42,9 @@ class AddDataForIndia implements DataPatchInterface, PatchVersionInterface
     }
 
     /**
-     * {@inheritdoc}
+     * Run code inside patch
+     *
+     * @return void
      */
     public function apply()
     {
@@ -103,7 +104,7 @@ class AddDataForIndia implements DataPatchInterface, PatchVersionInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public static function getDependencies()
     {
@@ -113,7 +114,7 @@ class AddDataForIndia implements DataPatchInterface, PatchVersionInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public static function getVersion()
     {
@@ -121,7 +122,7 @@ class AddDataForIndia implements DataPatchInterface, PatchVersionInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function getAliases()
     {

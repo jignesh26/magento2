@@ -1,11 +1,10 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 
-// @codingStandardsIgnoreFile
-
+/** @var \Magento\Framework\View\Helper\SecureHtmlRenderer $secureRenderer */
 ?>
 <?php
 /**
@@ -19,11 +18,14 @@ $items = $block->getItems();
         <?= $block->getChildHtml($_item->getId()) ?>
     <?php endforeach ?>
     </dl>
-    <script>
+    <?php $scriptString = <<<script
         require([
             'mage/adminhtml/accordion'
         ], function(){
-        	tab_content_<?= $block->getHtmlId() ?>AccordionJs = new varienAccordion('tab_content_<?= $block->getHtmlId() ?>', '<?= /* @escapeNotVerified */ $block->getShowOnlyOne() ?>');
-    	});
-    </script>
+            tab_content_{$block->getHtmlId()}AccordionJs = new varienAccordion('tab_content_{$block->getHtmlId()}',
+             '{$block->escapeJs($block->getShowOnlyOne())}');
+        });
+script;
+    ?>
+    <?= /* @noEscape */ $secureRenderer->renderTag('script', [], $scriptString, false) ?>
 <?php endif; ?>

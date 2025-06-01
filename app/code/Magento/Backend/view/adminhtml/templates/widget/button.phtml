@@ -1,11 +1,8 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
-
-// @codingStandardsIgnoreFile
-
 ?>
 <?php
 /**
@@ -13,7 +10,7 @@
  */
 ?>
 <?= $block->getBeforeHtml() ?>
-<button <?= /* @escapeNotVerified */ $block->getAttributesHtml(), $block->getUiId() ?>>
-    <span><?= /* @escapeNotVerified */ $block->getLabel() ?></span>
+<button <?= /* @noEscape */ $block->getAttributesHtml(), $block->getUiId() ?>>
+    <span><?= $block->escapeHtml($block->getLabel()) ?></span>
 </button>
 <?= $block->getAfterHtml() ?>

@@ -1,25 +1,30 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Helper;
 
+use Magento\Catalog\Model\Config\CatalogMediaConfig;
 use Magento\Framework\App\Helper\AbstractHelper;
+use Magento\Framework\App\ObjectManager;
+use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\View\Element\Block\ArgumentInterface;
 
 /**
  * Catalog image helper
  *
  * @api
  * @SuppressWarnings(PHPMD.TooManyFields)
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  * @since 100.0.2
  */
-class Image extends AbstractHelper
+class Image extends AbstractHelper implements ArgumentInterface
 {
     /**
      * Media config node
      */
-    const MEDIA_TYPE_CONFIG_NODE = 'images';
+    public const MEDIA_TYPE_CONFIG_NODE = 'images';
 
     /**
      * Current model
@@ -43,8 +48,6 @@ class Image extends AbstractHelper
     protected $_scheduleRotate = false;
 
     /**
-     * Angle
-     *
      * @var int
      */
     protected $_angle;
@@ -57,22 +60,16 @@ class Image extends AbstractHelper
     protected $_watermark;
 
     /**
-     * Watermark Position
-     *
      * @var string
      */
     protected $_watermarkPosition;
 
     /**
-     * Watermark Size
-     *
      * @var string
      */
     protected $_watermarkSize;
 
     /**
-     * Watermark Image opacity
-     *
      * @var int
      */
     protected $_watermarkImageOpacity;
@@ -85,8 +82,6 @@ class Image extends AbstractHelper
     protected $_product;
 
     /**
-     * Image File
-     *
      * @var string
      */
     protected $_imageFile;
@@ -104,8 +99,6 @@ class Image extends AbstractHelper
     protected $_assetRepo;
 
     /**
-     * Product image factory
-     *
      * @var \Magento\Catalog\Model\Product\ImageFactory
      */
     protected $_productImageFactory;
@@ -133,26 +126,33 @@ class Image extends AbstractHelper
     private $viewAssetPlaceholderFactory;
 
     /**
+     * @var CatalogMediaConfig
+     */
+    private $mediaConfig;
+
+    /**
      * @param \Magento\Framework\App\Helper\Context $context
      * @param \Magento\Catalog\Model\Product\ImageFactory $productImageFactory
      * @param \Magento\Framework\View\Asset\Repository $assetRepo
      * @param \Magento\Framework\View\ConfigInterface $viewConfig
      * @param \Magento\Catalog\Model\View\Asset\PlaceholderFactory $placeholderFactory
+     * @param CatalogMediaConfig $mediaConfig
      */
     public function __construct(
         \Magento\Framework\App\Helper\Context $context,
         \Magento\Catalog\Model\Product\ImageFactory $productImageFactory,
         \Magento\Framework\View\Asset\Repository $assetRepo,
         \Magento\Framework\View\ConfigInterface $viewConfig,
-        \Magento\Catalog\Model\View\Asset\PlaceholderFactory $placeholderFactory = null
+        ?\Magento\Catalog\Model\View\Asset\PlaceholderFactory $placeholderFactory = null,
+        ?CatalogMediaConfig $mediaConfig = null
     ) {
         $this->_productImageFactory = $productImageFactory;
         parent::__construct($context);
         $this->_assetRepo = $assetRepo;
         $this->viewConfig = $viewConfig;
         $this->viewAssetPlaceholderFactory = $placeholderFactory
-            ?: \Magento\Framework\App\ObjectManager::getInstance()
-                ->get(\Magento\Catalog\Model\View\Asset\PlaceholderFactory::class);
+            ?: ObjectManager::getInstance()->get(\Magento\Catalog\Model\View\Asset\PlaceholderFactory::class);
+        $this->mediaConfig = $mediaConfig ?: ObjectManager::getInstance()->get(CatalogMediaConfig::class);
     }
 
     /**
@@ -212,31 +212,29 @@ class Image extends AbstractHelper
 
         // Set 'keep frame' flag
         $frame = $this->getFrame();
-        if (!empty($frame)) {
-            $this->_getModel()->setKeepFrame($frame);
-        }
+        $this->_getModel()->setKeepFrame($frame);
 
         // Set 'constrain only' flag
         $constrain = $this->getAttribute('constrain');
-        if (!empty($constrain)) {
+        if (null !== $constrain) {
             $this->_getModel()->setConstrainOnly($constrain);
         }
 
         // Set 'keep aspect ratio' flag
         $aspectRatio = $this->getAttribute('aspect_ratio');
-        if (!empty($aspectRatio)) {
+        if (null !== $aspectRatio) {
             $this->_getModel()->setKeepAspectRatio($aspectRatio);
         }
 
         // Set 'transparency' flag
         $transparency = $this->getAttribute('transparency');
-        if (!empty($transparency)) {
+        if (null !== $transparency) {
             $this->_getModel()->setKeepTransparency($transparency);
         }
 
         // Set background color
         $background = $this->getAttribute('background');
-        if (!empty($background)) {
+        if (null !== $background) {
             $this->_getModel()->setBackgroundColor($background);
         }
 
@@ -298,7 +296,8 @@ class Image extends AbstractHelper
      *
      * @param int $quality
      * @return $this
-     * @deprecated
+     * @deprecated 103.0.1
+     * @see Updated deprecation doc annotations
      */
     public function setQuality($quality)
     {
@@ -385,7 +384,9 @@ class Image extends AbstractHelper
     {
         // assume that 3 params were given instead of array
         if (!is_array($colorRGB)) {
+            //phpcs:disable
             $colorRGB = func_get_args();
+            //phpcs:enabled
         }
         $this->_getModel()->setBackgroundColor($colorRGB);
         return $this;
@@ -447,7 +448,8 @@ class Image extends AbstractHelper
      * @param null|string $placeholder
      * @return string
      *
-     * @deprecated 101.1.0 Returns only default placeholder.
+     * @deprecated 102.0.0 Returns only default placeholder.
+     * @see Updated deprecation doc annotations
      * Does not take into account custom placeholders set in Configuration.
      */
     public function getPlaceholder($placeholder = null)
@@ -499,7 +501,11 @@ class Image extends AbstractHelper
             if ($this->getImageFile()) {
                 $model->setBaseFile($this->getImageFile());
             } else {
-                $model->setBaseFile($this->getProduct()->getData($model->getDestinationSubdir()));
+                $model->setBaseFile(
+                    $this->getProduct()
+                        ? $this->getProduct()->getData($model->getDestinationSubdir())
+                        : ''
+                );
             }
         }
         return $this;
@@ -527,7 +533,16 @@ class Image extends AbstractHelper
     public function getUrl()
     {
         try {
-            $this->applyScheduledActions();
+            switch ($this->mediaConfig->getMediaUrlFormat()) {
+                case CatalogMediaConfig::IMAGE_OPTIMIZATION_PARAMETERS:
+                    $this->initBaseFile();
+                    break;
+                case CatalogMediaConfig::HASH:
+                    $this->applyScheduledActions();
+                    break;
+                default:
+                    throw new LocalizedException(__("The specified Catalog media URL format is not supported."));
+            }
             return $this->_getModel()->getUrl();
         } catch (\Exception $e) {
             return $this->getDefaultPlaceholderUrl();
@@ -763,8 +778,8 @@ class Image extends AbstractHelper
      */
     protected function parseSize($string)
     {
-        $size = explode('x', strtolower($string));
-        if (sizeof($size) == 2) {
+        $size = $string !== null ? explode('x', strtolower($string)) : [];
+        if (count($size) === 2) {
             return ['width' => $size[0] > 0 ? $size[0] : null, 'height' => $size[1] > 0 ? $size[1] : null];
         }
         return false;

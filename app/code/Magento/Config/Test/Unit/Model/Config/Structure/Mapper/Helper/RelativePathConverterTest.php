@@ -3,18 +3,23 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Config\Test\Unit\Model\Config\Structure\Mapper\Helper;
 
-class RelativePathConverterTest extends \PHPUnit\Framework\TestCase
+use Magento\Config\Model\Config\Structure\Mapper\Helper\RelativePathConverter;
+use PHPUnit\Framework\TestCase;
+
+class RelativePathConverterTest extends TestCase
 {
     /**
-     * @var \Magento\Config\Model\Config\Structure\Mapper\Helper\RelativePathConverter
+     * @var RelativePathConverter
      */
     protected $_sut;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->_sut = new \Magento\Config\Model\Config\Structure\Mapper\Helper\RelativePathConverter();
+        $this->_sut = new RelativePathConverter();
     }
 
     public function testConvertWithInvalidRelativePath()
@@ -55,7 +60,7 @@ class RelativePathConverterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function convertWithInvalidArgumentsDataProvider()
+    public static function convertWithInvalidArgumentsDataProvider()
     {
         return [['', ''], ['some/node', ''], ['', 'some/node']];
     }
@@ -63,7 +68,7 @@ class RelativePathConverterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function convertDataProvider()
+    public static function convertDataProvider()
     {
         return [
             ['currentNode', 'relativeNode', 'relativeNode'],

@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Framework\App;
 
@@ -18,6 +18,7 @@ use Magento\TestFramework\Helper\Bootstrap;
  * @SuppressWarnings(PHPMD.UnusedFormalParameter)
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  * @magentoAppArea frontend
+ * @magentoAppIsolation enabled
  */
 class FrontControllerTest extends TestCase
 {
@@ -70,7 +71,7 @@ class FrontControllerTest extends TestCase
     /**
      * @inheritDoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->_objectManager = Bootstrap::getObjectManager();
         $this->_model = $this->_objectManager->create(
@@ -113,6 +114,26 @@ class FrontControllerTest extends TestCase
         $request = $this->_objectManager->get(HttpRequest::class);
         /* empty action */
         $request->setRequestUri('core/index/index');
+        $this->assertInstanceOf(
+            ResultInterface::class,
+            $this->_model->dispatch($request)
+        );
+    }
+
+    public function testDispatchWithAcceptHeader(): void
+    {
+        if (!Bootstrap::canTestHeaders()) {
+            $this->markTestSkipped('Can\'t test dispatch process without sending headers');
+        }
+
+        $this->fakeRequestValidator->valid = true;
+        $_SERVER['HTTP_HOST'] = 'localhost';
+        $this->_objectManager->get(State::class)->setAreaCode('frontend');
+        $request = $this->_objectManager->get(HttpRequest::class);
+        $request->setRequestUri('/checkout');
+        $headers = $request->getHeaders();
+        $headers->addHeaderLine('Accept', 'text/html');
+        $request->setHeaders($headers);
         $this->assertInstanceOf(
             ResultInterface::class,
             $this->_model->dispatch($request)

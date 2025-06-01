@@ -3,6 +3,8 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\App\Test\Unit\Config;
 
 use Magento\Framework\App\Config\ConfigPathResolver;
@@ -11,9 +13,10 @@ use Magento\Framework\App\Config\Data\ProcessorFactory;
 use Magento\Framework\App\Config\Data\ProcessorInterface;
 use Magento\Framework\App\Config\Initial;
 use Magento\Framework\App\Config\MetadataConfigTypeProcessor;
-use \PHPUnit_Framework_MockObject_MockObject as MockObject;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class MetadataConfigTypeProcessorTest extends \PHPUnit\Framework\TestCase
+class MetadataConfigTypeProcessorTest extends TestCase
 {
     /**
      * @var MetadataConfigTypeProcessor
@@ -45,7 +48,7 @@ class MetadataConfigTypeProcessorTest extends \PHPUnit\Framework\TestCase
      */
     private $configPathResolverMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->_modelPoolMock = $this->getMockBuilder(ProcessorFactory::class)
             ->disableOriginalConstructor()
@@ -80,56 +83,55 @@ class MetadataConfigTypeProcessorTest extends \PHPUnit\Framework\TestCase
     {
         $this->configPathResolverMock->expects($this->exactly(6))
             ->method('resolve')
-            ->withConsecutive(
-                ['some/config/path1', 'default'],
-                ['some/config/path2', 'default'],
-                ['some/config/path3', 'default'],
-                ['some/config/path1', 'websites', 'website_one'],
-                ['some/config/path2', 'websites', 'website_one'],
-                ['some/config/path3', 'websites', 'website_one']
-            )
-            ->willReturnOnConsecutiveCalls(
-                'default/some/config/path1',
-                'default/some/config/path2',
-                'default/some/config/path3',
-                'websites/website_one/some/config/path1',
-                'websites/website_one/some/config/path2',
-                'websites/website_one/some/config/path3'
-            );
+            ->willReturnCallback(function ($arg1, $arg2) {
+                if ($arg1 === 'some/config/path1' && $arg2 === 'default') {
+                    return 'default/some/config/path1';
+                } elseif ($arg1 === 'some/config/path2' && $arg2 === 'default') {
+                    return 'default/some/config/path2';
+                } elseif ($arg1 === 'some/config/path3' && $arg2 === 'default') {
+                    return 'default/some/config/path3';
+                } elseif ($arg1 === 'some/config/path1' && $arg2 === 'websites') {
+                    return 'websites/website_one/some/config/path1';
+                } elseif ($arg1 === 'some/config/path2' && $arg2 === 'websites') {
+                    return 'websites/website_one/some/config/path2';
+                } elseif ($arg1 === 'some/config/path3' && $arg2 === 'websites') {
+                    return 'websites/website_one/some/config/path3';
+                }
+            });
+
         $this->configSourceMock->expects($this->exactly(6))
             ->method('get')
-            ->withConsecutive(
-                ['default/some/config/path1'],
-                ['default/some/config/path2'],
-                ['default/some/config/path3'],
-                ['websites/website_one/some/config/path1'],
-                ['websites/website_one/some/config/path2'],
-                ['websites/website_one/some/config/path3']
-            )
-            ->willReturnOnConsecutiveCalls(
-                'someValue',
-                [],
-                'someValue',
-                [],
-                'someValue',
-                []
-            );
+            ->willReturnCallback(function ($arg) {
+                if ($arg == 'default/some/config/path1') {
+                    return 'someValue';
+                } elseif ($arg == 'default/some/config/path2') {
+                    return [];
+                } elseif ($arg == 'default/some/config/path3') {
+                    return 'someValue';
+                } elseif ($arg == 'websites/website_one/some/config/path1') {
+                    return [];
+                } elseif ($arg == 'websites/website_one/some/config/path2') {
+                    return 'someValue';
+                } elseif ($arg == 'websites/website_one/some/config/path3') {
+                    return [];
+                }
+            });
+
         $this->_modelPoolMock->expects($this->exactly(3))
             ->method('get')
             ->with('Custom_Backend_Model')
             ->willReturn($this->_backendModelMock);
         $this->_backendModelMock->expects($this->exactly(3))
             ->method('processValue')
-            ->withConsecutive(
-                ['value2'],
-                ['value1'],
-                ['value3']
-            )
-            ->willReturnOnConsecutiveCalls(
-                'default_processed_value_path2',
-                'website_one_processed_value_path1',
-                'website_one_processed_value_path3'
-            );
+            ->willReturnCallback(function ($arg) {
+                if ($arg == 'value2') {
+                    return 'default_processed_value_path2';
+                } elseif ($arg == 'value1') {
+                    return 'website_one_processed_value_path1';
+                } elseif ($arg == 'value3') {
+                    return 'website_one_processed_value_path3';
+                }
+            });
 
         $data = [
             'default' => [

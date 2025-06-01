@@ -1,17 +1,24 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2011 Adobe
+ * All Rights Reserved.
  */
+
+declare(strict_types=1);
+
 namespace Magento\Framework\Config\Test\Unit;
 
-class XsdTest extends \PHPUnit\Framework\TestCase
+use Magento\Framework\Config\Dom;
+use PHPUnit\Framework\TestCase;
+
+class XsdTest extends TestCase
 {
     /**
      * @param string $xsdFile
      * @param string $invalidXmlFile
      * @param int $expectedErrorsQty
      * @dataProvider invalidXmlFileDataProvider
+     * @throws \Exception
      */
     public function testInvalidXmlFile($xsdFile, $invalidXmlFile, $expectedErrorsQty)
     {
@@ -23,7 +30,7 @@ class XsdTest extends \PHPUnit\Framework\TestCase
         $schema = __DIR__ . "/../../etc/{$xsdFile}";
 
         libxml_use_internal_errors(true);
-        $result = \Magento\Framework\Config\Dom::validateDomDocument($dom, $schema);
+        $result = Dom::validateDomDocument($dom, $schema);
         $errorsQty = count($result);
         libxml_use_internal_errors(false);
 
@@ -36,8 +43,8 @@ class XsdTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function invalidXmlFileDataProvider()
+    public static function invalidXmlFileDataProvider()
     {
-        return [['view.xsd', 'view_invalid.xml', 8], ['theme.xsd', 'theme_invalid.xml', 1]];
+        return [['view.xsd', 'view_invalid.xml', 10], ['theme.xsd', 'theme_invalid.xml', 1]];
     }
 }

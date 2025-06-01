@@ -25,7 +25,7 @@ class AggregatedTest extends \PHPUnit\Framework\TestCase
      */
     protected $objectManager;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         \Magento\TestFramework\Helper\Bootstrap::getInstance()->reinitialize(
             [
@@ -105,7 +105,7 @@ class AggregatedTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getFilesDataProvider()
+    public static function getFilesDataProvider()
     {
         $fixtureDir = dirname(dirname(__DIR__));
         return [

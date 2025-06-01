@@ -5,10 +5,15 @@
  */
 namespace Magento\Framework\Code\Test\Unit\Generator;
 
+use PHPUnit\Framework\TestCase;
+use Magento\Framework\Code\Generator\Io;
+use Magento\Framework\Filesystem;
+use PHPUnit\Framework\MockObject\MockObject;
+use Magento\Framework\Filesystem\Driver\File;
 use Magento\Framework\Exception\FileSystemException;
 use Magento\Framework\Phrase;
 
-class IoTest extends \PHPUnit\Framework\TestCase
+class IoTest extends TestCase
 {
     /**#@+
      * Source and result class parameters
@@ -30,31 +35,31 @@ class IoTest extends \PHPUnit\Framework\TestCase
      */
     protected $_generationDirectory;
 
-    /** @var \Magento\Framework\Code\Generator\Io */
+    /** @var Io */
     protected $_object;
 
-    /** @var \Magento\Framework\Filesystem|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Filesystem|MockObject */
     protected $_filesystemDriverMock;
 
     /** @var string */
-    protected $existingFile = '/Magento/Class/Exists.php';
+    protected static $existingFile = '/Magento/Class/Exists.php';
 
     /** @var string */
-    protected $nonExistingFile = '/Magento/Class/Does/Not/Exists.php';
+    protected static $nonExistingFile = '/Magento/Class/Does/Not/Exists.php';
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->_generationDirectory = rtrim(self::GENERATION_DIRECTORY, '/') . '/';
 
-        $this->_filesystemDriverMock = $this->createMock(\Magento\Framework\Filesystem\Driver\File::class);
+        $this->_filesystemDriverMock = $this->createMock(File::class);
 
-        $this->_object = new \Magento\Framework\Code\Generator\Io(
+        $this->_object = new Io(
             $this->_filesystemDriverMock,
             self::GENERATION_DIRECTORY
         );
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         unset($this->_generationDirectory);
         unset($this->_filesystemMock);
@@ -97,7 +102,7 @@ class IoTest extends \PHPUnit\Framework\TestCase
         } else {
             $exceptionMessage = 'Some error renaming file';
             $renameMockEvent = $this->throwException(new FileSystemException(new Phrase($exceptionMessage)));
-            $this->expectException(\Magento\Framework\Exception\FileSystemException::class);
+            $this->expectException(FileSystemException::class);
             $this->expectExceptionMessage($exceptionMessage);
         }
 
@@ -114,24 +119,24 @@ class IoTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function testWriteResultFileAlreadyExistsDataProvider()
+    public static function testWriteResultFileAlreadyExistsDataProvider()
     {
         return [
             'Writing file succeeds: writeResultFile succeeds' => [
-                'resultFileName' => $this->nonExistingFile,
+                'resultFileName' => self::$nonExistingFile,
                 'fileExists' => false,
                 'exceptionDuringRename' => false,
                 'success' => true
 
             ],
             'Writing file fails because class already exists on disc: writeResultFile succeeds' => [
-                'resultFileName' => $this->existingFile,
+                'resultFileName' => self::$existingFile,
                 'fileExists' => true,
                 'exceptionDuringRename' => true,
                 'success' => true
             ],
             'Error renaming file, btu class does not exist on disc: writeResultFile throws exception and fails' => [
-                'resultFileName' => $this->nonExistingFile,
+                'resultFileName' => self::$nonExistingFile,
                 'fileExists' => false,
                 'exceptionDuringRename' => true,
                 'success' => false
@@ -146,9 +151,9 @@ class IoTest extends \PHPUnit\Framework\TestCase
         )->method(
             'isWritable'
         )->with(
-            $this->equalTo($this->_generationDirectory)
-        )->will(
-            $this->returnValue(true)
+            $this->_generationDirectory
+        )->willReturn(
+            true
         );
 
         $this->assertTrue($this->_object->makeGenerationDirectory());
@@ -161,9 +166,9 @@ class IoTest extends \PHPUnit\Framework\TestCase
         )->method(
             'isWritable'
         )->with(
-            $this->equalTo($this->_generationDirectory)
-        )->will(
-            $this->returnValue(false)
+            $this->_generationDirectory
+        )->willReturn(
+            false
         );
 
         $this->_filesystemDriverMock->expects(
@@ -171,10 +176,10 @@ class IoTest extends \PHPUnit\Framework\TestCase
         )->method(
             'createDirectory'
         )->with(
-            $this->equalTo($this->_generationDirectory),
+            $this->_generationDirectory,
             $this->anything()
-        )->will(
-            $this->returnValue(true)
+        )->willReturn(
+            true
         );
 
         $this->assertTrue($this->_object->makeGenerationDirectory());
@@ -197,9 +202,9 @@ class IoTest extends \PHPUnit\Framework\TestCase
         )->method(
             'isExists'
         )->with(
-            $this->equalTo($fileName)
-        )->will(
-            $this->returnValue($exists)
+            $fileName
+        )->willReturn(
+            $exists
         );
 
         $this->assertSame($exists, $this->_object->fileExists($fileName));
@@ -208,11 +213,11 @@ class IoTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function fileExistsDataProvider()
+    public static function fileExistsDataProvider()
     {
         return [
-            ['fileName' => $this->existingFile, 'exists' => true],
-            ['fileName' => $this->nonExistingFile, 'exists' => false]
+            ['fileName' => self::$existingFile, 'exists' => true],
+            ['fileName' => self::$nonExistingFile, 'exists' => false]
         ];
     }
 }

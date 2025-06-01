@@ -7,19 +7,19 @@ declare(strict_types=1);
 
 namespace Magento\Elasticsearch\Test\Unit\Model\Adapter\FieldMapper\Product;
 
+use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\AttributeAdapter;
 use Magento\Framework\Api\CustomAttributesDataInterface;
-use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
 use Magento\Framework\Model\AbstractExtensibleModel;
-use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldType\ConverterInterface
-    as FieldTypeConverterInterface;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @SuppressWarnings(PHPMD)
  */
-class AttributeAdapterTest extends \PHPUnit\Framework\TestCase
+class AttributeAdapterTest extends TestCase
 {
     /**
-     * @var \Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\AttributeAdapter
+     * @var AttributeAdapter
      */
     private $adapter;
 
@@ -33,11 +33,11 @@ class AttributeAdapterTest extends \PHPUnit\Framework\TestCase
      *
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->attribute = $this->getMockBuilder(CustomAttributesDataInterface::class)
             ->disableOriginalConstructor()
-            ->setMethods([
+            ->addMethods([
                 'getIsFilterable',
                 'getIsFilterableInSearch',
                 'getIsSearchable',
@@ -51,7 +51,7 @@ class AttributeAdapterTest extends \PHPUnit\Framework\TestCase
         $objectManager = new ObjectManagerHelper($this);
 
         $this->adapter = $objectManager->getObject(
-            \Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\AttributeAdapter::class,
+            AttributeAdapter::class,
             [
                 'attribute' => $this->attribute,
                 'attributeCode' => 'code',
@@ -236,7 +236,7 @@ class AttributeAdapterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isEavAttributeProvider()
+    public static function isEavAttributeProvider()
     {
         return [
             [false],
@@ -246,7 +246,7 @@ class AttributeAdapterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isComplexTypeProvider()
+    public static function isComplexTypeProvider()
     {
         return [
             ['select', true, true],
@@ -254,13 +254,14 @@ class AttributeAdapterTest extends \PHPUnit\Framework\TestCase
             ['multiselect', false, true],
             ['int', false, false],
             ['int', true, true],
+            ['boolean', true, false],
         ];
     }
 
     /**
      * @return array
      */
-    public function isBooleanTypeProvider()
+    public static function isBooleanTypeProvider()
     {
         return [
             ['select', 'int', true],
@@ -275,7 +276,7 @@ class AttributeAdapterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isIntegerTypeProvider()
+    public static function isIntegerTypeProvider()
     {
         return [
             ['smallint', true],
@@ -287,7 +288,7 @@ class AttributeAdapterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isFloatTypeProvider()
+    public static function isFloatTypeProvider()
     {
         return [
             ['decimal', true],
@@ -298,7 +299,7 @@ class AttributeAdapterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isDateTimeTypeProvider()
+    public static function isDateTimeTypeProvider()
     {
         return [
             ['timestamp', true],
@@ -310,7 +311,7 @@ class AttributeAdapterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isAlwaysIndexableProvider()
+    public static function isAlwaysIndexableProvider()
     {
         return [
             [false]
@@ -320,7 +321,7 @@ class AttributeAdapterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isSearchableProvider()
+    public static function isSearchableProvider()
     {
         return [
             [true, false, false, false, true],
@@ -335,30 +336,30 @@ class AttributeAdapterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isFilterableProvider()
+    public static function isFilterableProvider()
     {
         return [
-            [true, false, true,],
-            [true, false, true,],
-            [false, false, false,]
+            [true, false, true],
+            [true, false, true],
+            [false, false, false]
         ];
     }
 
     /**
      * @return array
      */
-    public function isStringServiceFieldTypeProvider()
+    public static function isStringServiceFieldTypeProvider()
     {
         return [
-            ['string', 'text', false,],
-            ['text', 'text', true,]
+            ['string', 'text', false],
+            ['text', 'text', true]
         ];
     }
 
     /**
      * @return array
      */
-    public function getFieldNameProvider()
+    public static function getFieldNameProvider()
     {
         return [
             ['name', [], 'name']
@@ -368,7 +369,7 @@ class AttributeAdapterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getFieldTypeProvider()
+    public static function getFieldTypeProvider()
     {
         return [
             ['type', 'type']
@@ -378,7 +379,7 @@ class AttributeAdapterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getFieldIndexProvider()
+    public static function getFieldIndexProvider()
     {
         return [
             ['type', 'no', 'no']

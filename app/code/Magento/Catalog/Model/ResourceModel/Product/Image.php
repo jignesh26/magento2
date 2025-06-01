@@ -1,16 +1,18 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 declare(strict_types=1);
 
 namespace Magento\Catalog\Model\ResourceModel\Product;
 
+use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\Framework\DB\Adapter\AdapterInterface;
 use Magento\Framework\DB\Query\Generator;
 use Magento\Framework\DB\Select;
 use Magento\Framework\App\ResourceConnection;
+use Magento\Framework\EntityManager\MetadataPool;
 
 /**
  * Class for retrieval of all product images
@@ -40,11 +42,13 @@ class Image
     /**
      * @param Generator $generator
      * @param ResourceConnection $resourceConnection
+     * @param MetadataPool $metadataPool
      * @param int $batchSize
      */
     public function __construct(
         Generator $generator,
         ResourceConnection $resourceConnection,
+        private readonly MetadataPool $metadataPool,
         $batchSize = 100
     ) {
         $this->batchQueryGenerator = $generator;
@@ -54,7 +58,7 @@ class Image
     }
 
     /**
-     * Returns product images
+     * Get all product images.
      *
      * @return \Generator
      */
@@ -75,7 +79,28 @@ class Image
     }
 
     /**
-     * Get the number of unique pictures of products
+     * Get used product images.
+     *
+     * @return \Generator
+     */
+    public function getUsedProductImages(): \Generator
+    {
+        $batchSelectIterator = $this->batchQueryGenerator->generate(
+            'value_id',
+            $this->getUsedImagesSelect(),
+            $this->batchSize,
+            \Magento\Framework\DB\Query\BatchIteratorInterface::NON_UNIQUE_FIELD_ITERATOR
+        );
+
+        foreach ($batchSelectIterator as $select) {
+            foreach ($this->connection->fetchAll($select) as $key => $value) {
+                yield $key => $value;
+            }
+        }
+    }
+
+    /**
+     * Get the number of unique images of products.
      *
      * @return int
      */
@@ -92,7 +117,24 @@ class Image
     }
 
     /**
-     * Return Select to fetch all products images
+     * Get the number of unique and used images of products.
+     *
+     * @return int
+     */
+    public function getCountUsedProductImages(): int
+    {
+        $select = $this->getUsedImagesSelect()
+            ->reset('columns')
+            ->reset('distinct')
+            ->columns(
+                new \Zend_Db_Expr('count(distinct value)')
+            );
+
+        return (int) $this->connection->fetchOne($select);
+    }
+
+    /**
+     * Return select to fetch all products images.
      *
      * @return Select
      */
@@ -105,5 +147,41 @@ class Image
             )->where(
                 'disabled = 0'
             );
+    }
+
+    /**
+     * Return select to fetch all used product images.
+     *
+     * @return Select
+     */
+    private function getUsedImagesSelect(): Select
+    {
+        $productMetadata =  $this->metadataPool->getMetadata(ProductInterface::class);
+        $linkField = $productMetadata->getLinkField();
+        $identifierField = $productMetadata->getIdentifierField();
+
+        $select = $this->connection->select()->distinct()
+            ->from(
+                ['images' => $this->resourceConnection->getTableName(Gallery::GALLERY_TABLE)],
+                'value as filepath'
+            )->joinInner(
+                ['image_value' => $this->resourceConnection->getTableName(Gallery::GALLERY_VALUE_TABLE)],
+                'images.value_id = image_value.value_id',
+                []
+            )->joinInner(
+                ['products' => $this->resourceConnection->getTableName('catalog_product_entity')],
+                "image_value.$linkField = products.$linkField",
+                []
+            )->joinInner(
+                ['websites' => $this->resourceConnection->getTableName('catalog_product_website')],
+                "products.$identifierField = websites.product_id",
+                ['GROUP_CONCAT(websites.website_id SEPARATOR \',\') AS website_ids']
+            )->where(
+                'images.disabled = 0 AND image_value.disabled = 0'
+            )->group(
+                'websites.product_id'
+            );
+
+        return $select;
     }
 }

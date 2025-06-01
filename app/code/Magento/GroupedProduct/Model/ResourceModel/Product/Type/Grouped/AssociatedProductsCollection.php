@@ -8,7 +8,10 @@
 namespace Magento\GroupedProduct\Model\ResourceModel\Product\Type\Grouped;
 
 /**
+ * Associated products collection.
+ *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @SuppressWarnings(PHPMD.CookieAndSessionMisuse)
  */
 class AssociatedProductsCollection extends \Magento\Catalog\Model\ResourceModel\Product\Link\Product\Collection
 {
@@ -18,7 +21,6 @@ class AssociatedProductsCollection extends \Magento\Catalog\Model\ResourceModel\
      * @var \Magento\Framework\Registry
      */
     protected $_coreRegistry = null;
-
     /**
      * Product types config
      *
@@ -76,7 +78,7 @@ class AssociatedProductsCollection extends \Magento\Catalog\Model\ResourceModel\
         \Magento\Customer\Api\GroupManagementInterface $groupManagement,
         \Magento\Framework\Registry $coreRegistry,
         \Magento\Catalog\Model\ProductTypes\ConfigInterface $config,
-        \Magento\Framework\DB\Adapter\AdapterInterface $connection = null
+        ?\Magento\Framework\DB\Adapter\AdapterInterface $connection = null
     ) {
         $this->_coreRegistry = $coreRegistry;
         $this->_config = $config;

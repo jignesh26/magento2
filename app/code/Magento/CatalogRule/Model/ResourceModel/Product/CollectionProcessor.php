@@ -1,9 +1,10 @@
 <?php
 /**
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\CatalogRule\Model\ResourceModel\Product;
 
 use Magento\Catalog\Model\ResourceModel\Product\Collection as ProductCollection;
@@ -11,6 +12,8 @@ use Magento\CatalogRule\Pricing\Price\CatalogRulePrice;
 
 /**
  * Add catalog rule prices to collection
+ *
+ * @SuppressWarnings(PHPMD.CookieAndSessionMisuse)
  */
 class CollectionProcessor
 {
@@ -61,6 +64,8 @@ class CollectionProcessor
     }
 
     /**
+     * Join prices to collection
+     *
      * @param ProductCollection $productCollection
      * @param string $joinColumn
      * @return ProductCollection
@@ -73,18 +78,21 @@ class CollectionProcessor
             $productCollection->getSelect()
                 ->joinLeft(
                     ['catalog_rule' => $this->resource->getTableName('catalogrule_product_price')],
-                    implode(' AND ', [
-                        'catalog_rule.product_id = ' . $connection->quoteIdentifier($joinColumn),
-                        $connection->quoteInto('catalog_rule.website_id = ?', $store->getWebsiteId()),
-                        $connection->quoteInto(
-                            'catalog_rule.customer_group_id = ?',
-                            $this->customerSession->getCustomerGroupId()
-                        ),
-                        $connection->quoteInto(
-                            'catalog_rule.rule_date = ?',
-                            $this->dateTime->formatDate($this->localeDate->scopeDate($store->getId()), false)
-                        ),
-                    ]),
+                    implode(
+                        ' AND ',
+                        [
+                            'catalog_rule.product_id = ' . $connection->quoteIdentifier($joinColumn),
+                            $connection->quoteInto('catalog_rule.website_id = ?', $store->getWebsiteId()),
+                            $connection->quoteInto(
+                                'catalog_rule.customer_group_id = ?',
+                                $this->customerSession->getCustomerGroupId()
+                            ),
+                            $connection->quoteInto(
+                                'catalog_rule.rule_date = ?',
+                                $this->dateTime->formatDate($this->localeDate->scopeDate($store->getId()), false)
+                            ),
+                        ]
+                    ),
                     [CatalogRulePrice::PRICE_CODE => 'rule_price']
                 );
             $productCollection->setFlag('catalog_rule_loaded', true);

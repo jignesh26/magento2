@@ -10,7 +10,7 @@ class ContentConverterTest extends \Magento\TestFramework\TestCase\AbstractContr
     /** @var \Magento\Cms\Setup\ContentConverter */
     private $converter;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->converter = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(
             \Magento\Cms\Setup\ContentConverter::class
@@ -27,7 +27,7 @@ class ContentConverterTest extends \Magento\TestFramework\TestCase\AbstractContr
         $this->assertEquals($expected, $this->converter->convert($value));
     }
 
-    public function convertDataProvider()
+    public static function convertDataProvider()
     {
         // @codingStandardsIgnoreStart
         $someContent = '<div class="content-heading">

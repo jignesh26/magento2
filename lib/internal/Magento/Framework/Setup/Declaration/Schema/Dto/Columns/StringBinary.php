@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Framework\Setup\Declaration\Schema\Dto\Columns;
 
@@ -11,7 +11,7 @@ use Magento\Framework\Setup\Declaration\Schema\Dto\Table;
 
 /**
  * String or Binary column.
- * Declared in SQL, like VARCHAR(L), BINARY(L)
+ * Declared in SQL, like CHAR(L), VARCHAR(L), BINARY(L)
  * where L - length.
  */
 class StringBinary extends Column implements
@@ -35,6 +35,16 @@ class StringBinary extends Column implements
     private $length;
 
     /**
+     * @var string|null
+     */
+    private $charset;
+
+    /**
+     * @var string|null
+     */
+    private $collation;
+
+    /**
      * Constructor.
      *
      * @param string $name
@@ -45,6 +55,10 @@ class StringBinary extends Column implements
      * @param string $default
      * @param string|null $comment
      * @param string|null $onCreate
+     * @param string|null $charset
+     * @param string|null $collation
+     *
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         string $name,
@@ -52,14 +66,18 @@ class StringBinary extends Column implements
         Table $table,
         int $length,
         bool $nullable = true,
-        string $default = null,
-        string $comment = null,
-        string $onCreate = null
+        ?string $default = null,
+        ?string $comment = null,
+        ?string $onCreate = null,
+        ?string $charset = 'utf8mb4',
+        ?string $collation = 'utf8mb4_general_ci'
     ) {
         parent::__construct($name, $type, $table, $comment, $onCreate);
         $this->nullable = $nullable;
         $this->default = $default;
         $this->length = $length;
+        $this->charset = $charset;
+        $this->collation = $collation;
     }
 
     /**
@@ -73,10 +91,9 @@ class StringBinary extends Column implements
     }
 
     /**
-     * Return default value.
-     * Note: default value should be string.
+     * Return default value, Note: default value should be string.
      *
-     * @return string | null
+     * @return string|null
      */
     public function getDefault()
     {
@@ -94,16 +111,41 @@ class StringBinary extends Column implements
     }
 
     /**
+     * Get collation
+     *
+     * @return string|null
+     */
+    public function getCollation(): ?string
+    {
+        return $this->collation;
+    }
+
+    /**
+     * Get charset
+     *
+     * @return string|null
+     */
+    public function getCharset(): ?string
+    {
+        return $this->charset;
+    }
+
+    /**
      * @inheritdoc
      */
     public function getDiffSensitiveParams()
     {
-        return [
+        $param = [
             'type' => $this->getType(),
             'nullable' => $this->isNullable(),
             'default' => $this->getDefault(),
             'length' => $this->getLength(),
             'comment' => $this->getComment()
         ];
+        if ($this->getType() === 'varchar') {
+            $param['collation'] = $this->getCollation();
+            $param['charset'] = $this->getCharset();
+        }
+        return $param;
     }
 }

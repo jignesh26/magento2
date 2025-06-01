@@ -9,9 +9,9 @@ namespace Magento\Bundle\Model\Product;
 
 /**
  * @magentoDbIsolation disabled
+ * @magentoAppIsolation enabled
  * @magentoIndexerDimensionMode catalog_product_price website_and_customer_group
  * @group indexer_dimension
- * @magentoAppArea frontend
  */
 class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
 {
@@ -19,9 +19,7 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
      * @param array $strategyModifiers
      * @param array $expectedResults
      * @dataProvider getTestCases
-     * @magentoAppIsolation enabled
      * @magentoDataFixture Magento/Bundle/_files/PriceCalculator/dynamic_bundle_product.php
-     * @magentoDbIsolation disabled
      */
     public function testPriceForDynamicBundle(array $strategyModifiers, array $expectedResults)
     {
@@ -57,10 +55,8 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
      * @param array $strategyModifiers
      * @param array $expectedResults
      * @dataProvider getTestCases
-     * @magentoAppIsolation enabled
      * @magentoConfigFixture current_store catalog/price/scope 1
      * @magentoDataFixture Magento/Bundle/_files/PriceCalculator/dynamic_bundle_product.php
-     * @magentoDbIsolation disabled
      */
     public function testPriceForDynamicBundleInWebsiteScope(array $strategyModifiers, array $expectedResults)
     {
@@ -96,11 +92,11 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
      * Test cases for current test
      * @return array
      */
-    public function getTestCases()
+    public static function getTestCases()
     {
         return [
             '#1 Testing price for dynamic bundle product with one simple' => [
-                'strategy' => $this->getBundleConfiguration1(),
+                'strategyModifiers' => self::getBundleConfiguration1(),
                 'expectedResults' => [
                     // just price from simple1
                     'minimalPrice' => 10,
@@ -110,7 +106,7 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
             ],
 
             '#2 Testing price for dynamic bundle product with three simples and different qty' => [
-                'strategy' => $this->getBundleConfiguration2(),
+                'strategyModifiers' => self::getBundleConfiguration2(),
                 'expectedResults' => [
                     // min price from simples 3*10 or 30
                     'minimalPrice' => 30,
@@ -120,7 +116,7 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
             ],
 
             '#3 Testing price for dynamic bundle product with four simples and different price' => [
-                'strategy' => $this->getBundleConfiguration3(),
+                'strategyModifiers' => self::getBundleConfiguration3(),
                 'expectedResults' => [
                     //  10
                     'minimalPrice' => 10,
@@ -130,7 +126,7 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
             ],
 
             '#4 Testing price for dynamic bundle with two non required options' => [
-                'strategy' => $this->getBundleConfiguration4(),
+                'strategyModifiers' => self::getBundleConfiguration4(),
                 'expectedResults' => [
                     // 1 * 10
                     'minimalPrice' => 10,
@@ -140,7 +136,7 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
             ],
 
             '#5 Testing price for dynamic bundle with two required options' => [
-                'strategy' => $this->getBundleConfiguration5(),
+                'strategyModifiers' => self::getBundleConfiguration5(),
                 'expectedResults' => [
                     // 1 * 10 + 1 * 10
                     'minimalPrice' => 20,
@@ -156,7 +152,7 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
      *
      * @return array
      */
-    private function getBundleConfiguration1()
+    private static function getBundleConfiguration1()
     {
         $optionsData = [
             [
@@ -167,6 +163,8 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
                     [
                         'sku' => 'simple1',
                         'qty' => 1,
+                        'price' => 100,
+                        'price_type' => 0,
                     ],
                 ]
             ],
@@ -185,7 +183,7 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
      *
      * @return array
      */
-    private function getBundleConfiguration2()
+    private static function getBundleConfiguration2()
     {
         $optionsData = [
             [
@@ -196,14 +194,20 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
                     [
                         'sku' => 'simple1',
                         'qty' => 3,
+                        'price' => 100,
+                        'price_type' => 0,
                     ],
                     [
                         'sku' => 'simple2',
                         'qty' => 2,
+                        'price' => 100,
+                        'price_type' => 0,
                     ],
                     [
                         'sku' => 'simple3',
                         'qty' => 1,
+                        'price' => 100,
+                        'price_type' => 0,
                     ],
                 ]
             ]
@@ -222,7 +226,7 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
      *
      * @return array
      */
-    private function getBundleConfiguration3()
+    private static function getBundleConfiguration3()
     {
         $optionsData = [
             [
@@ -233,14 +237,20 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
                     [
                         'sku' => 'simple1',
                         'qty' => 1,
+                        'price' => 100,
+                        'price_type' => 0,
                     ],
                     [
                         'sku' => 'simple2',
                         'qty' => 1,
+                        'price' => 100,
+                        'price_type' => 0,
                     ],
                     [
                         'sku' => 'simple3',
                         'qty' => 1,
+                        'price' => 100,
+                        'price_type' => 0,
                     ]
                 ]
             ]
@@ -258,7 +268,7 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
      * Dynamic bundle with two non required options and special price
      * @return array
      */
-    private function getBundleConfiguration4()
+    private static function getBundleConfiguration4()
     {
         $optionsData = [
             [
@@ -269,10 +279,14 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
                     [
                         'sku' => 'simple1',
                         'qty' => 1,
+                        'price' => 100,
+                        'price_type' => 0,
                     ],
                     [
                         'sku' => 'simple2',
                         'qty' => 3,
+                        'price' => 100,
+                        'price_type' => 0,
                     ],
                 ]
             ],
@@ -284,10 +298,14 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
                     [
                         'sku' => 'simple1',
                         'qty' => 1,
+                        'price' => 100,
+                        'price_type' => 0,
                     ],
                     [
                         'sku' => 'simple2',
                         'qty' => 3,
+                        'price' => 100,
+                        'price_type' => 0,
                     ],
                 ]
             ]
@@ -305,7 +323,7 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
      * Dynamic bundle with two required options
      * @return array
      */
-    private function getBundleConfiguration5()
+    private static function getBundleConfiguration5()
     {
         $optionsData = [
             [
@@ -316,10 +334,14 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
                     [
                         'sku' => 'simple1',
                         'qty' => 1,
+                        'price' => 100,
+                        'price_type' => 0,
                     ],
                     [
                         'sku' => 'simple2',
                         'qty' => 3,
+                        'price' => 100,
+                        'price_type' => 0,
                     ],
                 ]
             ],
@@ -331,10 +353,14 @@ class DynamicBundlePriceCalculatorWithDimensionTest extends BundlePriceAbstract
                     [
                         'sku' => 'simple1',
                         'qty' => 1,
+                        'price' => 100,
+                        'price_type' => 0,
                     ],
                     [
                         'sku' => 'simple2',
                         'qty' => 3,
+                        'price' => 100,
+                        'price_type' => 0,
                     ],
                 ]
             ]

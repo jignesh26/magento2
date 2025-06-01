@@ -3,33 +3,37 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Deploy\Test\Unit\Service;
 
+use Magento\Deploy\Console\DeployStaticOptions;
 use Magento\Deploy\Package\Package;
 use Magento\Deploy\Process\Queue;
+use Magento\Deploy\Process\QueueFactory;
 use Magento\Deploy\Service\Bundle;
 use Magento\Deploy\Service\DeployPackage;
 use Magento\Deploy\Service\DeployRequireJsConfig;
 use Magento\Deploy\Service\DeployStaticContent;
-use Magento\Deploy\Process\QueueFactory;
 use Magento\Deploy\Service\DeployTranslationsDictionary;
 use Magento\Deploy\Service\MinifyTemplates;
 use Magento\Deploy\Strategy\CompactDeploy;
 use Magento\Deploy\Strategy\DeployStrategyFactory;
-
 use Magento\Framework\App\View\Deployment\Version\StorageInterface;
+
 use Magento\Framework\ObjectManagerInterface;
+use PHPUnit\Framework\MockObject\MockObject as Mock;
+
+use PHPUnit\Framework\TestCase;
 
 use Psr\Log\LoggerInterface;
-
-use PHPUnit_Framework_MockObject_MockObject as Mock;
 
 /**
  * Static Content deploy service class unit tests
  *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class DeployStaticContentTest extends \PHPUnit\Framework\TestCase
+class DeployStaticContentTest extends TestCase
 {
     /**
      * @var DeployStaticContent|Mock
@@ -61,7 +65,7 @@ class DeployStaticContentTest extends \PHPUnit\Framework\TestCase
      */
     private $versionStorage;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->deployStrategyFactory = $this->createPartialMock(DeployStrategyFactory::class, ['create']);
         $this->queueFactory = $this->createPartialMock(QueueFactory::class, ['create']);
@@ -92,6 +96,9 @@ class DeployStaticContentTest extends \PHPUnit\Framework\TestCase
      * @param array $options
      * @param string $expectedContentVersion
      * @dataProvider deployDataProvider
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function testDeploy($options, $expectedContentVersion)
     {
@@ -102,7 +109,7 @@ class DeployStaticContentTest extends \PHPUnit\Framework\TestCase
             $package->expects($this->never())->method('getTheme');
             $package->expects($this->never())->method('getLocale');
         } else {
-            $package->expects($this->exactly(1))->method('isVirtual')->willReturn(false);
+            $package->expects($this->exactly(2))->method('isVirtual')->willReturn(false);
             $package->expects($this->exactly(3))->method('getArea')->willReturn('area');
             $package->expects($this->exactly(3))->method('getTheme')->willReturn('theme');
             $package->expects($this->exactly(3))->method('getLocale')->willReturn('locale');
@@ -125,7 +132,7 @@ class DeployStaticContentTest extends \PHPUnit\Framework\TestCase
         }
 
         $strategy = $this->getMockBuilder(CompactDeploy::class)
-            ->setMethods(['deploy'])
+            ->onlyMethods(['deploy'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
         if ($options['refresh-content-version-only']) {
@@ -143,19 +150,19 @@ class DeployStaticContentTest extends \PHPUnit\Framework\TestCase
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
         $deployRjsConfig = $this->getMockBuilder(DeployRequireJsConfig::class)
-            ->setMethods(['deploy'])
+            ->onlyMethods(['deploy'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
         $deployI18n = $this->getMockBuilder(DeployTranslationsDictionary::class)
-            ->setMethods(['deploy'])
+            ->onlyMethods(['deploy'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
         $deployBundle = $this->getMockBuilder(Bundle::class)
-            ->setMethods(['deploy'])
+            ->onlyMethods(['deploy'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
         $minifyTemplates = $this->getMockBuilder(MinifyTemplates::class)
-            ->setMethods(['minifyTemplates'])
+            ->onlyMethods(['minifyTemplates'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
 
@@ -165,38 +172,57 @@ class DeployStaticContentTest extends \PHPUnit\Framework\TestCase
         } else {
             $this->objectManager->expects($this->exactly(4))
                 ->method('create')
-                ->withConsecutive(
-                    [DeployPackage::class, ['logger' => $this->logger]],
-                    [DeployRequireJsConfig::class, ['logger' => $this->logger]],
-                    [DeployTranslationsDictionary::class, ['logger' => $this->logger]],
-                    [Bundle::class, ['logger' => $this->logger]]
-                )
-                ->willReturnOnConsecutiveCalls(
-                    $deployPackageService,
-                    $deployRjsConfig,
-                    $deployI18n,
-                    $deployBundle
+                ->willReturnCallback(
+                    function (
+                        $class,
+                        $params
+                    ) use (
+                        $deployPackageService,
+                        $deployRjsConfig,
+                        $deployI18n,
+                        $deployBundle
+                    ) {
+                        if ($class === DeployPackage::class &&
+                            $params === ['logger' => $this->logger]) {
+                            return $deployPackageService;
+                        } elseif ($class === DeployRequireJsConfig::class &&
+                            $params === ['logger' => $this->logger]) {
+                            return $deployRjsConfig;
+                        } elseif ($class === DeployTranslationsDictionary::class &&
+                            $params === ['logger' => $this->logger]) {
+                            return $deployI18n;
+                        } elseif ($class === Bundle::class &&
+                            $params === ['logger' => $this->logger]) {
+                            return $deployBundle;
+                        }
+                    }
                 );
 
             $this->objectManager->expects($this->exactly(1))
                 ->method('get')
-                ->withConsecutive([MinifyTemplates::class])
-                ->willReturnOnConsecutiveCalls($minifyTemplates);
+                ->willReturnCallback(
+                    function ($class) use ($minifyTemplates) {
+                        if ($class === MinifyTemplates::class) {
+                            return $minifyTemplates;
+                        }
+                    }
+                );
         }
 
-        $this->assertEquals(null, $this->service->deploy($options));
+        $this->assertNull($this->service->deploy($options));
     }
 
     /**
      * @return array
      */
-    public function deployDataProvider()
+    public static function deployDataProvider()
     {
         return [
             [
                 [
                     'strategy' =>  'compact',
                     'no-javascript' => false,
+                    'no-js-bundle' => false,
                     'no-html-minify' => false,
                     'refresh-content-version-only' => false,
                 ],
@@ -206,6 +232,7 @@ class DeployStaticContentTest extends \PHPUnit\Framework\TestCase
                 [
                     'strategy' =>  'compact',
                     'no-javascript' => false,
+                    'no-js-bundle' => false,
                     'no-html-minify' => false,
                     'refresh-content-version-only' => false,
                     'content-version' =>  '123456',
@@ -220,5 +247,39 @@ class DeployStaticContentTest extends \PHPUnit\Framework\TestCase
                 '654321'
             ]
         ];
+    }
+
+    public function testMaxExecutionTimeOptionPassed()
+    {
+        $options = [
+            DeployStaticOptions::MAX_EXECUTION_TIME           => 100,
+            DeployStaticOptions::REFRESH_CONTENT_VERSION_ONLY => false,
+            DeployStaticOptions::JOBS_AMOUNT                  => 3,
+            DeployStaticOptions::STRATEGY                     => 'compact',
+            DeployStaticOptions::NO_JAVASCRIPT                => true,
+            DeployStaticOptions::NO_JS_BUNDLE                 => true,
+            DeployStaticOptions::NO_HTML_MINIFY               => true,
+        ];
+
+        $queueMock = $this->createMock(Queue::class);
+        $strategyMock = $this->createMock(CompactDeploy::class);
+        $this->queueFactory->expects($this->once())
+            ->method('create')
+            ->with(
+                [
+                    'logger'               => $this->logger,
+                    'maxExecTime'          => 100,
+                    'maxProcesses'         => 3,
+                    'options'              => $options,
+                    'deployPackageService' => null
+                ]
+            )
+            ->willReturn($queueMock);
+        $this->deployStrategyFactory->expects($this->once())
+            ->method('create')
+            ->with('compact', ['queue' => $queueMock])
+            ->willReturn($strategyMock);
+
+        $this->service->deploy($options);
     }
 }

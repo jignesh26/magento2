@@ -3,6 +3,8 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Sales\Test\Unit\Model\Order\Payment\State;
 
 use Magento\Directory\Model\Currency;
@@ -10,12 +12,13 @@ use Magento\Sales\Api\Data\OrderPaymentInterface;
 use Magento\Sales\Model\Order;
 use Magento\Sales\Model\Order\Payment\State\RegisterCaptureNotificationCommand;
 use Magento\Sales\Model\Order\StatusResolver;
-use PHPUnit_Framework_MockObject_MockObject as MockObject;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @see RegisterCaptureNotificationCommand
  */
-class RegisterCaptureNotificationCommandTest extends \PHPUnit\Framework\TestCase
+class RegisterCaptureNotificationCommandTest extends TestCase
 {
     /**
      * @var float
@@ -25,7 +28,7 @@ class RegisterCaptureNotificationCommandTest extends \PHPUnit\Framework\TestCase
     /**
      * @var string
      */
-    private $newOrderStatus = 'custom_status';
+    private static $newOrderStatus = 'custom_status';
 
     /**
      * @see RegisterCaptureNotificationCommand::execute
@@ -61,7 +64,7 @@ class RegisterCaptureNotificationCommandTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function commandResultDataProvider()
+    public static function commandResultDataProvider()
     {
         return [
             [
@@ -69,7 +72,7 @@ class RegisterCaptureNotificationCommandTest extends \PHPUnit\Framework\TestCase
                 false,
                 Order::STATE_COMPLETE,
                 Order::STATE_COMPLETE,
-                $this->newOrderStatus,
+                self::$newOrderStatus,
                 'Registered notification about captured amount of %1.',
             ],
             [
@@ -77,7 +80,23 @@ class RegisterCaptureNotificationCommandTest extends \PHPUnit\Framework\TestCase
                 false,
                 null,
                 Order::STATE_PROCESSING,
-                $this->newOrderStatus,
+                self::$newOrderStatus,
+                'Registered notification about captured amount of %1.',
+            ],
+            [
+                false,
+                false,
+                Order::STATE_NEW,
+                Order::STATE_PROCESSING,
+                self::$newOrderStatus,
+                'Registered notification about captured amount of %1.',
+            ],
+            [
+                false,
+                false,
+                Order::STATE_PENDING_PAYMENT,
+                Order::STATE_PROCESSING,
+                self::$newOrderStatus,
                 'Registered notification about captured amount of %1.',
             ],
             [
@@ -85,7 +104,7 @@ class RegisterCaptureNotificationCommandTest extends \PHPUnit\Framework\TestCase
                 false,
                 Order::STATE_PROCESSING,
                 Order::STATE_PAYMENT_REVIEW,
-                $this->newOrderStatus,
+                self::$newOrderStatus,
                 'An amount of %1 will be captured after being approved at the payment gateway.',
             ],
             [
@@ -116,7 +135,7 @@ class RegisterCaptureNotificationCommandTest extends \PHPUnit\Framework\TestCase
             ->disableOriginalConstructor()
             ->getMock();
         $statusResolver->method('getOrderStatusByState')
-            ->willReturn($this->newOrderStatus);
+            ->willReturn(self::$newOrderStatus);
 
         return $statusResolver;
     }
@@ -130,7 +149,8 @@ class RegisterCaptureNotificationCommandTest extends \PHPUnit\Framework\TestCase
         /** @var Order|MockObject $order */
         $order = $this->getMockBuilder(Order::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getBaseCurrency', 'getOrderStatusByState'])
+            ->addMethods(['getOrderStatusByState'])
+            ->onlyMethods(['getBaseCurrency'])
             ->getMock();
         $order->method('getBaseCurrency')
             ->willReturn($this->getCurrency());
@@ -147,7 +167,7 @@ class RegisterCaptureNotificationCommandTest extends \PHPUnit\Framework\TestCase
     private function getPayment($isTransactionPending, $isFraudDetected)
     {
         $payment = $this->getMockBuilder(OrderPaymentInterface::class)
-            ->setMethods(['getIsTransactionPending', 'getIsFraudDetected'])
+            ->addMethods(['getIsTransactionPending', 'getIsFraudDetected'])
             ->getMockForAbstractClass();
         $payment->method('getIsTransactionPending')
             ->willReturn($isTransactionPending);

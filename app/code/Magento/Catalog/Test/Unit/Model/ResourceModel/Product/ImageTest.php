@@ -1,47 +1,53 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 declare(strict_types=1);
 
 namespace Magento\Catalog\Test\Unit\Model\ResourceModel\Product;
 
+use Magento\Catalog\Model\ResourceModel\Product\Gallery;
 use Magento\Catalog\Model\ResourceModel\Product\Image;
+use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\DB\Adapter\AdapterInterface;
+use Magento\Framework\DB\Query\BatchIteratorInterface;
 use Magento\Framework\DB\Query\Generator;
 use Magento\Framework\DB\Select;
-use Magento\Framework\App\ResourceConnection;
-use Magento\Catalog\Model\ResourceModel\Product\Gallery;
-use PHPUnit_Framework_MockObject_MockObject as MockObject;
-use Magento\Framework\DB\Query\BatchIteratorInterface;
+use Magento\Framework\EntityManager\EntityMetadataInterface;
+use Magento\Framework\EntityManager\MetadataPool;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class ImageTest extends \PHPUnit\Framework\TestCase
+class ImageTest extends TestCase
 {
-    /**
-     * @var \Magento\Framework\TestFramework\Unit\Helper\ObjectManager
-     */
-    protected $objectManager;
-
     /**
      * @var AdapterInterface | MockObject
      */
-    protected $connectionMock;
+    private $connectionMock;
 
     /**
      * @var Generator | MockObject
      */
-    protected $generatorMock;
+    private $generatorMock;
 
     /**
      * @var ResourceConnection | MockObject
      */
-    protected $resourceMock;
+    private $resourceMock;
+
+    /**
+     * @var MetadataPool|MockObject
+     */
+    private $metadataPoolMock;
+
+    /**
+     * @var Image
+     */
+    private $imageModel;
 
     protected function setUp(): void
     {
-        $this->objectManager =
-            new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
         $this->connectionMock = $this->createMock(AdapterInterface::class);
         $this->resourceMock = $this->createMock(ResourceConnection::class);
         $this->resourceMock->method('getConnection')
@@ -49,28 +55,61 @@ class ImageTest extends \PHPUnit\Framework\TestCase
         $this->resourceMock->method('getTableName')
             ->willReturnArgument(0);
         $this->generatorMock = $this->createMock(Generator::class);
+        $this->metadataPoolMock = $this->createMock(MetadataPool::class);
+        $metadata = $this->createMock(EntityMetadataInterface::class);
+        $this->metadataPoolMock->method('getMetadata')
+            ->willReturn($metadata);
+
+        $this->imageModel = new Image(
+            $this->generatorMock,
+            $this->resourceMock,
+            $this->metadataPoolMock,
+        );
     }
 
     /**
      * @return MockObject
      */
-    protected function getVisibleImagesSelectMock(): MockObject
+    private function getVisibleImagesSelectMock(): MockObject
     {
-        $selectMock = $this->getMockBuilder(Select::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $selectMock = $this->createMock(Select::class);
         $selectMock->expects($this->once())
             ->method('distinct')
             ->willReturnSelf();
         $selectMock->expects($this->once())
             ->method('from')
-            ->with(
-                ['images' => Gallery::GALLERY_TABLE],
-                'value as filepath'
-            )->willReturnSelf();
+            ->with(['images' => Gallery::GALLERY_TABLE], 'value as filepath')
+            ->willReturnSelf();
         $selectMock->expects($this->once())
             ->method('where')
             ->with('disabled = 0')
+            ->willReturnSelf();
+
+        return $selectMock;
+    }
+
+    /**
+     * @return MockObject
+     */
+    private function getUsedImagesSelectMock(): MockObject
+    {
+        $selectMock = $this->createMock(Select::class);
+        $selectMock->expects($this->once())
+            ->method('distinct')
+            ->willReturnSelf();
+        $selectMock->expects($this->once())
+            ->method('from')
+            ->with(['images' => Gallery::GALLERY_TABLE], 'value as filepath')
+            ->willReturnSelf();
+        $selectMock->expects($this->atLeastOnce())
+            ->method('joinInner')
+            ->willReturnSelf();
+        $selectMock->expects($this->once())
+            ->method('where')
+            ->with('images.disabled = 0 AND image_value.disabled = 0')
+            ->willReturnSelf();
+        $selectMock->expects($this->once())
+            ->method('group')
             ->willReturnSelf();
 
         return $selectMock;
@@ -85,10 +124,15 @@ class ImageTest extends \PHPUnit\Framework\TestCase
         $selectMock = $this->getVisibleImagesSelectMock();
         $selectMock->expects($this->exactly(2))
             ->method('reset')
-            ->withConsecutive(
-                ['columns'],
-                ['distinct']
-            )->willReturnSelf();
+            ->willReturnCallback(
+                function ($arg) use ($selectMock) {
+                    if ($arg == 'columns') {
+                        return $selectMock;
+                    } elseif ($arg == 'distinct') {
+                        return $selectMock;
+                    }
+                }
+            );
         $selectMock->expects($this->once())
             ->method('columns')
             ->with(new \Zend_Db_Expr('count(distinct value)'))
@@ -102,17 +146,46 @@ class ImageTest extends \PHPUnit\Framework\TestCase
             ->with($selectMock)
             ->willReturn($imagesCount);
 
-        $imageModel = $this->objectManager->getObject(
-            Image::class,
-            [
-                'generator' => $this->generatorMock,
-                'resourceConnection' => $this->resourceMock
-            ]
+        $this->assertSame(
+            $imagesCount,
+            $this->imageModel->getCountAllProductImages()
         );
+    }
+
+    /**
+     * @param int $imagesCount
+     * @dataProvider dataProvider
+     */
+    public function testGetCountUsedProductImages(int $imagesCount): void
+    {
+        $selectMock = $this->getUsedImagesSelectMock();
+        $selectMock->expects($this->exactly(2))
+            ->method('reset')
+            ->willReturnCallback(
+                function ($arg) use ($selectMock) {
+                    if ($arg == 'columns') {
+                        return $selectMock;
+                    } elseif ($arg == 'distinct') {
+                        return $selectMock;
+                    }
+                }
+            );
+        $selectMock->expects($this->once())
+            ->method('columns')
+            ->with(new \Zend_Db_Expr('count(distinct value)'))
+            ->willReturnSelf();
+
+        $this->connectionMock->expects($this->once())
+            ->method('select')
+            ->willReturn($selectMock);
+        $this->connectionMock->expects($this->once())
+            ->method('fetchOne')
+            ->with($selectMock)
+            ->willReturn($imagesCount);
 
         $this->assertSame(
             $imagesCount,
-            $imageModel->getCountAllProductImages()
+            $this->imageModel->getCountUsedProductImages()
         );
     }
 
@@ -121,25 +194,18 @@ class ImageTest extends \PHPUnit\Framework\TestCase
      * @param int $batchSize
      * @dataProvider dataProvider
      */
-    public function testGetAllProductImages(
-        int $imagesCount,
-        int $batchSize
-    ): void {
+    public function testGetAllProductImages(int $imagesCount, int $batchSize): void
+    {
+        $selectMock = $this->getVisibleImagesSelectMock();
         $this->connectionMock->expects($this->once())
             ->method('select')
-            ->willReturn($this->getVisibleImagesSelectMock());
+            ->willReturn($selectMock);
 
         $batchCount = (int)ceil($imagesCount / $batchSize);
         $fetchResultsCallback = $this->getFetchResultCallbackForBatches($imagesCount, $batchSize);
         $this->connectionMock->expects($this->exactly($batchCount))
             ->method('fetchAll')
-            ->will($this->returnCallback($fetchResultsCallback));
-
-        /** @var Select | MockObject $selectMock */
-        $selectMock = $this->getMockBuilder(Select::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-
+            ->willReturnCallback($fetchResultsCallback);
         $this->generatorMock->expects($this->once())
             ->method('generate')
             ->with(
@@ -147,22 +213,56 @@ class ImageTest extends \PHPUnit\Framework\TestCase
                 $selectMock,
                 $batchSize,
                 BatchIteratorInterface::NON_UNIQUE_FIELD_ITERATOR
-            )->will(
-                $this->returnCallback(
-                    $this->getBatchIteratorCallback($selectMock, $batchCount)
-                )
+            )->willReturnCallback(
+                $this->getBatchIteratorCallback($selectMock, $batchCount)
             );
 
-        $imageModel = $this->objectManager->getObject(
-            Image::class,
-            [
-                'generator' => $this->generatorMock,
-                'resourceConnection' => $this->resourceMock,
-                'batchSize' => $batchSize
-            ]
+        $imageModel = new Image(
+            $this->generatorMock,
+            $this->resourceMock,
+            $this->metadataPoolMock,
+            $batchSize,
         );
+        $resultImagesCount = iterator_to_array($imageModel->getAllProductImages(), false);
+        $this->assertCount($imagesCount, $resultImagesCount);
+    }
 
-        $this->assertCount($imagesCount, $imageModel->getAllProductImages());
+    /**
+     * @param int $imagesCount
+     * @param int $batchSize
+     * @dataProvider dataProvider
+     */
+    public function testGetUsedProductImages(int $imagesCount, int $batchSize): void
+    {
+        $selectMock = $this->getUsedImagesSelectMock();
+        $this->connectionMock->expects($this->once())
+            ->method('select')
+            ->willReturn($selectMock);
+
+        $batchCount = (int)ceil($imagesCount / $batchSize);
+        $fetchResultsCallback = $this->getFetchResultCallbackForBatches($imagesCount, $batchSize);
+        $this->connectionMock->expects($this->exactly($batchCount))
+            ->method('fetchAll')
+            ->willReturnCallback($fetchResultsCallback);
+        $this->generatorMock->expects($this->once())
+            ->method('generate')
+            ->with(
+                'value_id',
+                $selectMock,
+                $batchSize,
+                BatchIteratorInterface::NON_UNIQUE_FIELD_ITERATOR
+            )->willReturnCallback(
+                $this->getBatchIteratorCallback($selectMock, $batchCount)
+            );
+
+        $imageModel = new Image(
+            $this->generatorMock,
+            $this->resourceMock,
+            $this->metadataPoolMock,
+            $batchSize,
+        );
+        $resultImagesCount = iterator_to_array($imageModel->getUsedProductImages(), false);
+        $this->assertCount($imagesCount, $resultImagesCount);
     }
 
     /**
@@ -170,10 +270,8 @@ class ImageTest extends \PHPUnit\Framework\TestCase
      * @param int $batchSize
      * @return \Closure
      */
-    protected function getFetchResultCallbackForBatches(
-        int $imagesCount,
-        int $batchSize
-    ): \Closure {
+    private function getFetchResultCallbackForBatches(int $imagesCount, int $batchSize): \Closure
+    {
         $fetchResultsCallback = function () use (&$imagesCount, $batchSize) {
             $batchSize =
                 ($imagesCount >= $batchSize) ? $batchSize : $imagesCount;
@@ -201,10 +299,8 @@ class ImageTest extends \PHPUnit\Framework\TestCase
      * @param int $batchCount
      * @return \Closure
      */
-    protected function getBatchIteratorCallback(
-        MockObject $selectMock,
-        int $batchCount
-    ): \Closure {
+    private function getBatchIteratorCallback(MockObject $selectMock, int $batchCount): \Closure
+    {
         $iteratorCallback = function () use ($batchCount, $selectMock): array {
             $result = [];
             $count = $batchCount;
@@ -223,7 +319,7 @@ class ImageTest extends \PHPUnit\Framework\TestCase
      * Data Provider
      * @return array
      */
-    public function dataProvider(): array
+    public static function dataProvider(): array
     {
         return [
             [300, 300],

@@ -24,11 +24,11 @@ use Magento\Framework\DataObject;
  */
 class Form extends \Magento\Backend\Block\Widget\Form\Generic
 {
-    const SCOPE_DEFAULT = 'default';
+    public const SCOPE_DEFAULT = 'default';
 
-    const SCOPE_WEBSITES = 'websites';
+    public const SCOPE_WEBSITES = 'websites';
 
-    const SCOPE_STORES = 'stores';
+    public const SCOPE_STORES = 'stores';
 
     /**
      * Config data array
@@ -134,6 +134,7 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
      * @param \Magento\Config\Block\System\Config\Form\Fieldset\Factory $fieldsetFactory
      * @param \Magento\Config\Block\System\Config\Form\Field\Factory $fieldFactory
      * @param array $data
+     * @param SettingChecker|null $settingChecker
      */
     public function __construct(
         \Magento\Backend\Block\Template\Context $context,
@@ -143,31 +144,21 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
         \Magento\Config\Model\Config\Structure $configStructure,
         \Magento\Config\Block\System\Config\Form\Fieldset\Factory $fieldsetFactory,
         \Magento\Config\Block\System\Config\Form\Field\Factory $fieldFactory,
-        array $data = []
+        array $data = [],
+        ?SettingChecker $settingChecker = null
     ) {
         parent::__construct($context, $registry, $formFactory, $data);
         $this->_configFactory = $configFactory;
         $this->_configStructure = $configStructure;
         $this->_fieldsetFactory = $fieldsetFactory;
         $this->_fieldFactory = $fieldFactory;
+        $this->settingChecker = $settingChecker ?: ObjectManager::getInstance()->get(SettingChecker::class);
 
         $this->_scopeLabels = [
             self::SCOPE_DEFAULT => __('[GLOBAL]'),
             self::SCOPE_WEBSITES => __('[WEBSITE]'),
             self::SCOPE_STORES => __('[STORE VIEW]'),
         ];
-    }
-
-    /**
-     * @deprecated 100.1.2
-     * @return SettingChecker
-     */
-    private function getSettingChecker()
-    {
-        if ($this->settingChecker === null) {
-            $this->settingChecker = ObjectManager::getInstance()->get(SettingChecker::class);
-        }
-        return $this->settingChecker;
     }
 
     /**
@@ -366,9 +357,8 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
 
         $sharedClass = $this->_getSharedCssClass($field);
         $requiresClass = $this->_getRequiresCssClass($field, $fieldPrefix);
+        $isReadOnly = $this->isReadOnly($field, $path);
 
-        $isReadOnly = $this->getElementVisibility()->isDisabled($field->getPath())
-            ?: $this->getSettingChecker()->isReadOnly($path, $this->getScope(), $this->getStringScopeCode());
         $formField = $fieldset->addField(
             $elementId,
             $field->getType(),
@@ -417,7 +407,7 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
     {
         $data = $this->getAppConfigDataValue($path);
 
-        $placeholderValue = $this->getSettingChecker()->getPlaceholderValue(
+        $placeholderValue = $this->settingChecker->getPlaceholderValue(
             $path,
             $this->getScope(),
             $this->getStringScopeCode()
@@ -434,6 +424,10 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
                 $backendModel = $field->getBackendModel();
                 // Backend models which implement ProcessorInterface are processed by ScopeConfigInterface
                 if (!$backendModel instanceof ProcessorInterface) {
+                    if (array_key_exists($path, $this->_configData)) {
+                        $data = $this->_configData[$path];
+                    }
+
                     $backendModel->setPath($path)
                         ->setValue($data)
                         ->setWebsite($this->getWebsiteCode())
@@ -526,7 +520,7 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
      */
     protected function _generateElementId($path)
     {
-        return str_replace('/', '_', $path);
+        return $path !== null ? str_replace('/', '_', $path) : '';
     }
 
     /**
@@ -541,7 +535,7 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
     }
 
     /**
-     * @return \Magento\Backend\Block\Widget\Form|\Magento\Framework\View\Element\AbstractBlock
+     * @inheritdoc
      */
     protected function _beforeToHtml()
     {
@@ -718,6 +712,7 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
      *
      * @TODO delete this methods when {^see above^} is done
      * @return string
+     * @SuppressWarnings(PHPMD.RequestAwareBlockMethod)
      */
     public function getSectionCode()
     {
@@ -729,6 +724,7 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
      *
      * @TODO delete this methods when {^see above^} is done
      * @return string
+     * @SuppressWarnings(PHPMD.RequestAwareBlockMethod)
      */
     public function getWebsiteCode()
     {
@@ -740,6 +736,7 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
      *
      * @TODO delete this methods when {^see above^} is done
      * @return string
+     * @SuppressWarnings(PHPMD.RequestAwareBlockMethod)
      */
     public function getStoreCode()
     {
@@ -798,6 +795,26 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
     }
 
     /**
+     * Check Path is Readonly
+     *
+     * @param \Magento\Config\Model\Config\Structure\Element\Field $field
+     * @param string $path
+     * @return boolean
+     */
+    private function isReadOnly(\Magento\Config\Model\Config\Structure\Element\Field $field, $path)
+    {
+        $isReadOnly = $this->settingChecker->isReadOnly(
+            $path,
+            ScopeConfigInterface::SCOPE_TYPE_DEFAULT
+        );
+        if (!$isReadOnly) {
+            $isReadOnly = $this->getElementVisibility()->isDisabled($field->getPath())
+                ?: $this->settingChecker->isReadOnly($path, $this->getScope(), $this->getStringScopeCode());
+        }
+        return $isReadOnly;
+    }
+
+    /**
      * Retrieve deployment config data value by path
      *
      * @param string $path
@@ -821,10 +838,10 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
      * Gets instance of ElementVisibilityInterface.
      *
      * @return ElementVisibilityInterface
-     * @deprecated 100.2.0 Added to not break backward compatibility of the constructor signature
+     * @deprecated 101.0.0 Added to not break backward compatibility of the constructor signature
      *             by injecting the new dependency directly.
      *             The method can be removed in a future major release, when constructor signature can be changed.
-     * @since 100.2.0
+     * @since 101.0.0
      */
     public function getElementVisibility()
     {

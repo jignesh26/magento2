@@ -1,25 +1,31 @@
 <?php
+
 /**
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Paypal\Test\Unit\Model\Payflow\Service\Response\Handler;
 
 use Magento\Framework\DataObject;
+use Magento\Framework\Xml\Security;
 use Magento\Payment\Model\InfoInterface;
-use Magento\Paypal\Model\Payflow\Service\Response\Handler\FraudHandler;
 use Magento\Paypal\Model\Info;
+use Magento\Paypal\Model\Payflow\Service\Response\Handler\FraudHandler;
 use Magento\Paypal\Model\Payflowpro;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class FraudHandlerTest extends \PHPUnit\Framework\TestCase
+class FraudHandlerTest extends TestCase
 {
     /**
-     * @var InfoInterface | \PHPUnit_Framework_MockObject_MockObject
+     * @var InfoInterface|MockObject
      */
     private $paymentMock;
 
     /**
-     * @var Object | \PHPUnit_Framework_MockObject_MockObject
+     * @var Object|MockObject
      */
     private $responseMock;
 
@@ -29,24 +35,24 @@ class FraudHandlerTest extends \PHPUnit\Framework\TestCase
     private $fraudHandler;
 
     /**
-     * @var Info | \PHPUnit_Framework_MockObject_MockObject
+     * @var Info|MockObject
      */
     private $paypalInfoManagerMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->paymentMock = $this->getMockBuilder(\Magento\Payment\Model\InfoInterface::class)
+        $this->paymentMock = $this->getMockBuilder(InfoInterface::class)
             ->getMock();
-        $this->responseMock = $this->getMockBuilder(\Magento\Framework\DataObject::class)
+        $this->responseMock = $this->getMockBuilder(DataObject::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $this->paypalInfoManagerMock = $this->getMockBuilder(\Magento\Paypal\Model\Info::class)
+        $this->paypalInfoManagerMock = $this->getMockBuilder(Info::class)
             ->disableOriginalConstructor()
             ->getMock();
 
         $this->fraudHandler = new FraudHandler(
             $this->paypalInfoManagerMock,
-            new \Magento\Framework\Xml\Security()
+            new Security()
         );
     }
 
@@ -96,7 +102,7 @@ class FraudHandlerTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function handleMessagesDataProvider()
+    public static function handleMessagesDataProvider()
     {
         return [
             ['Fraud message', null, null, ['RESPMSG' => 'Fraud message']],
@@ -108,13 +114,13 @@ class FraudHandlerTest extends \PHPUnit\Framework\TestCase
             ],
             [
                 'New fraud message',
-                $this->getRulesXmlString(),
+                self::getRulesXmlString(),
                 [
                     'Total Purchase Price Ceiling' => 'Existing fraud message',
                     'RESPMSG' => 'Existing fraud message'
                 ],
                 array_merge(
-                    $this->getRulesExpectedDictionary(),
+                    self::getRulesExpectedDictionary(),
                     [
                         'Total Purchase Price Ceiling' => 'Existing fraud message',
                         'RESPMSG' => 'Existing fraud message'
@@ -130,7 +136,7 @@ class FraudHandlerTest extends \PHPUnit\Framework\TestCase
      * @param string $fileName
      * @return string
      */
-    private function getRulesXmlString($fileName = 'fps_prexmldata.xml')
+    private static function getRulesXmlString($fileName = 'fps_prexmldata.xml')
     {
         return file_get_contents(__DIR__ . '/_files/' . $fileName);
     }
@@ -140,21 +146,16 @@ class FraudHandlerTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    private function getRulesExpectedDictionary()
+    private static function getRulesExpectedDictionary()
     {
         return [
-            'Total Purchase Price Ceiling' =>
-                'The purchase amount of 7501 is greater than the ceiling value set of 7500',
-            'Total ItemCeiling' =>
-                '16 items were ordered, which is overthe maximum allowed quantity of 15',
-            'Shipping/BillingMismatch' =>
-                'Thebilling and shipping addresses did not match',
-            'BIN Risk List Match' =>
-                'The card number is in a high risk bin list',
-            'Zip Risk List Match' =>
-                'High risk shipping zip',
-            'USPS Address Validation Failure' =>
-                'The billing address is not a valid USAddress'
+            'Total Purchase Price Ceiling' => 'The purchase amount of 7501 is greater than the ceiling value set of 750'
+                . '0',
+            'Total ItemCeiling' => '16 items were ordered, which is overthe maximum allowed quantity of 15',
+            'Shipping/BillingMismatch' => 'Thebilling and shipping addresses did not match',
+            'BIN Risk List Match' => 'The card number is in a high risk bin list',
+            'Zip Risk List Match' => 'High risk shipping zip',
+            'USPS Address Validation Failure' => 'The billing address is not a valid USAddress'
         ];
     }
 

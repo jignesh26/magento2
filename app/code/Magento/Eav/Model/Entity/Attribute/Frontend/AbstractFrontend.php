@@ -20,6 +20,8 @@ use Magento\Eav\Model\Entity\Attribute;
 use Magento\Eav\Model\Entity\Attribute\Source\BooleanFactory;
 
 /**
+ * EAV entity attribute form renderer.
+ *
  * @api
  * @since 100.0.2
  */
@@ -76,11 +78,11 @@ abstract class AbstractFrontend implements \Magento\Eav\Model\Entity\Attribute\F
      */
     public function __construct(
         BooleanFactory $attrBooleanFactory,
-        CacheInterface $cache = null,
+        ?CacheInterface $cache = null,
         $storeResolver = null,
-        array $cacheTags = null,
-        StoreManagerInterface $storeManager = null,
-        Serializer $serializer = null
+        ?array $cacheTags = null,
+        ?StoreManagerInterface $storeManager = null,
+        ?Serializer $serializer = null
     ) {
         $this->_attrBooleanFactory = $attrBooleanFactory;
         $this->cache = $cache ?: ObjectManager::getInstance()->get(CacheInterface::class);
@@ -233,6 +235,9 @@ abstract class AbstractFrontend implements \Magento\Eav\Model\Entity\Attribute\F
             switch ($validateRules['input_validation']) {
                 case 'alphanumeric':
                     $class = 'validate-alphanum';
+                    break;
+                case 'alphanum-with-spaces':
+                    $class = 'validate-alphanum-with-spaces';
                     break;
                 case 'numeric':
                     $class = 'validate-digits';

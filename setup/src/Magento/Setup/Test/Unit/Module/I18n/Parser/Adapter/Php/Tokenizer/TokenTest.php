@@ -3,22 +3,25 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Setup\Test\Unit\Module\I18n\Parser\Adapter\Php\Tokenizer;
 
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
 use Magento\Setup\Module\I18n\Parser\Adapter\Php\Tokenizer\Token;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \Magento\Setup\Module\I18n\Parser\Adapter\Php\Tokenizer\Token
  */
-class TokenTest extends \PHPUnit\Framework\TestCase
+class TokenTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\TestFramework\Unit\Helper\ObjectManager
+     * @var ObjectManager
      */
     protected $objectManager;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = new ObjectManager($this);
     }
@@ -68,7 +71,7 @@ class TokenTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function testIsNewDataProvider()
+    public static function testIsNewDataProvider()
     {
         return [
             'new' => ['name' => T_NEW, 'value' => 'new', 'result' => true],
@@ -80,7 +83,7 @@ class TokenTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function testIsNamespaceSeparatorDataProvider()
+    public static function testIsNamespaceSeparatorDataProvider()
     {
         return [
             'new' => ['name' => T_NEW, 'value' => 'new', 'result' => false],
@@ -92,7 +95,7 @@ class TokenTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function testIsIdentifierDataProvider()
+    public static function testIsIdentifierDataProvider()
     {
         return [
             'new' => ['name' => T_NEW, 'value' => 'new', 'result' => false],
@@ -110,7 +113,7 @@ class TokenTest extends \PHPUnit\Framework\TestCase
     {
         $line = 110;
         return $this->objectManager->getObject(
-            \Magento\Setup\Module\I18n\Parser\Adapter\Php\Tokenizer\Token::class,
+            Token::class,
             [
                 'name' => $name,
                 'value' => $value,
@@ -121,13 +124,13 @@ class TokenTest extends \PHPUnit\Framework\TestCase
 
     public function testIsConcatenateOperatorTrue()
     {
-        $token = new \Magento\Setup\Module\I18n\Parser\Adapter\Php\Tokenizer\Token('.', '.');
+        $token = new Token('.', '.');
         $this->assertTrue($token->isConcatenateOperator());
     }
 
     public function testIsConcatenateOperatorFalse()
     {
-        $token = new \Magento\Setup\Module\I18n\Parser\Adapter\Php\Tokenizer\Token(',', ',');
+        $token = new Token(',', ',');
         $this->assertFalse($token->isConcatenateOperator());
     }
 }

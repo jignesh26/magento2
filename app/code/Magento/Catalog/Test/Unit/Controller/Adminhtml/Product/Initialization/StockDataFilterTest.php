@@ -1,24 +1,27 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Catalog\Test\Unit\Controller\Adminhtml\Product\Initialization;
 
 use Magento\Catalog\Controller\Adminhtml\Product\Initialization\StockDataFilter;
+use Magento\CatalogInventory\Model\Configuration;
+use Magento\Framework\App\Config\ScopeConfigInterface;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-/**
- * Class StockDataFilterTest
- */
-class StockDataFilterTest extends \PHPUnit\Framework\TestCase
+class StockDataFilterTest extends TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $storeMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $scopeConfigMock;
 
@@ -27,17 +30,17 @@ class StockDataFilterTest extends \PHPUnit\Framework\TestCase
      */
     protected $stockDataFilter;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var MockObject */
     protected $stockConfiguration;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->scopeConfigMock = $this->createMock(\Magento\Framework\App\Config\ScopeConfigInterface::class);
+        $this->scopeConfigMock = $this->getMockForAbstractClass(ScopeConfigInterface::class);
 
-        $this->scopeConfigMock->expects($this->any())->method('getValue')->will($this->returnValue(1));
+        $this->scopeConfigMock->expects($this->any())->method('getValue')->willReturn(1);
 
         $this->stockConfiguration = $this->createPartialMock(
-            \Magento\CatalogInventory\Model\Configuration::class,
+            Configuration::class,
             ['getManageStock']
         );
 
@@ -56,7 +59,7 @@ class StockDataFilterTest extends \PHPUnit\Framework\TestCase
         if (isset($inputStockData['use_config_manage_stock']) && $inputStockData['use_config_manage_stock'] === 1) {
             $this->stockConfiguration->expects($this->once())
                 ->method('getManageStock')
-                ->will($this->returnValue($outputStockData['manage_stock']));
+                ->willReturn($outputStockData['manage_stock']);
         }
 
         $this->assertEquals($outputStockData, $this->stockDataFilter->filter($inputStockData));
@@ -67,7 +70,7 @@ class StockDataFilterTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function filterDataProvider()
+    public static function filterDataProvider()
     {
         return [
             'case1' => [

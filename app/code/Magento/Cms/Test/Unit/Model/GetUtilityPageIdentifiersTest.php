@@ -1,8 +1,9 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\Cms\Test\Unit\Model;
 
@@ -10,6 +11,7 @@ use Magento\Cms\Model\GetUtilityPageIdentifiers;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
 use Magento\Store\Model\ScopeInterface;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -25,18 +27,18 @@ class GetUtilityPageIdentifiersTest extends TestCase
     private $model;
 
     /**
-     * @var ScopeConfigInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ScopeConfigInterface|MockObject
      */
     private $scopeConfig;
 
     /**
      * @inheritdoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $objectManager = new ObjectManager($this);
         $this->scopeConfig = $this->getMockBuilder(ScopeConfigInterface::class)
-            ->setMethods(['getValue'])
+            ->onlyMethods(['getValue'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
         $this->model = $objectManager->getObject(
@@ -59,14 +61,16 @@ class GetUtilityPageIdentifiersTest extends TestCase
         $cmsNoCookies = 'testCmsNoCookies';
         $this->scopeConfig->expects($this->exactly(3))
             ->method('getValue')
-            ->withConsecutive(
-                [$this->identicalTo('web/default/cms_home_page'), $this->identicalTo(ScopeInterface::SCOPE_STORE)],
-                [$this->identicalTo('web/default/cms_no_route'), $this->identicalTo(ScopeInterface::SCOPE_STORE)],
-                [$this->identicalTo('web/default/cms_no_cookies'), $this->identicalTo(ScopeInterface::SCOPE_STORE)]
-            )->willReturnOnConsecutiveCalls(
-                $cmsHomePage,
-                $cmsNoRoute,
-                $cmsNoCookies
+            ->willReturnCallback(
+                function ($arg1, $arg2) use ($cmsHomePage, $cmsNoRoute, $cmsNoCookies) {
+                    if ($arg1 === 'web/default/cms_home_page' && $arg2 === ScopeInterface::SCOPE_STORE) {
+                        return $cmsHomePage;
+                    } elseif ($arg1 === 'web/default/cms_no_route' && $arg2 === ScopeInterface::SCOPE_STORE) {
+                        return $cmsNoRoute;
+                    } elseif ($arg1 === 'web/default/cms_no_cookies' && $arg2 === ScopeInterface::SCOPE_STORE) {
+                        return $cmsNoCookies;
+                    }
+                }
             );
         $this->assertSame([$cmsHomePage, $cmsNoRoute, $cmsNoCookies], $this->model->execute());
     }

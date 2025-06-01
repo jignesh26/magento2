@@ -12,7 +12,7 @@ define([
     'Magento_Ui/js/lib/validation/validator',
     'Magento_Ui/js/form/element/file-uploader',
     'mage/adminhtml/browser',
-    'mage/adminhtml/tools'
+    'jquery/jquery-storageapi'
 ], function ($, _, utils, uiAlert, validator, Element, browser) {
     'use strict';
 
@@ -55,7 +55,13 @@ define([
                 fileSize = $buttonEl.data('size'),
                 fileMimeType = $buttonEl.data('mime-type'),
                 filePathname = $buttonEl.val(),
-                fileBasename = filePathname.split('/').pop();
+                fileBasename = filePathname.split('/').pop(),
+                deletedFiles = $.localStorage.get('deleted_images');
+
+            if (deletedFiles && deletedFiles.indexOf(filePathname) !== -1) {
+                $.localStorage.set('deleted_images', deletedFiles.splice(deletedFiles.indexOf(filePathname), 1));
+                filePathname += '?rand=' + Date.now();
+            }
 
             this.addFile({
                 type: fileMimeType,
@@ -79,10 +85,18 @@ define([
                 '/type/image/?isAjax=true';
 
             if (this.mediaGallery.initialOpenSubpath) {
-                openDialogUrl += '&current_tree_path=' + Base64.mageEncode(this.mediaGallery.initialOpenSubpath);
+                openDialogUrl += '&current_tree_path=' + Base64.idEncode(this.mediaGallery.initialOpenSubpath);
             }
 
-            browser.openDialog(openDialogUrl, null, null, this.mediaGallery.openDialogTitle);
+            browser.openDialog(
+                openDialogUrl,
+                null,
+                null,
+                this.mediaGallery.openDialogTitle,
+                {
+                    targetElementId: $buttonEl.attr('id')
+                }
+            );
         },
 
         /**
@@ -126,7 +140,7 @@ define([
          * @param {Event} e
          */
         triggerImageUpload: function (imageUploader, e) {
-            $(e.target).closest('.file-uploader').find('input[type="file"]').click();
+            $(e.target).closest('.file-uploader').find('.uppy-Dashboard-browse').trigger('click');
         },
 
         /**

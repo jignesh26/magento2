@@ -1,28 +1,33 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\CatalogSearch\Test\Unit\Model\ResourceModel;
 
 use Magento\Catalog\Model\ResourceModel\Eav\Attribute;
+use Magento\CatalogSearch\Model\ResourceModel\Advanced;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-class AdvancedTest extends \PHPUnit\Framework\TestCase
+class AdvancedTest extends TestCase
 {
     /**
-     * @var \Magento\CatalogSearch\Model\ResourceModel\Advanced
+     * @var Advanced
      */
     private $model;
 
     /**
      * setUp method for AdvancedTest
      */
-    protected function setUp()
+    protected function setUp(): void
     {
-        $helper = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $helper = new ObjectManager($this);
 
-        $this->model = $helper->getObject(\Magento\CatalogSearch\Model\ResourceModel\Advanced::class);
+        $this->model = $helper->getObject(Advanced::class);
     }
 
     /**
@@ -30,9 +35,9 @@ class AdvancedTest extends \PHPUnit\Framework\TestCase
      */
     public function testPrepareCondition($backendType, $value, $expected)
     {
-        /** @var Attribute|\PHPUnit_Framework_MockObject_MockObject $attributeMock */
-        $attributeMock = $this->getMockBuilder(\Magento\Catalog\Model\ResourceModel\Eav\Attribute::class)
-            ->setMethods(['getBackendType'])
+        /** @var Attribute|MockObject $attributeMock */
+        $attributeMock = $this->getMockBuilder(Attribute::class)
+            ->onlyMethods(['getBackendType'])
             ->disableOriginalConstructor()
             ->getMock();
         $attributeMock->expects($this->once())
@@ -50,7 +55,7 @@ class AdvancedTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function prepareConditionDataProvider()
+    public static function prepareConditionDataProvider()
     {
         return [
             ['string', 'string', 'string'],

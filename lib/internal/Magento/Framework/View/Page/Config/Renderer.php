@@ -9,6 +9,12 @@ namespace Magento\Framework\View\Page\Config;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\View\Asset\GroupedCollection;
 use Magento\Framework\View\Page\Config;
+use Magento\Framework\View\Page\Config\Metadata\MsApplicationTileImage;
+use Psr\Log\LoggerInterface;
+use Magento\Framework\UrlInterface;
+use Magento\Framework\Escaper;
+use Magento\Framework\Stdlib\StringUtils;
+use Magento\Framework\View\Asset\MergeService;
 
 /**
  * Page config Renderer model
@@ -20,7 +26,29 @@ class Renderer implements RendererInterface
     /**
      * @var array
      */
-    protected $assetTypeOrder = ['css', 'ico', 'js'];
+    protected $assetTypeOrder = [
+        'css',
+        'ico',
+        'js',
+        'eot',
+        'svg',
+        'ttf',
+        'woff',
+        'woff2',
+    ];
+
+    /**
+     * Possible fonts type
+     *
+     * @var array
+     */
+    private const FONTS_TYPE = [
+        'eot',
+        'svg',
+        'ttf',
+        'woff',
+        'woff2',
+    ];
 
     /**
      * @var Config
@@ -28,45 +56,52 @@ class Renderer implements RendererInterface
     protected $pageConfig;
 
     /**
-     * @var \Magento\Framework\View\Asset\MergeService
+     * @var MergeService
      */
     protected $assetMergeService;
 
     /**
-     * @var \Magento\Framework\Escaper
-     */
-    protected $escaper;
-
-    /**
-     * @var \Magento\Framework\Stdlib\StringUtils
-     */
-    protected $string;
-
-    /**
-     * @var \Psr\Log\LoggerInterface
-     */
-    protected $logger;
-
-    /**
-     * @var \Magento\Framework\UrlInterface
+     * @var UrlInterface
      */
     protected $urlBuilder;
 
     /**
+     * @var Escaper
+     */
+    protected $escaper;
+
+    /**
+     * @var StringUtils
+     */
+    protected $string;
+
+    /**
+     * @var LoggerInterface
+     */
+    protected $logger;
+
+    /**
+     * @var MsApplicationTileImage
+     */
+    private $msApplicationTileImage;
+
+    /**
      * @param Config $pageConfig
-     * @param \Magento\Framework\View\Asset\MergeService $assetMergeService
-     * @param \Magento\Framework\UrlInterface $urlBuilder
-     * @param \Magento\Framework\Escaper $escaper
-     * @param \Magento\Framework\Stdlib\StringUtils $string
-     * @param \Psr\Log\LoggerInterface $logger
+     * @param MergeService $assetMergeService
+     * @param UrlInterface $urlBuilder
+     * @param Escaper $escaper
+     * @param StringUtils $string
+     * @param LoggerInterface $logger
+     * @param MsApplicationTileImage|null $msApplicationTileImage
      */
     public function __construct(
         Config $pageConfig,
-        \Magento\Framework\View\Asset\MergeService $assetMergeService,
-        \Magento\Framework\UrlInterface $urlBuilder,
-        \Magento\Framework\Escaper $escaper,
-        \Magento\Framework\Stdlib\StringUtils $string,
-        \Psr\Log\LoggerInterface $logger
+        MergeService $assetMergeService,
+        UrlInterface $urlBuilder,
+        Escaper $escaper,
+        StringUtils $string,
+        LoggerInterface $logger,
+        ?MsApplicationTileImage $msApplicationTileImage = null
     ) {
         $this->pageConfig = $pageConfig;
         $this->assetMergeService = $assetMergeService;
@@ -74,6 +109,8 @@ class Renderer implements RendererInterface
         $this->escaper = $escaper;
         $this->string = $string;
         $this->logger = $logger;
+        $this->msApplicationTileImage = $msApplicationTileImage ?:
+            \Magento\Framework\App\ObjectManager::getInstance()->get(MsApplicationTileImage::class);
     }
 
     /**
@@ -102,6 +139,17 @@ class Renderer implements RendererInterface
         $result .= $this->renderMetadata();
         $result .= $this->renderTitle();
         $this->prepareFavicon();
+        return $result;
+    }
+
+    /**
+     * Render head assets
+     *
+     * @return string
+     */
+    public function renderHeadAssets()
+    {
+        $result = '';
         $result .= $this->renderAssets($this->getAvailableResultGroups());
         $result .= $this->pageConfig->getIncludes();
         return $result;
@@ -157,6 +205,10 @@ class Renderer implements RendererInterface
         if (method_exists($this->pageConfig, $method)) {
             $content = $this->pageConfig->$method();
         }
+        if ($content && $name === $this->msApplicationTileImage::META_NAME) {
+            $content = $this->msApplicationTileImage->getUrl($content);
+        }
+
         return $content;
     }
 
@@ -174,26 +226,20 @@ class Renderer implements RendererInterface
 
         switch ($name) {
             case Config::META_CHARSET:
-                $metadataTemplate = '<meta charset="%content"/>' . "\n";
-                break;
+                return '<meta charset="%content"/>' . "\n";
 
             case Config::META_CONTENT_TYPE:
-                $metadataTemplate = '<meta http-equiv="Content-Type" content="%content"/>' . "\n";
-                break;
+                return '<meta http-equiv="Content-Type" content="%content"/>' . "\n";
 
             case Config::META_X_UI_COMPATIBLE:
-                $metadataTemplate = '<meta http-equiv="X-UA-Compatible" content="%content"/>' . "\n";
-                break;
+                return '<meta http-equiv="X-UA-Compatible" content="%content"/>' . "\n";
 
             case Config::META_MEDIA_TYPE:
-                $metadataTemplate = false;
-                break;
+                return false;
 
             default:
-                $metadataTemplate = '<meta name="%name" content="%content"/>' . "\n";
-                break;
+                return '<meta name="%name" content="%content"/>' . "\n";
         }
-        return $metadataTemplate;
     }
 
     /**
@@ -313,15 +359,18 @@ class Renderer implements RendererInterface
      */
     protected function addDefaultAttributes($contentType, $attributes)
     {
-        switch ($contentType) {
-            case 'js':
-                $attributes = ' type="text/javascript" ' . $attributes;
-                break;
-
-            case 'css':
-                $attributes = ' rel="stylesheet" type="text/css" ' . ($attributes ?: ' media="all"');
-                break;
+        if ($contentType === 'js') {
+            return ' type="text/javascript" ' . $attributes;
         }
+
+        if ($contentType === 'css') {
+            return ' rel="stylesheet" type="text/css" ' . ($attributes ?: ' media="all"');
+        }
+
+        if ($this->canTypeBeFont($contentType)) {
+            return 'rel="preload" as="font" crossorigin="anonymous"';
+        }
+
         return $attributes;
     }
 
@@ -336,12 +385,12 @@ class Renderer implements RendererInterface
     {
         switch ($contentType) {
             case 'js':
-                $groupTemplate = '<script ' . $attributes . ' src="%s"></script>' . "\n";
+                $groupTemplate = preg_replace('/\s+/', ' ', '<script ' . $attributes . ' src="%s"></script>') . "\n";
                 break;
 
             case 'css':
             default:
-                $groupTemplate = '<link ' . $attributes . ' href="%s" />' . "\n";
+                $groupTemplate = preg_replace('/\s+/', ' ', '<link ' . $attributes . ' href="%s" />') . "\n";
                 break;
         }
         return $groupTemplate;
@@ -375,6 +424,7 @@ class Renderer implements RendererInterface
         $attributes = $this->getGroupAttributes($group);
 
         $result = '';
+        $template = '';
         try {
             /** @var $asset \Magento\Framework\View\Asset\AssetInterface */
             foreach ($assets as $asset) {
@@ -389,6 +439,17 @@ class Renderer implements RendererInterface
             $result .= sprintf($template, $this->urlBuilder->getUrl('', ['_direct' => 'core/index/notFound']));
         }
         return $result;
+    }
+
+    /**
+     * Check if file type can be font
+     *
+     * @param string $type
+     * @return bool
+     */
+    private function canTypeBeFont(string $type): bool
+    {
+        return in_array($type, self::FONTS_TYPE, true);
     }
 
     /**

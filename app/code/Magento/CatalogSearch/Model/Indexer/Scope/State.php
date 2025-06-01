@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\CatalogSearch\Model\Indexer\Scope;
@@ -18,6 +18,9 @@ namespace Magento\CatalogSearch\Model\Indexer\Scope;
  * The 'use_temporary_table' state is an opposite for 'use_main_table'
  *   which means that default indexer table should be left unchanged during indexation
  *   and temporary table should be used instead.
+ *
+ * @deprecated mysql search engine has been removed
+ * @see \Magento\Elasticsearch
  */
 class State
 {

@@ -7,9 +7,12 @@
 namespace Magento\Paypal\Model;
 
 use Exception;
+use Magento\Framework\App\ObjectManager;
 use Magento\Framework\Exception\LocalizedException;
+use Magento\Sales\Model\Order;
 use Magento\Sales\Model\Order\Email\Sender\CreditmemoSender;
 use Magento\Sales\Model\Order\Email\Sender\OrderSender;
+use Magento\Sales\Model\OrderMutexInterface;
 
 /**
  * PayPal Instant Payment Notification processor model
@@ -45,13 +48,19 @@ class Ipn extends \Magento\Paypal\Model\AbstractIpn implements IpnInterface
     protected $creditmemoSender;
 
     /**
-     * @param \Magento\Paypal\Model\ConfigFactory $configFactory
+     * @var OrderMutexInterface|null
+     */
+    private ?OrderMutexInterface $orderMutex;
+
+    /**
+     * @param ConfigFactory $configFactory
      * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\HTTP\Adapter\CurlFactory $curlFactory
      * @param \Magento\Sales\Model\OrderFactory $orderFactory
      * @param Info $paypalInfo
      * @param OrderSender $orderSender
      * @param CreditmemoSender $creditmemoSender
+     * @param OrderMutexInterface|null $orderMutex
      * @param array $data
      */
     public function __construct(
@@ -62,6 +71,7 @@ class Ipn extends \Magento\Paypal\Model\AbstractIpn implements IpnInterface
         Info $paypalInfo,
         OrderSender $orderSender,
         CreditmemoSender $creditmemoSender,
+        ?OrderMutexInterface $orderMutex = null,
         array $data = []
     ) {
         parent::__construct($configFactory, $logger, $curlFactory, $data);
@@ -69,6 +79,7 @@ class Ipn extends \Magento\Paypal\Model\AbstractIpn implements IpnInterface
         $this->_paypalInfo = $paypalInfo;
         $this->orderSender = $orderSender;
         $this->creditmemoSender = $creditmemoSender;
+        $this->orderMutex = $orderMutex ?: ObjectManager::getInstance()->get(OrderMutexInterface::class);
     }
 
     /**
@@ -106,6 +117,7 @@ class Ipn extends \Magento\Paypal\Model\AbstractIpn implements IpnInterface
         $parameters = ['params' => [$methodCode, $order->getStoreId()]];
         $this->_config = $this->_configFactory->create($parameters);
         if (!$this->_config->isMethodActive($methodCode) || !$this->_config->isMethodAvailable()) {
+            // phpcs:ignore Magento2.Exceptions.DirectThrow
             throw new Exception(sprintf('The "%s" method isn\'t available.', $methodCode));
         }
         /** @link https://cms.paypal.com/cgi-bin/marketingweb?cmd=_render-content&content_ID=
@@ -115,8 +127,9 @@ class Ipn extends \Magento\Paypal\Model\AbstractIpn implements IpnInterface
         if (!$merchantEmail) {
             return $this->_config;
         }
-        $receiver = $this->getRequestData('business') ?: $this->getRequestData('receiver_email');
+        $receiver = $this->getRequestData('business') ?: ($this->getRequestData('receiver_email') ?? '');
         if (strtolower($merchantEmail) != strtolower($receiver)) {
+            // phpcs:ignore Magento2.Exceptions.DirectThrow
             throw new Exception(
                 sprintf(
                     'The requested "%s" and the configured "%s" merchant emails don\'t match.',
@@ -140,6 +153,7 @@ class Ipn extends \Magento\Paypal\Model\AbstractIpn implements IpnInterface
         $incrementId = $this->getRequestData('invoice');
         $this->_order = $this->_orderFactory->create()->loadByIncrementId($incrementId);
         if (!$this->_order->getId()) {
+            // phpcs:ignore Magento2.Exceptions.DirectThrow
             throw new Exception(sprintf('The "%s" order ID is incorrect. Verify the ID and try again.', $incrementId));
         }
         return $this->_order;
@@ -245,8 +259,11 @@ class Ipn extends \Magento\Paypal\Model\AbstractIpn implements IpnInterface
                 break;
             // customer attempted to pay via bank account, but failed
             case Info::PAYMENTSTATUS_FAILED:
-                // cancel order
-                $this->_registerPaymentFailure();
+                if ($this->_order->getState() === \Magento\Sales\Model\Order::STATE_PAYMENT_REVIEW) {
+                    $this->_registerPaymentDenial();
+                } else {
+                    $this->_registerPaymentFailure();
+                }
                 break;
             // payment was obtained, but money were not captured yet
             case Info::PAYMENTSTATUS_PENDING:
@@ -270,6 +287,7 @@ class Ipn extends \Magento\Paypal\Model\AbstractIpn implements IpnInterface
                 $this->_registerPaymentVoid();
                 break;
             default:
+                // phpcs:ignore Magento2.Exceptions.DirectThrow
                 throw new Exception("The '{$paymentStatus}' payment status couldn't be handled.");
         }
     }
@@ -294,6 +312,9 @@ class Ipn extends \Magento\Paypal\Model\AbstractIpn implements IpnInterface
         $payment->setParentTransactionId($parentTransactionId);
         $payment->setShouldCloseParentTransaction('Completed' === $this->getRequestData('auth_status'));
         $payment->setIsTransactionClosed(0);
+        if ($this->_order->getState() === Order::STATE_PENDING_PAYMENT) {
+            $this->_order->setState(Order::STATE_PROCESSING);
+        }
         $payment->registerCaptureNotification(
             $this->getRequestData('mc_gross'),
             $skipFraudDetection && $parentTransactionId
@@ -322,11 +343,12 @@ class Ipn extends \Magento\Paypal\Model\AbstractIpn implements IpnInterface
     {
         try {
             $this->_importPaymentInformation();
-            $this->_order->getPayment()
-                ->setTransactionId($this->getRequestData('txn_id'))
-                ->setNotificationResult(true)
-                ->setIsTransactionClosed(true)
-                ->deny(false);
+            $payment = $this->_order->getPayment();
+            $payment->setTransactionId($this->getRequestData('txn_id'));
+            $payment->setPreparedMessage($this->_createIpnComment(''));
+            $payment->setNotificationResult(true);
+            $payment->setIsTransactionClosed(true);
+            $payment->deny(false);
             $this->_order->save();
         } catch (LocalizedException $e) {
             if ($e->getMessage() != __('We cannot cancel this order.')) {
@@ -360,6 +382,7 @@ class Ipn extends \Magento\Paypal\Model\AbstractIpn implements IpnInterface
             return;
         }
         if ('order' === $reason) {
+            // phpcs:ignore Magento2.Exceptions.DirectThrow
             throw new Exception('The "order" authorizations aren\'t implemented.');
         }
         // case when was placed using PayPal standard
@@ -454,6 +477,21 @@ class Ipn extends \Magento\Paypal\Model\AbstractIpn implements IpnInterface
      */
     protected function _registerPaymentRefund()
     {
+        return $this->orderMutex->execute(
+            (int) $this->_order->getEntityId(),
+            \Closure::fromCallable([$this, 'processRefund'])
+        );
+    }
+
+    /**
+     * Process a refund
+     *
+     * @return void
+     * @throws Exception
+     * @SuppressWarnings(PHPMD.UnusedPrivateMethod) This method is used in closure callback
+     */
+    private function processRefund()
+    {
         $this->_importPaymentInformation();
         $reason = $this->getRequestData('reason_code');
         $isRefundFinal = !$this->_paypalInfo->isReversalDisputable($reason);
@@ -501,6 +539,7 @@ class Ipn extends \Magento\Paypal\Model\AbstractIpn implements IpnInterface
 
     /**
      * Map payment information from IPN to payment object
+     *
      * Returns true if there were changes in information
      *
      * @return bool
@@ -537,8 +576,10 @@ class Ipn extends \Magento\Paypal\Model\AbstractIpn implements IpnInterface
 
         // collect fraud filters
         $fraudFilters = [];
-        for ($i = 1; $value = $this->getRequestData("fraud_management_pending_filters_{$i}"); $i++) {
+        $index = 1;
+        while ($value = $this->getRequestData("fraud_management_pending_filters_{$index}")) {
             $fraudFilters[] = $value;
+            $index++;
         }
         if ($fraudFilters) {
             $from[Info::FRAUD_FILTERS] = $fraudFilters;
@@ -568,6 +609,7 @@ class Ipn extends \Magento\Paypal\Model\AbstractIpn implements IpnInterface
 
     /**
      * Generate an "IPN" comment with additional explanation.
+     *
      * Returns the generated comment or order status history object
      *
      * @param string $comment

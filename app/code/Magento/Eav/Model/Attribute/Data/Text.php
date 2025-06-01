@@ -6,32 +6,39 @@
 
 namespace Magento\Eav\Model\Attribute\Data;
 
+use Magento\Eav\Model\Attribute;
 use Magento\Framework\App\RequestInterface;
+use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Locale\ResolverInterface;
+use Magento\Framework\Stdlib\DateTime\TimezoneInterface;
+use Magento\Framework\Stdlib\StringUtils;
+use Psr\Log\LoggerInterface;
 
 /**
  * EAV Entity Attribute Text Data Model
  *
  * @author      Magento Core Team <core@magentocommerce.com>
+ * @SuppressWarnings(PHPMD.CyclomaticComplexity)
  */
 class Text extends \Magento\Eav\Model\Attribute\Data\AbstractData
 {
     /**
-     * @var \Magento\Framework\Stdlib\StringUtils
+     * @var StringUtils
      */
     protected $_string;
 
     /**
-     * @param \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate
-     * @param \Psr\Log\LoggerInterface $logger
-     * @param \Magento\Framework\Locale\ResolverInterface $localeResolver
-     * @param \Magento\Framework\Stdlib\StringUtils $stringHelper
+     * @param TimezoneInterface $localeDate
+     * @param LoggerInterface $logger
+     * @param ResolverInterface $localeResolver
+     * @param StringUtils $stringHelper
      * @codeCoverageIgnore
      */
     public function __construct(
-        \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate,
-        \Psr\Log\LoggerInterface $logger,
-        \Magento\Framework\Locale\ResolverInterface $localeResolver,
-        \Magento\Framework\Stdlib\StringUtils $stringHelper
+        TimezoneInterface $localeDate,
+        LoggerInterface   $logger,
+        ResolverInterface $localeResolver,
+        StringUtils       $stringHelper
     ) {
         parent::__construct($localeDate, $logger, $localeResolver);
         $this->_string = $stringHelper;
@@ -45,7 +52,7 @@ class Text extends \Magento\Eav\Model\Attribute\Data\AbstractData
      */
     public function extractValue(RequestInterface $request)
     {
-        $value = $this->_getRequestValue($request);
+        $value = trim($this->_getRequestValue($request));
         return $this->_applyInputFilter($value);
     }
 
@@ -72,20 +79,19 @@ class Text extends \Magento\Eav\Model\Attribute\Data\AbstractData
             return true;
         }
 
-        if (empty($value) && $value !== '0') {
+        if (empty($value) && $value !== '0' && $attribute->getDefaultValue() === null) {
             $label = __($attribute->getStoreLabel());
             $errors[] = __('"%1" is a required value.', $label);
+
+            return $errors;
         }
 
-        $result = $this->validateLength($attribute, $value);
-        if (count($result) !== 0) {
-            $errors = array_merge($errors, $result);
-        }
+        $validateLengthResult = $this->validateLength($attribute, $value);
+        $errors = array_merge($errors, $validateLengthResult);
 
-        $result = $this->_validateInputRule($value);
-        if ($result !== true) {
-            $errors = array_merge($errors, $result);
-        }
+        $validateInputRuleResult = $this->validateInputRule($value);
+        $errors = array_merge($errors, $validateInputRuleResult);
+
         if (count($errors) == 0) {
             return true;
         }
@@ -98,6 +104,7 @@ class Text extends \Magento\Eav\Model\Attribute\Data\AbstractData
      *
      * @param array|string $value
      * @return $this
+     * @throws LocalizedException
      */
     public function compactValue($value)
     {
@@ -125,6 +132,7 @@ class Text extends \Magento\Eav\Model\Attribute\Data\AbstractData
      * @param string $format
      * @return string|array
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     * @throws LocalizedException
      */
     public function outputValue($format = \Magento\Eav\Model\AttributeDataFactory::OUTPUT_FORMAT_TEXT)
     {
@@ -137,11 +145,11 @@ class Text extends \Magento\Eav\Model\Attribute\Data\AbstractData
     /**
      * Validates value length by attribute rules
      *
-     * @param \Magento\Eav\Model\Attribute $attribute
+     * @param Attribute $attribute
      * @param string $value
      * @return array errors
      */
-    private function validateLength(\Magento\Eav\Model\Attribute $attribute, $value): array
+    private function validateLength(Attribute $attribute, string $value): array
     {
         $errors = [];
         $length = $this->_string->strlen(trim($value));
@@ -161,5 +169,17 @@ class Text extends \Magento\Eav\Model\Attribute\Data\AbstractData
         }
 
         return $errors;
+    }
+
+    /**
+     * Validate value by attribute input validation rule.
+     *
+     * @param string $value
+     * @return array
+     */
+    private function validateInputRule(string $value): array
+    {
+        $result = $this->_validateInputRule($value);
+        return \is_array($result) ? $result : [];
     }
 }

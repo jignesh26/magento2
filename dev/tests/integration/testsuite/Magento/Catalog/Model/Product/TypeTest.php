@@ -12,7 +12,7 @@ class TypeTest extends \PHPUnit\Framework\TestCase
      */
     protected $_productType;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->_productType = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->get(
             \Magento\Catalog\Model\Product\Type::class
@@ -37,7 +37,7 @@ class TypeTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function factoryDataProvider()
+    public static function factoryDataProvider()
     {
         return [
             [null, \Magento\Catalog\Model\Product\Type\Simple::class],
@@ -70,7 +70,7 @@ class TypeTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function factoryReturnsSingletonDataProvider()
+    public static function factoryReturnsSingletonDataProvider()
     {
         return [
             [null],
@@ -92,7 +92,7 @@ class TypeTest extends \PHPUnit\Framework\TestCase
         $this->assertInstanceOf($expectedClass, $type);
     }
 
-    public function priceFactoryDataProvider()
+    public static function priceFactoryDataProvider()
     {
         return [
             [null, \Magento\Catalog\Model\Product\Type\Price::class],
@@ -145,7 +145,7 @@ class TypeTest extends \PHPUnit\Framework\TestCase
         $this->assertNotEmpty($this->_productType->getOptionText($typeId));
     }
 
-    public function getOptionTextDataProvider()
+    public static function getOptionTextDataProvider()
     {
         return [
             [\Magento\Catalog\Model\Product\Type::TYPE_SIMPLE],
@@ -173,7 +173,7 @@ class TypeTest extends \PHPUnit\Framework\TestCase
     public function testGetCompositeTypes()
     {
         $types = $this->_productType->getCompositeTypes();
-        $this->assertInternalType('array', $types);
+        $this->assertIsArray($types);
         $this->assertContains(\Magento\Catalog\Model\Product\Type::TYPE_BUNDLE, $types);
     }
 
@@ -209,7 +209,7 @@ class TypeTest extends \PHPUnit\Framework\TestCase
      */
     protected function _assertOptions($options)
     {
-        $this->assertInternalType('array', $options);
+        $this->assertIsArray($options);
         $types = [];
         foreach ($options as $option) {
             $this->assertArrayHasKey('value', $option);

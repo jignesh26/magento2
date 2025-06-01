@@ -13,10 +13,13 @@ use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Customer\Api\Data\CustomerInterface;
 use Magento\Customer\Model\Address\Mapper;
 use Magento\Customer\Model\Metadata\FormFactory;
+use Magento\Directory\Helper\Data as DirectoryHelper;
 use Magento\Framework\Currency;
 use Magento\Framework\Json\EncoderInterface;
+use Magento\Framework\Json\Helper\Data as JsonHelper;
 use Magento\Framework\Locale\CurrencyInterface;
 use Magento\Framework\Pricing\PriceCurrencyInterface;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
 use Magento\Quote\Model\Quote;
 use Magento\Quote\Model\Quote\Address;
 use Magento\Quote\Model\Quote\Payment;
@@ -24,8 +27,8 @@ use Magento\Sales\Block\Adminhtml\Order\Create\Form;
 use Magento\Sales\Model\AdminOrder\Create;
 use Magento\Store\Model\Store;
 use Magento\Store\Model\StoreManagerInterface;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use PHPUnit_Framework_MockObject_MockObject as MockObject;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
@@ -60,8 +63,20 @@ class FormTest extends TestCase
     /**
      * @inheritdoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
+        $objectManagerHelper = new ObjectManager($this);
+        $objects = [
+            [
+                JsonHelper::class,
+                $this->createMock(JsonHelper::class)
+            ],
+            [
+                DirectoryHelper::class,
+                $this->createMock(DirectoryHelper::class)
+            ]
+        ];
+        $objectManagerHelper->prepareObjectManager($objects);
         /** @var Context|MockObject $context */
         $context = $this->getMockBuilder(Context::class)
             ->disableOriginalConstructor()
@@ -72,7 +87,8 @@ class FormTest extends TestCase
 
         $this->quoteSession = $this->getMockBuilder(QuoteSession::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getCustomerId', 'getQuoteId', 'getStoreId', 'getStore', 'getQuote'])
+            ->onlyMethods(['getStore', 'getQuote'])
+            ->addMethods(['getQuoteId', 'getStoreId', 'getCustomerId'])
             ->getMock();
         /** @var Create|MockObject $create */
         $create = $this->getMockBuilder(Create::class)
@@ -140,7 +156,7 @@ class FormTest extends TestCase
 
         $customer = $this->getMockBuilder(CustomerInterface::class)
             ->disableOriginalConstructor()
-            ->getMock();
+            ->getMockForAbstractClass();
         $customer->method('getAddresses')
             ->willReturn([]);
         $this->customerRepository->method('getById')

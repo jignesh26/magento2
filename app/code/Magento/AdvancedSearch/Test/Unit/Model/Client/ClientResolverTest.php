@@ -1,41 +1,51 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\AdvancedSearch\Test\Unit\Model\Client;
 
+use InvalidArgumentException;
+use LogicException;
 use Magento\AdvancedSearch\Model\Client\ClientFactoryInterface;
 use Magento\AdvancedSearch\Model\Client\ClientInterface;
 use Magento\AdvancedSearch\Model\Client\ClientOptionsInterface;
 use Magento\AdvancedSearch\Model\Client\ClientResolver;
 use Magento\Framework\ObjectManagerInterface;
 use Magento\Framework\Search\EngineResolverInterface;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class ClientResolverTest extends \PHPUnit\Framework\TestCase
+/**
+ * @covers \Magento\AdvancedSearch\Model\Client\ClientResolver
+ */
+class ClientResolverTest extends TestCase
 {
     /**
-     * @var ClientResolver|\PHPUnit_Framework_MockObject_MockObject
+     * Testable Object
+     *
+     * @var ClientResolver
      */
     private $model;
 
     /**
-     * @var ObjectManagerInterface |\PHPUnit_Framework_MockObject_MockObject
+     * @var ObjectManagerInterface|MockObject
      */
     private $objectManager;
 
     /**
-     * @var EngineResolverInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var EngineResolverInterface|MockObject
      */
     private $engineResolverMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->engineResolverMock = $this->getMockBuilder(EngineResolverInterface::class)
             ->getMockForAbstractClass();
 
-        $this->objectManager = $this->createMock(ObjectManagerInterface::class);
+        $this->objectManager = $this->getMockForAbstractClass(ObjectManagerInterface::class);
 
         $this->model = new ClientResolver(
             $this->objectManager,
@@ -45,63 +55,58 @@ class ClientResolverTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function testCreate()
+    public function testCreate(): void
     {
         $this->engineResolverMock->expects($this->once())->method('getCurrentSearchEngine')
-            ->will($this->returnValue('engineName'));
+            ->willReturn('engineName');
 
-        $factoryMock = $this->createMock(ClientFactoryInterface::class);
+        $factoryMock = $this->getMockForAbstractClass(ClientFactoryInterface::class);
 
-        $clientMock = $this->createMock(ClientInterface::class);
+        $clientMock = $this->getMockForAbstractClass(ClientInterface::class);
 
-        $clientOptionsMock = $this->createMock(ClientOptionsInterface::class);
+        $clientOptionsMock = $this->getMockForAbstractClass(ClientOptionsInterface::class);
 
         $this->objectManager->expects($this->exactly(2))->method('create')
-            ->withConsecutive(
-                [$this->equalTo('engineFactoryClass')],
-                [$this->equalTo('engineOptionClass')]
-            )
-            ->willReturnOnConsecutiveCalls(
-                $factoryMock,
-                $clientOptionsMock
-            );
+            ->willReturnCallback(function ($className) use ($factoryMock, $clientOptionsMock) {
+                if ($className == 'engineFactoryClass') {
+                    return $factoryMock;
+                } elseif ($className == 'engineOptionClass') {
+                    return $clientOptionsMock;
+                }
+            });
 
         $clientOptionsMock->expects($this->once())->method('prepareClientOptions')
             ->with([])
-            ->will($this->returnValue(['parameters']));
+            ->willReturn(['parameters']);
 
         $factoryMock->expects($this->once())->method('create')
-            ->with($this->equalTo(['parameters']))
-            ->will($this->returnValue($clientMock));
+            ->with(['parameters'])
+            ->willReturn($clientMock);
 
         $result = $this->model->create();
         $this->assertInstanceOf(ClientInterface::class, $result);
     }
 
-    /**
-     * @expectedException \InvalidArgumentException
-     */
-    public function testCreateExceptionThrown()
+    public function testCreateExceptionThrown(): void
     {
+        $this->expectException(InvalidArgumentException::class);
         $this->objectManager->expects($this->once())->method('create')
-            ->with($this->equalTo('engineFactoryClass'))
-            ->will($this->returnValue('t'));
+            ->with('engineFactoryClass')
+            ->willReturn('t');
 
         $this->model->create('engineName');
     }
 
-    /**
-     * @expectedException LogicException
-     */
-    public function testCreateLogicException()
+    public function testCreateLogicException(): void
     {
+        $this->expectException(LogicException::class);
         $this->model->create('input');
     }
 
-    public function testGetCurrentEngine()
+    public function testGetCurrentEngine(): void
     {
         $this->engineResolverMock->expects($this->once())->method('getCurrentSearchEngine')
-            ->will($this->returnValue('engineName'));
+            ->willReturn('engineName');
 
         $this->assertEquals('engineName', $this->model->getCurrentEngine());
     }

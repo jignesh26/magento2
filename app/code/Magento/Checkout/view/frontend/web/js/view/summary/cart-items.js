@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 
 define([
@@ -11,6 +11,8 @@ define([
     'Magento_Checkout/js/model/quote'
 ], function (ko, totals, Component, stepNavigator, quote) {
     'use strict';
+
+    var useQty = window.checkoutConfig.useQty;
 
     return Component.extend({
         defaults: {
@@ -42,6 +44,15 @@ define([
          */
         getCartLineItemsCount: function () {
             return parseInt(totals.getItems()().length, 10);
+        },
+
+        /**
+         * Returns shopping cart items summary (includes config settings)
+         *
+         * @returns {Number}
+         */
+        getCartSummaryItemsCount: function () {
+            return useQty ? this.getItemsQty() : this.getCartLineItemsCount();
         },
 
         /**

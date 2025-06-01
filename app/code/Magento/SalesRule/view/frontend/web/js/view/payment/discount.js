@@ -9,36 +9,44 @@ define([
     'uiComponent',
     'Magento_Checkout/js/model/quote',
     'Magento_SalesRule/js/action/set-coupon-code',
-    'Magento_SalesRule/js/action/cancel-coupon'
-], function ($, ko, Component, quote, setCouponCodeAction, cancelCouponAction) {
+    'Magento_SalesRule/js/action/cancel-coupon',
+    'Magento_SalesRule/js/model/coupon'
+], function ($, ko, Component, quote, setCouponCodeAction, cancelCouponAction, coupon) {
     'use strict';
-
-    var totals = quote.getTotals(),
-        couponCode = ko.observable(null),
-        isApplied;
-
-    if (totals()) {
-        couponCode(totals()['coupon_code']);
-    }
-    isApplied = ko.observable(couponCode() != null);
 
     return Component.extend({
         defaults: {
             template: 'Magento_SalesRule/payment/discount'
         },
-        couponCode: couponCode,
+        couponCode: coupon.getCouponCode(),
 
         /**
          * Applied flag
          */
-        isApplied: isApplied,
+        isApplied: coupon.getIsApplied(),
+
+        initialize: function () {
+            var totals = quote.getTotals(),
+                couponCode = this.couponCode,
+                isApplied = this.isApplied,
+                couponCodeValue;
+
+            if (totals()) {
+                couponCode(totals()['coupon_code']);
+            }
+
+            couponCodeValue = couponCode();
+            isApplied(typeof couponCodeValue === 'string' && couponCodeValue.length > 0);
+
+            this._super();
+        },
 
         /**
          * Coupon code application procedure
          */
         apply: function () {
             if (this.validate()) {
-                setCouponCodeAction(couponCode(), isApplied);
+                setCouponCodeAction(this.couponCode(), this.isApplied);
             }
         },
 
@@ -47,8 +55,8 @@ define([
          */
         cancel: function () {
             if (this.validate()) {
-                couponCode('');
-                cancelCouponAction(isApplied);
+                this.couponCode('');
+                cancelCouponAction(this.isApplied);
             }
         },
 
@@ -58,8 +66,13 @@ define([
          * @returns {Boolean}
          */
         validate: function () {
-            var form = '#discount-form';
+            let form = '#discount-form';
 
+            $(form + ' input[type="text"]').each(function () {
+                let currentValue = $(this).val();
+
+                $(this).val(currentValue.trim());
+            });
             return $(form).validation() && $(form).validation('isValid');
         }
     });

@@ -21,7 +21,7 @@ class OrderCommand implements CommandInterface
     /**
      * @param StatusResolver|null $statusResolver
      */
-    public function __construct(StatusResolver $statusResolver = null)
+    public function __construct(?StatusResolver $statusResolver = null)
     {
         $this->statusResolver = $statusResolver
             ? : ObjectManager::getInstance()->get(StatusResolver::class);
@@ -61,7 +61,7 @@ class OrderCommand implements CommandInterface
     }
 
     /**
-     * @deprecated 100.2.0 Replaced by a StatusResolver class call.
+     * @deprecated 100.1.9 Replaced by a StatusResolver class call.
      *
      * @param Order $order
      * @param string $status

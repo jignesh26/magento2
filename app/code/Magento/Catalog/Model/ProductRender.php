@@ -1,8 +1,7 @@
 <?php
 /**
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Catalog\Model;
@@ -206,7 +205,7 @@ class ProductRender extends \Magento\Framework\Model\AbstractExtensibleModel imp
      * Set an extension attributes object.
      *
      * @param \Magento\Catalog\Api\Data\ProductRenderExtensionInterface $extensionAttributes
-     * @return $this
+     * @return void
      */
     public function setExtensionAttributes(
         \Magento\Catalog\Api\Data\ProductRenderExtensionInterface $extensionAttributes

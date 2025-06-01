@@ -1,8 +1,10 @@
 <?php
-/***
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+/**
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Cms\Test\Unit\Ui\Component\Listing;
 
 use Magento\Cms\Ui\Component\DataProvider;
@@ -13,36 +15,40 @@ use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Authorization;
 use Magento\Framework\ObjectManagerInterface;
 use Magento\Framework\View\Element\UiComponent\DataProvider\Reporting;
+use Magento\Ui\Component\Container;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+use Magento\Cms\Api\Data\PageInterface;
 
-class DataProviderTest extends \PHPUnit\Framework\TestCase
+class DataProviderTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\Authorization|\PHPUnit_Framework_MockObject_MockObject
+     * @var Authorization|MockObject
      */
     private $authorizationMock;
 
     /**
-     * @var \Magento\Framework\View\Element\UiComponent\DataProvider\Reporting|\PHPUnit_Framework_MockObject_MockObject
+     * @var Reporting|MockObject
      */
     private $reportingMock;
 
     /**
-     * @var \Magento\Framework\Api\Search\SearchCriteriaBuilder|\PHPUnit_Framework_MockObject_MockObject
+     * @var SearchCriteriaBuilder|MockObject
      */
     private $searchCriteriaBuilderMock;
 
     /**
-     * @var \Magento\Framework\App\RequestInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var RequestInterface|MockObject
      */
     private $requestInterfaceMock;
 
     /**
-     * @var \Magento\Framework\Api\FilterBuilder|\PHPUnit_Framework_MockObject_MockObject
+     * @var FilterBuilder|MockObject
      */
     private $filterBuilderMock;
 
     /**
-     * @var \Magento\Cms\Ui\Component\DataProvider
+     * @var DataProvider
      */
     private $dataProvider;
 
@@ -61,7 +67,18 @@ class DataProviderTest extends \PHPUnit\Framework\TestCase
      */
     private $requestFieldName = 'id';
 
-    public function setUp()
+    /**
+     * @var array
+     */
+    private array $pageLayoutColumns = [
+        PageInterface::PAGE_LAYOUT,
+        PageInterface::CUSTOM_THEME,
+        PageInterface::CUSTOM_THEME_FROM,
+        PageInterface::CUSTOM_THEME_TO,
+        PageInterface::CUSTOM_ROOT_TEMPLATE
+    ];
+
+    protected function setUp(): void
     {
         $this->authorizationMock = $this->getMockBuilder(Authorization::class)
             ->disableOriginalConstructor()
@@ -77,14 +94,14 @@ class DataProviderTest extends \PHPUnit\Framework\TestCase
 
         $this->requestInterfaceMock = $this->getMockBuilder(RequestInterface::class)
             ->disableOriginalConstructor()
-            ->getMock();
+            ->getMockForAbstractClass();
 
         $this->filterBuilderMock = $this->getMockBuilder(FilterBuilder::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        /** @var ObjectManagerInterface|\PHPUnit_Framework_MockObject_MockObject $objectManagerMock */
-        $objectManagerMock = $this->createMock(ObjectManagerInterface::class);
+        /** @var ObjectManagerInterface|MockObject $objectManagerMock */
+        $objectManagerMock = $this->getMockForAbstractClass(ObjectManagerInterface::class);
         $objectManagerMock->expects($this->once())
             ->method('get')
             ->willReturn($this->authorizationMock);
@@ -106,10 +123,15 @@ class DataProviderTest extends \PHPUnit\Framework\TestCase
      */
     public function testPrepareMetadata()
     {
-        $this->authorizationMock->expects($this->once())
+        $this->authorizationMock->expects($this->exactly(2))
             ->method('isAllowed')
-            ->with('Magento_Cms::save')
-            ->willReturn(false);
+            ->willReturnMap(
+                [
+                    ['Magento_Cms::save', null, false],
+                    ['Magento_Cms::save_design', null, false],
+
+                ]
+            );
 
         $metadata = [
             'cms_page_columns' => [
@@ -118,12 +140,28 @@ class DataProviderTest extends \PHPUnit\Framework\TestCase
                         'config' => [
                             'editorConfig' => [
                                 'enabled' => false
-                            ]
+                            ],
+                            'componentType' => Container::NAME
                         ]
                     ]
                 ]
             ]
         ];
+
+        foreach ($this->pageLayoutColumns as $column) {
+            $metadata['cms_page_columns']['children'][$column] = [
+                'arguments' => [
+                    'data' => [
+                        'config' => [
+                            'editor' => [
+                                'editorType' => false
+                            ],
+                            'componentType' => Container::NAME
+                        ]
+                    ]
+                ]
+            ];
+        }
 
         $this->assertEquals(
             $metadata,

@@ -3,12 +3,23 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Paypal\Test\Unit\Model;
 
+use Magento\Csp\Helper\CspNonceProvider;
+use Magento\Directory\Helper\Data;
+use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Payment\Model\Source\CctypeFactory;
+use Magento\Paypal\Model\CertFactory;
 use Magento\Paypal\Model\Config;
 use Magento\Store\Model\ScopeInterface;
+use Magento\Store\Model\StoreManagerInterface;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class ConfigTest extends \PHPUnit\Framework\TestCase
+class ConfigTest extends TestCase
 {
     /**
      * @var Config
@@ -16,47 +27,56 @@ class ConfigTest extends \PHPUnit\Framework\TestCase
     private $model;
 
     /**
-     * @var \Magento\Framework\App\Config\ScopeConfigInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ScopeConfigInterface|MockObject
      */
     private $scopeConfig;
 
     /**
-     * @var \Magento\Directory\Helper\Data|\PHPUnit_Framework_MockObject_MockObject
+     * @var Data|MockObject
      */
     private $directoryHelper;
 
     /**
-     * @var \Magento\Store\Model\StoreManagerInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var StoreManagerInterface|MockObject
      */
     private $storeManager;
 
     /**
-     * @var \Magento\Payment\Model\Source\CctypeFactory|\PHPUnit_Framework_MockObject_MockObject
+     * @var CctypeFactory|MockObject
      */
     private $ccTypeFactory;
 
     /**
-     * @var \Magento\Paypal\Model\CertFactory|\PHPUnit_Framework_MockObject_MockObject
+     * @var CertFactory|MockObject
      */
     private $certFactory;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->scopeConfig = $this->createMock(\Magento\Framework\App\Config\ScopeConfigInterface::class);
+        $this->scopeConfig = $this->getMockForAbstractClass(ScopeConfigInterface::class);
 
-        $this->directoryHelper = $this->getMockBuilder(\Magento\Directory\Helper\Data::class)
+        $this->directoryHelper = $this->getMockBuilder(Data::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->storeManager = $this->createMock(\Magento\Store\Model\StoreManagerInterface::class);
+        $this->storeManager = $this->getMockForAbstractClass(StoreManagerInterface::class);
 
-        $this->ccTypeFactory = $this->getMockBuilder(\Magento\Payment\Model\Source\CctypeFactory::class)
+        $this->ccTypeFactory = $this->getMockBuilder(CctypeFactory::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->certFactory = $this->getMockBuilder(\Magento\Paypal\Model\CertFactory::class)
+        $this->certFactory = $this->getMockBuilder(CertFactory::class)
             ->disableOriginalConstructor()
             ->getMock();
+
+        $objectManager = new ObjectManager($this);
+        $objects = [
+            [
+                CspNonceProvider::class,
+                $this->createMock(CspNonceProvider::class)
+            ]
+        ];
+        $objectManager->prepareObjectManager($objects);
 
         $this->model = new Config(
             $this->scopeConfig,
@@ -117,14 +137,31 @@ class ConfigTest extends \PHPUnit\Framework\TestCase
      */
     public function testIsMethodAvailableForIsMethodActive($methodName, $expected)
     {
-        $this->scopeConfig->expects($this->any())
-            ->method('getValue')
-            ->with('paypal/general/merchant_country')
-            ->will($this->returnValue('US'));
-        $this->scopeConfig->expects($this->exactly(2))
-            ->method('isSetFlag')
-            ->withAnyParameters()
-            ->will($this->returnValue(true));
+        if ($methodName == Config::METHOD_WPP_BML) {
+            $valueMap = [
+                ['paypal/general/merchant_country', ScopeConfigInterface::SCOPE_TYPE_DEFAULT, null, 'US'],
+                ['paypal/general/merchant_country', ScopeInterface::SCOPE_STORE, null, 'US'],
+                ['paypal/style/disable_funding_options', ScopeConfigInterface::SCOPE_TYPE_DEFAULT, null, []],
+            ];
+            $this->scopeConfig
+                ->method('getValue')
+                ->willReturnMap($valueMap);
+        } else {
+            $this->scopeConfig
+                ->method('getValue')
+                ->with('paypal/general/merchant_country')
+                ->willReturn('US');
+        }
+        $flagMap = [
+            ['payment/'. Config::METHOD_WPS_EXPRESS . '/active', ScopeInterface::SCOPE_STORE, null, 0],
+            ['payment/'. Config::METHOD_WPS_BML . '/active', ScopeInterface::SCOPE_STORE, null, 0],
+            ['payment/'. Config::METHOD_WPP_EXPRESS . '/active', ScopeInterface::SCOPE_STORE, null, 1],
+            ['payment/'. Config::METHOD_PAYFLOWPRO . '/active', ScopeInterface::SCOPE_STORE, null, 1],
+            ['payment/'. Config::METHOD_WPP_PE_EXPRESS . '/active', ScopeInterface::SCOPE_STORE, null, 1],
+            ['payment/'. Config::METHOD_WPP_PE_BML . '/active', ScopeInterface::SCOPE_STORE, null, 1],
+        ];
+        $this->scopeConfig->method('isSetFlag')
+            ->willReturnMap($flagMap);
 
         $this->model->setMethod($methodName);
         $this->assertEquals($expected, $this->model->isMethodAvailable($methodName));
@@ -167,7 +204,7 @@ class ConfigTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isMethodAvailableDataProvider()
+    public static function isMethodAvailableDataProvider()
     {
         return [
             [Config::METHOD_WPP_EXPRESS, true],
@@ -193,7 +230,7 @@ class ConfigTest extends \PHPUnit\Framework\TestCase
         $this->scopeConfig->expects($this->once())
             ->method('getValue')
             ->with('payment/' . Config::METHOD_WPP_EXPRESS . '/allow_ba_signup')
-            ->will($this->returnValue(1));
+            ->willReturn(1);
         $this->assertEquals(1, $this->model->getValue('allow_ba_signup'));
     }
 
@@ -204,7 +241,7 @@ class ConfigTest extends \PHPUnit\Framework\TestCase
         $this->scopeConfig->expects($this->once())
             ->method('getValue')
             ->with('payment/' . Config::METHOD_WPP_PE_EXPRESS . '/allow_ba_signup')
-            ->will($this->returnValue(1));
+            ->willReturn(1);
         $this->assertEquals(1, $this->model->getValue('allow_ba_signup'));
     }
 
@@ -220,6 +257,34 @@ class ConfigTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
+     * @param string $name
+     * @param string $expectedValue
+     * @param string|null $expectedResult
+     *
+     * @dataProvider payPalStylesDataProvider
+     */
+    public function testGetSpecificConfigPathPayPalStyles($name, $expectedValue, $expectedResult)
+    {
+        // _mapGenericStyleFieldset
+        $this->scopeConfig->method('getValue')
+            ->with('paypal/style/' . $name)
+            ->willReturn($expectedValue);
+
+        $this->assertEquals($expectedResult, $this->model->getValue($name));
+    }
+
+    /**
+     * @return array
+     */
+    public static function payPalStylesDataProvider(): array
+    {
+        return [
+            ['checkout_page_button_customize', 'value', 'value'],
+            ['test', 'value', null],
+        ];
+    }
+
+    /**
      * @dataProvider skipOrderReviewStepDataProvider
      */
     public function testGetPayPalBasicStartUrl($value, $url)
@@ -227,14 +292,14 @@ class ConfigTest extends \PHPUnit\Framework\TestCase
         $this->scopeConfig->expects($this->once())
             ->method('getValue')
             ->with('payment/paypal_express/skip_order_review_step')
-            ->will($this->returnValue($value));
+            ->willReturn($value);
         $this->assertEquals($url, $this->model->getPayPalBasicStartUrl('token'));
     }
 
     /**
      * @return array
      */
-    public function skipOrderReviewStepDataProvider()
+    public static function skipOrderReviewStepDataProvider()
     {
         return [
             [true, 'https://www.paypal.com/cgi-bin/webscr?cmd=_express-checkout&token=token&useraction=commit'],
@@ -253,7 +318,7 @@ class ConfigTest extends \PHPUnit\Framework\TestCase
         $this->scopeConfig->expects($this->once())
             ->method('getValue')
             ->with('payment/' . Config::METHOD_WPP_BML . '/publisher_id')
-            ->will($this->returnValue('12345'));
+            ->willReturn('12345');
         $this->assertEquals('12345', $this->model->getBmlPublisherId());
     }
 
@@ -265,14 +330,14 @@ class ConfigTest extends \PHPUnit\Framework\TestCase
         $this->scopeConfig->expects($this->once())
             ->method('getValue')
             ->with('payment/' . Config::METHOD_WPP_BML . '/' . $section . '_position')
-            ->will($this->returnValue($expected));
+            ->willReturn($expected);
         $this->assertEquals($expected, $this->model->getBmlPosition($section));
     }
 
     /**
      * @return array
      */
-    public function getBmlPositionDataProvider()
+    public static function getBmlPositionDataProvider()
     {
         return [
             ['head', 'left'],
@@ -288,14 +353,14 @@ class ConfigTest extends \PHPUnit\Framework\TestCase
         $this->scopeConfig->expects($this->once())
             ->method('getValue')
             ->with('payment/' . Config::METHOD_WPP_BML . '/' . $section . '_size')
-            ->will($this->returnValue($expected));
+            ->willReturn($expected);
         $this->assertEquals($expected, $this->model->getBmlSize($section));
     }
 
     /**
      * @return array
      */
-    public function getBmlSizeDataProvider()
+    public static function getBmlSizeDataProvider()
     {
         return [
             ['head', '125x75'],
@@ -312,24 +377,26 @@ class ConfigTest extends \PHPUnit\Framework\TestCase
         $this->directoryHelper->expects($this->any())
             ->method('getDefaultCountry')
             ->with(1)
-            ->will($this->returnValue('US'));
+            ->willReturn('US');
         $this->scopeConfig->expects($this->any())
             ->method('isSetFlag')
-            ->will($this->returnValue($expectedFlag));
+            ->willReturn($expectedFlag);
         $this->scopeConfig->expects($this->any())
             ->method('getValue')
-            ->will($this->returnValueMap([
-                ['payment/' . Config::METHOD_WPP_BML . '/' . $section . '_display', 'store', 1, $expectedValue],
-                ['payment/' . Config::METHOD_WPP_BML . '/active', 'store', 1, $expectedValue],
-                ['payment/' . Config::METHOD_WPP_PE_BML . '/active', 'store', 1, $expectedValue],
-            ]));
+            ->willReturnMap(
+                [
+                    ['payment/' . Config::METHOD_WPP_BML . '/' . $section . '_display', 'store', 1, $expectedValue],
+                    ['payment/' . Config::METHOD_WPP_BML . '/active', 'store', 1, $expectedValue],
+                    ['payment/' . Config::METHOD_WPP_PE_BML . '/active', 'store', 1, $expectedValue],
+                ]
+            );
         $this->assertEquals($expected, $this->model->getBmlDisplay($section));
     }
 
     /**
      * @return array
      */
-    public function dataProviderGetBmlDisplay()
+    public static function dataProviderGetBmlDisplay()
     {
         return [
             ['head', true, true, true],
@@ -363,11 +430,13 @@ class ConfigTest extends \PHPUnit\Framework\TestCase
 
         $this->scopeConfig->expects($this->any())
             ->method('getValue')
-            ->willReturnMap([
-                ['paypal/wpp/button_flavor', ScopeInterface::SCOPE_STORE, 123, $areButtonDynamic],
-                ['paypal/wpp/sandbox_flag', ScopeInterface::SCOPE_STORE, 123, $sandboxFlag],
-                ['paypal/wpp/button_type', ScopeInterface::SCOPE_STORE, 123, $buttonType],
-            ]);
+            ->willReturnMap(
+                [
+                    ['paypal/wpp/button_flavor', ScopeInterface::SCOPE_STORE, 123, $areButtonDynamic],
+                    ['paypal/wpp/sandbox_flag', ScopeInterface::SCOPE_STORE, 123, $sandboxFlag],
+                    ['paypal/wpp/button_type', ScopeInterface::SCOPE_STORE, 123, $buttonType],
+                ]
+            );
 
         $this->assertEquals(
             $result,
@@ -378,7 +447,7 @@ class ConfigTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function dataProviderGetExpressCheckoutShortcutImageUrl()
+    public static function dataProviderGetExpressCheckoutShortcutImageUrl()
     {
         return [
             [
@@ -431,10 +500,12 @@ class ConfigTest extends \PHPUnit\Framework\TestCase
 
         $this->scopeConfig->expects($this->any())
             ->method('getValue')
-            ->willReturnMap([
-                ['paypal/wpp/button_flavor', ScopeInterface::SCOPE_STORE, 123, $areButtonDynamic],
-                ['paypal/wpp/sandbox_flag', ScopeInterface::SCOPE_STORE, 123, $sandboxFlag],
-            ]);
+            ->willReturnMap(
+                [
+                    ['paypal/wpp/button_flavor', ScopeInterface::SCOPE_STORE, 123, $areButtonDynamic],
+                    ['paypal/wpp/sandbox_flag', ScopeInterface::SCOPE_STORE, 123, $sandboxFlag],
+                ]
+            );
 
         $this->assertEquals(
             $result,
@@ -445,7 +516,7 @@ class ConfigTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function dataProviderGetPaymentMarkImageUrl()
+    public static function dataProviderGetPaymentMarkImageUrl()
     {
         return [
             [

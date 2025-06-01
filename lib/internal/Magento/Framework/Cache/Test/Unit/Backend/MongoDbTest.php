@@ -3,30 +3,37 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Cache\Test\Unit\Backend;
 
-class MongoDbTest extends \PHPUnit\Framework\TestCase
+use Magento\Framework\Cache\Backend\MongoDb;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+
+class MongoDbTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\Cache\Backend\MongoDb|null
+     * @var MongoDb|null
      */
     protected $_model = null;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $_collection = null;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->_collection = $this->getMockBuilder('MongoCollection')
-            ->setMethods(['find', 'findOne', 'distinct', 'save', 'update', 'remove', 'drop'])
+        $this->_collection = $this->getMockBuilder(\stdClass::class)
+            ->addMethods(['find', 'findOne', 'distinct', 'save', 'update', 'remove', 'drop'])
+            ->disableOriginalConstructor()
             ->getMock();
-        $this->_model = $this->createPartialMock(\Magento\Framework\Cache\Backend\MongoDb::class, ['_getCollection']);
-        $this->_model->expects($this->any())->method('_getCollection')->will($this->returnValue($this->_collection));
+        $this->_model = $this->createPartialMock(MongoDb::class, ['_getCollection']);
+        $this->_model->expects($this->any())->method('_getCollection')->willReturn($this->_collection);
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         $this->_model = null;
         $this->_collection = null;
@@ -40,7 +47,7 @@ class MongoDbTest extends \PHPUnit\Framework\TestCase
     public function testGetIds(array $ids, array $expected)
     {
         $result = new \ArrayIterator($ids);
-        $this->_collection->expects($this->once())->method('find')->will($this->returnValue($result));
+        $this->_collection->expects($this->once())->method('find')->willReturn($result);
         $actual = $this->_model->getIds();
         $this->assertEquals($expected, $actual);
     }
@@ -48,7 +55,7 @@ class MongoDbTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getIdsDataProvider()
+    public static function getIdsDataProvider()
     {
         return [
             'empty db' => [[], []],
@@ -62,7 +69,7 @@ class MongoDbTest extends \PHPUnit\Framework\TestCase
      */
     public function testGetTags(array $tags)
     {
-        $this->_collection->expects($this->once())->method('distinct')->with('tags')->will($this->returnValue($tags));
+        $this->_collection->expects($this->once())->method('distinct')->with('tags')->willReturn($tags);
         $actual = $this->_model->getTags();
         $this->assertEquals($tags, $actual);
     }
@@ -70,7 +77,7 @@ class MongoDbTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getTagsDataProvider()
+    public static function getTagsDataProvider()
     {
         return ['no tags' => [[]], 'multiple tags' => [['tag1', 'tag2']]];
     }
@@ -91,8 +98,8 @@ class MongoDbTest extends \PHPUnit\Framework\TestCase
             'find'
         )->with(
             $expectedInput
-        )->will(
-            $this->returnValue($expectedOutput)
+        )->willReturn(
+            $expectedOutput
         );
         $actualIds = $this->_model->{$method}($tags);
         $this->assertEquals($expectedIds, $actualIds);
@@ -101,7 +108,7 @@ class MongoDbTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getIdsMatchingTagsDataProvider()
+    public static function getIdsMatchingTagsDataProvider()
     {
         return [
             'getIdsMatchingTags() - one tag' => [
@@ -172,8 +179,8 @@ class MongoDbTest extends \PHPUnit\Framework\TestCase
             'findOne'
         )->with(
             $expectedInput
-        )->will(
-            $this->returnValue($mongoOutput)
+        )->willReturn(
+            $mongoOutput
         );
         $actual = $this->_model->getMetadatas($cacheId);
         $this->assertEquals($expected, $actual);
@@ -182,7 +189,7 @@ class MongoDbTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getMetadatasDataProvider()
+    public static function getMetadatasDataProvider()
     {
         $time = time();
         return [
@@ -242,8 +249,8 @@ class MongoDbTest extends \PHPUnit\Framework\TestCase
             'findOne'
         )->with(
             $this->logicalAnd($this->arrayHasKey('_id'), $validityCondition)
-        )->will(
-            $this->returnValue(['data' => $binData])
+        )->willReturn(
+            ['data' => $binData]
         );
         $actual = $this->_model->load($cacheId, $doNotTestValidity);
         $this->assertSame($expected, $actual);
@@ -252,14 +259,14 @@ class MongoDbTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function loadDataProvider()
+    public static function loadDataProvider()
     {
         return ['test validity' => [false], 'do not test validity' => [true]];
     }
 
     public function testLoadNoRecord()
     {
-        $this->_collection->expects($this->once())->method('findOne')->will($this->returnValue(null));
+        $this->_collection->expects($this->once())->method('findOne')->willReturn(null);
         $this->assertFalse($this->_model->load('test_id'));
     }
 
@@ -272,16 +279,16 @@ class MongoDbTest extends \PHPUnit\Framework\TestCase
         )->method(
             'findOne'
         )->with(
-            $this->logicalAnd($this->arrayHasKey('_id'), $this->contains($cacheId))
-        )->will(
-            $this->returnValue(['mtime' => $time])
+            $this->logicalAnd($this->arrayHasKey('_id'), $this->containsEqual($cacheId))
+        )->willReturn(
+            ['mtime' => $time]
         );
         $this->assertSame($time, $this->_model->test($cacheId));
     }
 
     public function testTestNotFound()
     {
-        $this->_collection->expects($this->once())->method('findOne')->will($this->returnValue(null));
+        $this->_collection->expects($this->once())->method('findOne')->willReturn(null);
         $this->assertFalse($this->_model->test('test_id'));
     }
 
@@ -302,8 +309,8 @@ class MongoDbTest extends \PHPUnit\Framework\TestCase
             'save'
         )->with(
             $inputAssertion
-        )->will(
-            $this->returnValue(true)
+        )->willReturn(
+            true
         );
 
         $this->assertTrue($this->_model->save('test data', 'test_id', ['tag1', 'tag2'], 100));
@@ -318,8 +325,8 @@ class MongoDbTest extends \PHPUnit\Framework\TestCase
             'remove'
         )->with(
             ['_id' => $cacheId]
-        )->will(
-            $this->returnValue(true)
+        )->willReturn(
+            true
         );
         $this->assertTrue($this->_model->remove($cacheId));
     }
@@ -340,10 +347,10 @@ class MongoDbTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function cleanDataProvider()
+    public static function cleanDataProvider()
     {
         return [
-            'clean expired' => [\Zend_Cache::CLEANING_MODE_OLD, [], $this->arrayHasKey('expire')],
+            'clean expired' => [\Zend_Cache::CLEANING_MODE_OLD, [], self::arrayHasKey('expire')],
             'clean cache matching all tags (string)' => [
                 \Zend_Cache::CLEANING_MODE_MATCHING_TAG,
                 'tag1',
@@ -394,7 +401,7 @@ class MongoDbTest extends \PHPUnit\Framework\TestCase
 
     public function cleanAll()
     {
-        $this->_collection->expects($this->once())->method('drop')->will($this->returnValue(['ok' => true]));
+        $this->_collection->expects($this->once())->method('drop')->willReturn(['ok' => true]);
         $this->assertTrue($this->_model->clean(\Zend_Cache::CLEANING_MODE_ALL));
     }
 
@@ -411,12 +418,10 @@ class MongoDbTest extends \PHPUnit\Framework\TestCase
         }
     }
 
-    /**
-     * @expectedException \Zend_Cache_Exception
-     * @expectedExceptionMessage Unsupported cleaning mode: invalid_mode
-     */
     public function testCleanInvalidMode()
     {
+        $this->expectException('Zend_Cache_Exception');
+        $this->expectExceptionMessage('Unsupported cleaning mode: invalid_mode');
         $this->_model->clean('invalid_mode');
     }
 }

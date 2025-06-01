@@ -31,8 +31,8 @@ class ReadTest extends \PHPUnit\Framework\TestCase
     public function testGetAbsolutePath()
     {
         $dir = $this->getDirectoryInstance('foo');
-        $this->assertContains('_files/foo', $dir->getAbsolutePath());
-        $this->assertContains('_files/foo/bar', $dir->getAbsolutePath('bar'));
+        $this->assertStringContainsString('_files/foo', $dir->getAbsolutePath());
+        $this->assertStringContainsString('_files/foo/bar', $dir->getAbsolutePath('bar'));
     }
 
     public function testGetAbsolutePathOutside()
@@ -73,17 +73,17 @@ class ReadTest extends \PHPUnit\Framework\TestCase
         $exceptions = 0;
         $dir = $this->getDirectoryInstance('foo');
         try {
-            $dir->getRelativePath(__DIR__ .'/ReadTest.php');
+            $dir->getRelativePath(__DIR__ . '/ReadTest.php');
         } catch (ValidatorException $exception) {
             $exceptions++;
         }
         try {
-            $dir->getRelativePath(__DIR__ .'//./..////Directory/ReadTest.php');
+            $dir->getRelativePath(__DIR__ . '//./..////Directory/ReadTest.php');
         } catch (ValidatorException $exception) {
             $exceptions++;
         }
         try {
-            $dir->getRelativePath(__DIR__ .'\..\Directory\ReadTest.php');
+            $dir->getRelativePath(__DIR__ . '\..\Directory\ReadTest.php');
         } catch (ValidatorException $exception) {
             $exceptions++;
         }
@@ -117,7 +117,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function readProvider()
+    public static function readProvider()
     {
         return [
             ['foo', null, ['bar', 'file_three.txt']],
@@ -170,7 +170,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function searchProvider()
+    public static function searchProvider()
     {
         return [
             ['foo', 'bar/*', ['bar/file_two.txt', 'bar/baz']],
@@ -220,9 +220,15 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function existsProvider()
+    public static function existsProvider()
     {
-        return [['foo', 'bar', true], ['foo', 'bar/baz/', true], ['foo', 'bar/notexists', false]];
+        return [
+            ['foo', 'bar', true],
+            ['foo', 'bar/baz', true],
+            ['foo', 'bar/notexists', false],
+            ['foo', 'foo/../bar', true],
+            ['foo', 'foo/../notexists', false]
+        ];
     }
 
     public function testIsExistOutside()
@@ -274,7 +280,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
         ];
         $result = $dir->stat($path);
         foreach ($expectedInfo as $key) {
-            $this->assertTrue(array_key_exists($key, $result));
+            $this->assertArrayHasKey($key, $result);
         }
     }
 
@@ -283,7 +289,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function statProvider()
+    public static function statProvider()
     {
         return [['foo', 'bar'], ['foo', 'file_three.txt']];
     }
@@ -419,7 +425,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function isReadableProvider()
+    public static function isReadableProvider()
     {
         return [['foo', 'bar', true], ['foo', 'file_three.txt', true]];
     }
@@ -429,7 +435,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function isFileProvider()
+    public static function isFileProvider()
     {
         return [['bar', false], ['file_three.txt', true]];
     }
@@ -439,7 +445,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function isDirectoryProvider()
+    public static function isDirectoryProvider()
     {
         return [['bar', true], ['file_three.txt', false]];
     }
@@ -494,7 +500,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function readFileProvider()
+    public static function readFileProvider()
     {
         return [
             ['popup.csv', 'var myData = 5;'],

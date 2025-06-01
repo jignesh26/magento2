@@ -8,6 +8,7 @@ namespace Magento\Bundle\Model\Product;
 
 /**
  * Abstract class for testing bundle prices
+ * @codingStandardsIgnoreStart
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 abstract class BundlePriceAbstract extends \PHPUnit\Framework\TestCase
@@ -29,7 +30,12 @@ abstract class BundlePriceAbstract extends \PHPUnit\Framework\TestCase
      */
     protected $productCollectionFactory;
 
-    protected function setUp()
+    /**
+     * @var \Magento\CatalogRule\Model\RuleFactory
+     */
+    private $ruleFactory;
+
+    protected function setUp(): void
     {
         $this->objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
         $this->productRepository = $this->objectManager->create(\Magento\Catalog\Api\ProductRepositoryInterface::class);
@@ -42,13 +48,14 @@ abstract class BundlePriceAbstract extends \PHPUnit\Framework\TestCase
             true,
             \Magento\Store\Model\ScopeInterface::SCOPE_STORE
         );
+        $this->ruleFactory = $this->objectManager->get(\Magento\CatalogRule\Model\RuleFactory::class);
     }
 
     /**
      * Get test cases
      * @return array
      */
-    abstract public function getTestCases();
+    abstract static public function getTestCases();
 
     /**
      * @param array $strategyModifiers
@@ -61,6 +68,8 @@ abstract class BundlePriceAbstract extends \PHPUnit\Framework\TestCase
      */
     protected function prepareFixture($strategyModifiers, $productSku)
     {
+        $this->ruleFactory->create()->clearPriceRulesData();
+
         $bundleProduct = $this->productRepository->get($productSku);
 
         foreach ($strategyModifiers as $modifier) {
@@ -142,3 +151,4 @@ abstract class BundlePriceAbstract extends \PHPUnit\Framework\TestCase
         return $bundleProduct;
     }
 }
+// @codingStandardsIgnoreEnd

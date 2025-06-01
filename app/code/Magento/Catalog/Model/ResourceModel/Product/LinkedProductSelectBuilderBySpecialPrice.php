@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Model\ResourceModel\Product;
 
@@ -12,6 +12,10 @@ use Magento\Framework\DB\Select;
 use Magento\Store\Model\Store;
 
 /**
+ * LinkedProductSelectBuilderBySpecialPrice
+ *
+ * Provide Select object for retrieve product id by special price
+ *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class LinkedProductSelectBuilderBySpecialPrice implements LinkedProductSelectBuilderInterface
@@ -74,7 +78,7 @@ class LinkedProductSelectBuilderBySpecialPrice implements LinkedProductSelectBui
         \Magento\Framework\Stdlib\DateTime $dateTime,
         \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate,
         \Magento\Framework\EntityManager\MetadataPool $metadataPool,
-        BaseSelectProcessorInterface $baseSelectProcessor = null
+        ?BaseSelectProcessorInterface $baseSelectProcessor = null
     ) {
         $this->storeManager = $storeManager;
         $this->resource = $resourceConnection;
@@ -88,16 +92,16 @@ class LinkedProductSelectBuilderBySpecialPrice implements LinkedProductSelectBui
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
-    public function build($productId)
+    public function build(int $productId, int $storeId) : array
     {
         $linkField = $this->metadataPool->getMetadata(ProductInterface::class)->getLinkField();
         $connection = $this->resource->getConnection();
         $specialPriceAttribute = $this->eavConfig->getAttribute(Product::ENTITY, 'special_price');
         $specialPriceFromDate = $this->eavConfig->getAttribute(Product::ENTITY, 'special_from_date');
         $specialPriceToDate = $this->eavConfig->getAttribute(Product::ENTITY, 'special_to_date');
-        $timestamp = $this->localeDate->scopeTimeStamp($this->storeManager->getStore());
+        $timestamp = $this->localeDate->scopeTimeStamp($this->storeManager->getStore($storeId));
         $currentDate = $this->dateTime->formatDate($timestamp, false);
         $productTable = $this->resource->getTableName('catalog_product_entity');
 
@@ -145,7 +149,7 @@ class LinkedProductSelectBuilderBySpecialPrice implements LinkedProductSelectBui
 
         if (!$this->catalogHelper->isPriceGlobal()) {
             $priceSelectStore = clone $specialPrice;
-            $priceSelectStore->where('t.store_id = ?', $this->storeManager->getStore()->getId());
+            $priceSelectStore->where('t.store_id = ?', $storeId);
             $selects[] = $priceSelectStore;
         }
 

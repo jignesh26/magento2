@@ -1,22 +1,22 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 declare(strict_types=1);
 
 namespace Magento\CatalogGraphQl\Model\Resolver;
 
-use Magento\CatalogGraphQl\Model\Resolver\Layer\DataProvider\Filters;
-use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
-use Magento\CatalogGraphQl\Model\Resolver\Products\Query\Filter;
-use Magento\CatalogGraphQl\Model\Resolver\Products\Query\Search;
+use Magento\CatalogGraphQl\Model\Resolver\Products\Query\ProductQueryInterface;
 use Magento\Framework\GraphQl\Config\Element\Field;
+use Magento\Framework\GraphQl\Exception\GraphQlAuthorizationException;
 use Magento\Framework\GraphQl\Exception\GraphQlInputException;
-use Magento\Framework\GraphQl\Query\Resolver\Argument\SearchCriteria\Builder;
-use Magento\Framework\GraphQl\Query\Resolver\Argument\SearchCriteria\SearchFilter;
 use Magento\Framework\GraphQl\Query\ResolverInterface;
+use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
 use Magento\Catalog\Model\Layer\Resolver;
+use Magento\CatalogGraphQl\DataProvider\Product\SearchCriteriaBuilder;
+use Magento\Framework\GraphQl\Query\Uid;
+use Magento\Framework\App\ObjectManager;
 
 /**
  * Products field resolver, used for GraphQL request processing.
@@ -24,41 +24,32 @@ use Magento\Catalog\Model\Layer\Resolver;
 class Products implements ResolverInterface
 {
     /**
-     * @var Builder
-     */
-    private $searchCriteriaBuilder;
-
-    /**
-     * @var Search
+     * @var ProductQueryInterface
      */
     private $searchQuery;
 
     /**
-     * @var Filter
+     * @var SearchCriteriaBuilder
      */
-    private $filterQuery;
+    private $searchApiCriteriaBuilder;
+
+    /** @var Uid */
+    private $uidEncoder;
 
     /**
-     * @var SearchFilter
-     */
-    private $searchFilter;
-
-    /**
-     * @param Builder $searchCriteriaBuilder
-     * @param Search $searchQuery
-     * @param Filter $filterQuery
-     * @param SearchFilter $searchFilter
+     * @param ProductQueryInterface $searchQuery
+     * @param SearchCriteriaBuilder|null $searchApiCriteriaBuilder
+     * @param Uid|null $uidEncoder
      */
     public function __construct(
-        Builder $searchCriteriaBuilder,
-        Search $searchQuery,
-        Filter $filterQuery,
-        SearchFilter $searchFilter
+        ProductQueryInterface $searchQuery,
+        ?SearchCriteriaBuilder $searchApiCriteriaBuilder = null,
+        ?Uid $uidEncoder = null
     ) {
-        $this->searchCriteriaBuilder = $searchCriteriaBuilder;
         $this->searchQuery = $searchQuery;
-        $this->filterQuery = $filterQuery;
-        $this->searchFilter = $searchFilter;
+        $this->searchApiCriteriaBuilder = $searchApiCriteriaBuilder ??
+            ObjectManager::getInstance()->get(SearchCriteriaBuilder::class);
+        $this->uidEncoder = $uidEncoder ?: ObjectManager::getInstance()->get(Uid::class);
     }
 
     /**
@@ -68,37 +59,18 @@ class Products implements ResolverInterface
         Field $field,
         $context,
         ResolveInfo $info,
-        array $value = null,
-        array $args = null
+        ?array $value = null,
+        ?array $args = null
     ) {
-        $searchCriteria = $this->searchCriteriaBuilder->build($field->getName(), $args);
-        $searchCriteria->setCurrentPage($args['currentPage']);
-        $searchCriteria->setPageSize($args['pageSize']);
-        if (!isset($args['search']) && !isset($args['filter'])) {
-            throw new GraphQlInputException(
-                __("'search' or 'filter' input argument is required.")
-            );
-        } elseif (isset($args['search'])) {
-            $layerType = Resolver::CATALOG_LAYER_SEARCH;
-            $this->searchFilter->add($args['search'], $searchCriteria);
-            $searchResult = $this->searchQuery->getResult($searchCriteria, $info);
-        } else {
-            $layerType = Resolver::CATALOG_LAYER_CATEGORY;
-            $searchResult = $this->filterQuery->getResult($searchCriteria, $info);
-        }
-        //possible division by 0
-        if ($searchCriteria->getPageSize()) {
-            $maxPages = ceil($searchResult->getTotalCount() / $searchCriteria->getPageSize());
-        } else {
-            $maxPages = 0;
-        }
+        $this->validateInput($args);
 
-        $currentPage = $searchCriteria->getCurrentPage();
-        if ($searchCriteria->getCurrentPage() > $maxPages && $searchResult->getTotalCount() > 0) {
+        $searchResult = $this->searchQuery->getResult($args, $info, $context);
+
+        if ($searchResult->getCurrentPage() > $searchResult->getTotalPages() && $searchResult->getTotalCount() > 0) {
             throw new GraphQlInputException(
                 __(
                     'currentPage value %1 specified is greater than the %2 page(s) available.',
-                    [$currentPage, $maxPages]
+                    [$searchResult->getCurrentPage(), $searchResult->getTotalPages()]
                 )
             );
         }
@@ -106,14 +78,70 @@ class Products implements ResolverInterface
         $data = [
             'total_count' => $searchResult->getTotalCount(),
             'items' => $searchResult->getProductsSearchResult(),
+            'suggestions' => $searchResult->getSuggestions(),
             'page_info' => [
-                'page_size' => $searchCriteria->getPageSize(),
-                'current_page' => $currentPage,
-                'total_pages' => $maxPages
+                'page_size' => $searchResult->getPageSize(),
+                'current_page' => $searchResult->getCurrentPage(),
+                'total_pages' => $searchResult->getTotalPages()
             ],
-            'layer_type' => $layerType
+            'search_result' => $searchResult,
+            'layer_type' => isset($args['search']) ? Resolver::CATALOG_LAYER_SEARCH : Resolver::CATALOG_LAYER_CATEGORY,
         ];
 
+        if (isset($args['filter']['category_uid'])) {
+            $args['filter']['category_id'] = $this->getFilterCategoryIdFromCategoryUid($args['filter']['category_uid']);
+        }
+
+        if (isset($args['filter']['category_id'])) {
+            $data['categories'] = $args['filter']['category_id']['eq'] ?? $args['filter']['category_id']['in'];
+            $data['categories'] = is_array($data['categories']) ? $data['categories'] : [$data['categories']];
+        }
+
         return $data;
+    }
+
+    /**
+     * Get filter category_id by category_uid
+     *
+     * @param array $filterCategoryUid
+     * @return array|null
+     */
+    private function getFilterCategoryIdFromCategoryUid(array $filterCategoryUid): ?array
+    {
+        $filterCategoryId = null;
+        if (isset($filterCategoryUid['eq'])) {
+            $filterCategoryId['eq'] = $this->uidEncoder
+                ->decode((string)$filterCategoryUid['eq']);
+        } elseif (!empty($filterCategoryUid['in'])) {
+            foreach ($filterCategoryUid['in'] as $uid) {
+                $filterCategoryId['in'][] = $this->uidEncoder->decode((string) $uid);
+            }
+        }
+        return $filterCategoryId;
+    }
+
+    /**
+     * Validate input arguments
+     *
+     * @param array $args
+     * @throws GraphQlAuthorizationException
+     * @throws GraphQlInputException
+     */
+    private function validateInput(array $args)
+    {
+        if (isset($args['searchAllowed']) && $args['searchAllowed'] === false) {
+            throw new GraphQlAuthorizationException(__('Product search has been disabled.'));
+        }
+        if ($args['currentPage'] < 1) {
+            throw new GraphQlInputException(__('currentPage value must be greater than 0.'));
+        }
+        if ($args['pageSize'] < 1) {
+            throw new GraphQlInputException(__('pageSize value must be greater than 0.'));
+        }
+        if (!isset($args['search']) && !isset($args['filter'])) {
+            throw new GraphQlInputException(
+                __("'search' or 'filter' input argument is required.")
+            );
+        }
     }
 }

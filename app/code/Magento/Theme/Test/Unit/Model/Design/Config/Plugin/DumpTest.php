@@ -3,14 +3,19 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Theme\Test\Unit\Model\Design\Config\Plugin;
 
 use Magento\Config\App\Config\Source\DumpConfigSourceAggregated;
 use Magento\Framework\Stdlib\ArrayManager;
 use Magento\Framework\View\Design\Theme\ListInterface;
+use Magento\Framework\View\Design\ThemeInterface;
 use Magento\Theme\Model\Design\Config\Plugin\Dump;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class DumpTest extends \PHPUnit\Framework\TestCase
+class DumpTest extends TestCase
 {
     /**
      * @var Dump
@@ -34,17 +39,18 @@ class DumpTest extends \PHPUnit\Framework\TestCase
     ];
 
     /**
-     * @var ListInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ListInterface|MockObject
      */
     private $themeList;
 
-    public function setUp()
+    protected function setUp(): void
     {
         $this->arrayManager = new ArrayManager();
         $this->themeList = $this->getMockBuilder(ListInterface::class)
-            ->setMethods(['getItemById', 'getThemeByFullPath'])
+            ->addMethods(['getItemById'])
+            ->onlyMethods(['getThemeByFullPath'])
             ->disableOriginalConstructor()
-            ->getMock();
+            ->getMockForAbstractClass();
         $this->prepareThemeMock();
 
         $this->dumpPlugin = new Dump($this->themeList, $this->arrayManager);
@@ -72,7 +78,7 @@ class DumpTest extends \PHPUnit\Framework\TestCase
     {
         $themesMap = [];
         foreach ($this->themes as $themeId => $themeFullPath) {
-            $themeMock = $this->getMockBuilder(\Magento\Framework\View\Design\ThemeInterface::class)
+            $themeMock = $this->getMockBuilder(ThemeInterface::class)
                 ->getMockForAbstractClass();
             $themeMock->expects(static::any())->method('getFullPath')->willReturn($themeFullPath);
 
@@ -85,7 +91,7 @@ class DumpTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getDumpConfigDataProvider()
+    public static function getDumpConfigDataProvider()
     {
         return [
             [

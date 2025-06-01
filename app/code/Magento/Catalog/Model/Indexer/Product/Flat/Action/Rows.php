@@ -1,18 +1,18 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Model\Indexer\Product\Flat\Action;
 
+use Magento\Catalog\Model\Indexer\Product\Flat\AbstractAction;
 use Magento\Catalog\Model\Indexer\Product\Flat\FlatTableBuilder;
 use Magento\Catalog\Model\Indexer\Product\Flat\TableBuilder;
 
 /**
  * Class Rows reindex action for mass actions
- *
  */
-class Rows extends \Magento\Catalog\Model\Indexer\Product\Flat\AbstractAction
+class Rows extends AbstractAction
 {
     /**
      * @var Eraser
@@ -67,6 +67,7 @@ class Rows extends \Magento\Catalog\Model\Indexer\Product\Flat\AbstractAction
             foreach ($idsBatches as $changedIds) {
                 if ($tableExists) {
                     $this->flatItemEraser->removeDeletedProducts($changedIds, $store->getId());
+                    $this->flatItemEraser->removeDisabledProducts($changedIds, $store->getId());
                 }
                 if (!empty($changedIds)) {
                     $this->_reindex($store->getId(), $changedIds);

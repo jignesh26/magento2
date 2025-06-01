@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Catalog\Api;
@@ -17,6 +17,7 @@ interface ProductLinkManagementInterface
      *
      * @param string $sku
      * @param string $type
+     * @throws \Magento\Framework\Exception\NoSuchEntityException
      * @return \Magento\Catalog\Api\Data\ProductLinkInterface[]
      */
     public function getLinkedItemsByType($sku, $type);
@@ -28,6 +29,7 @@ interface ProductLinkManagementInterface
      * @param \Magento\Catalog\Api\Data\ProductLinkInterface[] $items
      * @throws \Magento\Framework\Exception\NoSuchEntityException
      * @throws \Magento\Framework\Exception\CouldNotSaveException
+     * @throws \Magento\Framework\Exception\InputException
      * @return bool
      */
     public function setProductLinks($sku, array $items);

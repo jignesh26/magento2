@@ -21,17 +21,39 @@ class GraphQlMutationTest extends GraphQlAbstract
         $query = <<<MUTATION
 mutation {
   testItem(id: {$id}) {
-    item_id,
-    name,
+    item_id
+    name
     integer_list
   }
 }
 MUTATION;
 
-        $response = $this->graphQlQuery($query);
+        $response = $this->graphQlMutation($query);
         $this->assertArrayHasKey('testItem', $response);
         $testItem = $response['testItem'];
         $this->assertArrayHasKey('integer_list', $testItem);
         $this->assertEquals([4, 5, 6], $testItem['integer_list']);
+    }
+
+    /**
+     */
+    public function testMutationIsNotAllowedViaGetRequest()
+    {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Mutation requests allowed only for POST requests');
+
+        $id = 3;
+
+        $query = <<<MUTATION
+mutation {
+  testItem(id: {$id}) {
+    item_id
+    name
+    integer_list
+  }
+}
+MUTATION;
+
+        $this->graphQlQuery($query, [], '', []);
     }
 }

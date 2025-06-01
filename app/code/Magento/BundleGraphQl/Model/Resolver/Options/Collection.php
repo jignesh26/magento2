@@ -1,22 +1,29 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 declare(strict_types=1);
-
 
 namespace Magento\BundleGraphQl\Model\Resolver\Options;
 
 use Magento\Bundle\Model\OptionFactory;
 use Magento\Framework\Api\ExtensionAttribute\JoinProcessorInterface;
+use Magento\Framework\App\ObjectManager;
+use Magento\Framework\GraphQl\Query\Uid;
+use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
 use Magento\Store\Model\StoreManagerInterface;
 
 /**
  * Collection to fetch bundle option data at resolution time.
  */
-class Collection
+class Collection implements ResetAfterRequestInterface
 {
+    /**
+     * Option type name
+     */
+    private const OPTION_TYPE = 'bundle';
+
     /**
      * @var OptionFactory
      */
@@ -42,25 +49,33 @@ class Collection
      */
     private $optionMap = [];
 
+    /** @var Uid */
+    private $uidEncoder;
+
     /**
      * @param OptionFactory $bundleOptionFactory
      * @param JoinProcessorInterface $extensionAttributesJoinProcessor
      * @param StoreManagerInterface $storeManager
+     * @param Uid|null $uidEncoder
      */
     public function __construct(
         OptionFactory $bundleOptionFactory,
         JoinProcessorInterface $extensionAttributesJoinProcessor,
-        StoreManagerInterface $storeManager
+        StoreManagerInterface $storeManager,
+        ?Uid $uidEncoder = null
     ) {
         $this->bundleOptionFactory = $bundleOptionFactory;
         $this->extensionAttributesJoinProcessor = $extensionAttributesJoinProcessor;
         $this->storeManager = $storeManager;
+        $this->uidEncoder = $uidEncoder ?: ObjectManager::getInstance()
+            ->get(Uid::class);
     }
 
     /**
      * Add parent id/sku pair to use for option filter at fetch time.
      *
      * @param int $parentId
+     * @param int $parentEntityId
      * @param string $sku
      */
     public function addParentFilterData(int $parentId, int $parentEntityId, string $sku) : void
@@ -77,11 +92,7 @@ class Collection
     public function getOptionsByParentId(int $parentId) : array
     {
         $options = $this->fetch();
-        if (!isset($options[$parentId])) {
-            return [];
-        }
-
-        return $options[$parentId];
+        return $options[$parentId] ?? [];
     }
 
     /**
@@ -102,19 +113,21 @@ class Collection
 
         $productTable = $optionsCollection->getTable('catalog_product_entity');
         $linkField = $optionsCollection->getConnection()->getAutoIncrementField($productTable);
+        $entityIds = array_column($this->skuMap, 'entity_id');
+
         $optionsCollection->getSelect()->join(
             ['cpe' => $productTable],
-            'cpe.'.$linkField.' = main_table.parent_id',
+            'cpe.' . $linkField . ' = main_table.parent_id',
             []
         )->where(
             "cpe.entity_id IN (?)",
-            $this->skuMap
+            $entityIds
         );
         $optionsCollection->setPositionOrder();
 
         $this->extensionAttributesJoinProcessor->process($optionsCollection);
         if (empty($optionsCollection->getData())) {
-            return null;
+            return [];
         }
 
         /** @var \Magento\Bundle\Model\Option $option */
@@ -127,8 +140,19 @@ class Collection
                 = $option->getTitle() === null ? $option->getDefaultTitle() : $option->getTitle();
             $this->optionMap[$option->getParentId()][$option->getId()]['sku']
                 = $this->skuMap[$option->getParentId()]['sku'];
+            $this->optionMap[$option->getParentId()][$option->getId()]['uid']
+                = $this->uidEncoder->encode(self::OPTION_TYPE . '/' . $option->getOptionId());
         }
 
         return $this->optionMap;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function _resetState(): void
+    {
+        $this->optionMap = [];
+        $this->skuMap = [];
     }
 }

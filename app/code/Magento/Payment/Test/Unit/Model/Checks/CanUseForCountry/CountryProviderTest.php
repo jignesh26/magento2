@@ -3,18 +3,21 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Payment\Test\Unit\Model\Checks\CanUseForCountry;
 
 use Magento\Directory\Helper\Data;
 use Magento\Payment\Model\Checks\CanUseForCountry\CountryProvider;
 use Magento\Quote\Model\Quote;
 use Magento\Quote\Model\Quote\Address;
-use PHPUnit_Framework_MockObject_MockObject as MockObject;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * CountryProviderTest contains tests for CountryProvider class
  */
-class CountryProviderTest extends \PHPUnit\Framework\TestCase
+class CountryProviderTest extends TestCase
 {
     /**
      * @var CountryProvider
@@ -31,16 +34,16 @@ class CountryProviderTest extends \PHPUnit\Framework\TestCase
      */
     private $quote;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->directory = $this->getMockBuilder(Data::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getDefaultCountry'])
+            ->onlyMethods(['getDefaultCountry'])
             ->getMock();
 
         $this->quote = $this->getMockBuilder(Quote::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getBillingAddress', 'getShippingAddress'])
+            ->onlyMethods(['getBillingAddress', 'getShippingAddress'])
             ->getMock();
 
         $this->countryProvider = new CountryProvider($this->directory);
@@ -53,7 +56,7 @@ class CountryProviderTest extends \PHPUnit\Framework\TestCase
     {
         $address = $this->getMockBuilder(Address::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getCountry'])
+            ->onlyMethods(['getCountry'])
             ->getMock();
 
         $this->quote->expects(static::once())
@@ -79,7 +82,7 @@ class CountryProviderTest extends \PHPUnit\Framework\TestCase
     {
         $address = $this->getMockBuilder(Address::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getCountry'])
+            ->onlyMethods(['getCountry'])
             ->getMock();
 
         $this->quote->expects(static::never())
@@ -104,7 +107,7 @@ class CountryProviderTest extends \PHPUnit\Framework\TestCase
     {
         $address = $this->getMockBuilder(Address::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getCountry'])
+            ->onlyMethods(['getCountry'])
             ->getMock();
 
         $this->quote->expects(static::once())

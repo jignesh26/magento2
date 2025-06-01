@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 
 /*eslint max-nested-callbacks: 0*/
@@ -46,26 +46,33 @@ define([
             });
 
             it('check on success response with invalid response data', function () {
-                var messageContainer = jasmine.createSpyObj('globalMessageList', ['addErrorMessage']);
+                var messageContainer = jasmine.createSpyObj('globalMessageList', ['addErrorMessage']),
+                    messageObject = {
+                        message: 'Something went wrong with your request. Please try again later.'
+                    };
 
                 model.process({
                     status: 200,
                     responseText: ''
                 }, messageContainer);
                 expect(messageContainer.addErrorMessage)
-                    .toHaveBeenCalledWith('Something went wrong with your request. Please try again later.');
+                    .toHaveBeenCalledWith(messageObject);
             });
 
             it('check on failed status', function () {
                 var messageContainer = jasmine.createSpyObj('globalMessageList', ['addErrorMessage']);
 
-                spyOn(window.location, 'replace').and.callFake(function () {});
+                let messageObject = {
+                    message: 'You are not authorized to access this resource.'
+                };
+
+                spyOn(model, 'redirectTo').and.callFake(function () {});
                 model.process({
                     status: 401,
                     responseText: ''
                 }, messageContainer);
-                expect(mocks['mage/url'].build)
-                    .toHaveBeenCalled();
+                expect(messageContainer.addErrorMessage)
+                    .toHaveBeenCalledWith(messageObject);
             });
         });
     });

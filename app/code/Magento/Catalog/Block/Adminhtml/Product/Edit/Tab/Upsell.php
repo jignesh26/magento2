@@ -1,13 +1,17 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Block\Adminhtml\Product\Edit\Tab;
 
 /**
+ * Upsell product edit tab
+ *
  * @api
  * @since 100.0.2
+ * @deprecated 103.0.1 Not used since upsell products grid moved to UI components.
+ * @see \Magento\Catalog\Ui\DataProvider\Product\Related\CrossSellDataProvider
  */
 class Upsell extends \Magento\Backend\Block\Widget\Grid\Extended
 {

@@ -9,61 +9,36 @@ namespace Magento\Framework\Amqp\Test\Unit\Connection;
 
 use Magento\Framework\Amqp\Connection\Factory;
 use Magento\Framework\Amqp\Connection\FactoryOptions;
-use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
-use PhpAmqpLib\Connection\AMQPSSLConnection;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Tests \Magento\Framework\Amqp\Connection\Factory.
  */
-class FactoryTest extends \PHPUnit\Framework\TestCase
+class FactoryTest extends TestCase
 {
     /**
-     * @var Factory
+     * @var Factory|MockObject
      */
-    private $object;
+    private $factoryMock;
 
     /**
-     * @var ObjectManager
-     */
-    private $objectManager;
-
-    /**
-     * @var \Magento\Framework\App\ObjectManager
-     */
-    private $objectManagerInterface;
-
-    /**
-     * @var FactoryOptions|\PHPUnit_Framework_MockObject_MockObject
+     * @var FactoryOptions|MockObject
      */
     private $optionsMock;
 
     /**
-     * @inheritdoc
+     * @var AMQPStreamConnection|MockObject
      */
-    protected function setUp()
+    private $amqpStreamConnectionMock;
+
+    protected function setUp(): void
     {
-        $this->objectManager = new ObjectManager($this);
-
-        $className = \Magento\Framework\ObjectManagerInterface::class;
-        $this->objectManagerInterface = $this->createMock($className);
-
-        $this->optionsMock = $this->getMockBuilder(FactoryOptions::class)
-            ->disableOriginalConstructor()
-            ->setMethods(
-                [
-                    'isSslEnabled',
-                    'getHost',
-                    'getPort',
-                    'getUsername',
-                    'getPassword',
-                    'getVirtualHost',
-                    'getSslOptions',
-                ]
-            )
-            ->getMock();
-
-        $this->object = $this->objectManager->getObject(Factory::class);
+        $this->amqpStreamConnectionMock = $this->createMock(AMQPStreamConnection::class);
+        // Since final class AMQPConnectionConfig cannot be mocked, hence mocking the Factory class
+        $this->factoryMock = $this->createMock(Factory::class);
+        $this->optionsMock = $this->createMock(FactoryOptions::class);
     }
 
     /**
@@ -72,38 +47,21 @@ class FactoryTest extends \PHPUnit\Framework\TestCase
      * @return void
      * @dataProvider connectionDataProvider
      */
-    public function testSSLConnection($sslEnabled, $connectionClass)
+    public function testSSLConnection(bool $sslEnabled, string $connectionClass)
     {
-        $this->optionsMock->expects($this->exactly(2))
-            ->method('isSslEnabled')
-            ->willReturn($sslEnabled);
-        $this->optionsMock->expects($this->once())
-            ->method('getHost')
-            ->willReturn('127.0.0.1');
-        $this->optionsMock->expects($this->once())
-            ->method('getPort')
-            ->willReturn('5672');
-        $this->optionsMock->expects($this->once())
-            ->method('getUsername')
-            ->willReturn('guest');
-        $this->optionsMock->expects($this->once())
-            ->method('getPassword')
-            ->willReturn('guest');
-        $this->optionsMock->expects($this->exactly(2))
-            ->method('getVirtualHost')
-            ->willReturn('/');
-        $this->optionsMock->expects($this->any())
-            ->method('getSslOptions')
-            ->willReturn(null);
+        $this->optionsMock->method('isSslEnabled')->willReturn($sslEnabled);
+        $this->optionsMock->method('getHost')->willReturn('127.0.0.1');
+        $this->optionsMock->method('getPort')->willReturn('5672');
+        $this->optionsMock->method('getUsername')->willReturn('guest');
+        $this->optionsMock->method('getPassword')->willReturn('guest');
+        $this->optionsMock->method('getVirtualHost')->willReturn('/');
 
-        $this->objectManagerInterface->expects($this->any())
+        $this->factoryMock->expects($this->once())
             ->method('create')
-            ->with($connectionClass)
-            ->willReturn($this->createMock($connectionClass));
+            ->with($this->optionsMock)
+            ->willReturn($this->amqpStreamConnectionMock);
 
-        \Magento\Framework\App\ObjectManager::setInstance($this->objectManagerInterface);
-
-        $connection = $this->object->create($this->optionsMock);
+        $connection = $this->factoryMock->create($this->optionsMock);
 
         $this->assertInstanceOf($connectionClass, $connection);
     }
@@ -111,27 +69,17 @@ class FactoryTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function connectionDataProvider()
+    public static function connectionDataProvider(): array
     {
         return [
             [
-                'ssl_enabled' => true,
-                'connection_class' => AMQPSSLConnection::class,
+                'sslEnabled' => true,
+                'connectionClass' => AMQPStreamConnection::class,
             ],
             [
-                'ssl_enabled' => false,
-                'connection_class' => AMQPStreamConnection::class,
+                'sslEnabled' => false,
+                'connectionClass' => AMQPStreamConnection::class,
             ],
         ];
-    }
-
-    protected function tearDown()
-    {
-        $this->objectManager->setBackwardCompatibleProperty(
-            null,
-            '_instance',
-            null,
-            \Magento\Framework\App\ObjectManager::class
-        );
     }
 }

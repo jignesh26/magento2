@@ -3,19 +3,23 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Phrase\Test\Unit\Renderer;
 
-use \Magento\Framework\Phrase\Renderer\Placeholder;
+use Magento\Framework\Phrase\Renderer\Placeholder;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\TestCase;
 
-class PlaceholderTest extends \PHPUnit\Framework\TestCase
+class PlaceholderTest extends TestCase
 {
     /** @var Placeholder */
     protected $_renderer;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
-        $this->_renderer = $objectManager->getObject(\Magento\Framework\Phrase\Renderer\Placeholder::class);
+        $objectManager = new ObjectManager($this);
+        $this->_renderer = $objectManager->getObject(Placeholder::class);
     }
 
     /**
@@ -33,7 +37,7 @@ class PlaceholderTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function renderPlaceholderDataProvider()
+    public static function renderPlaceholderDataProvider()
     {
         return [
             ['text %1 %2', ['one', 'two'], 'text one two'],

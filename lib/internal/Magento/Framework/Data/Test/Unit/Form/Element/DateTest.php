@@ -1,49 +1,56 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 /**
  * Tests for \Magento\Framework\Data\Form\Element\Date
  */
 namespace Magento\Framework\Data\Test\Unit\Form\Element;
 
-use \Magento\Framework\Data\Form\Element\Date;
+use Magento\Framework\Data\Form\Element\CollectionFactory;
+use Magento\Framework\Data\Form\Element\Date;
+use Magento\Framework\Data\Form\Element\Factory;
+use Magento\Framework\Escaper;
+use Magento\Framework\Stdlib\DateTime\TimezoneInterface;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class DateTest extends \PHPUnit\Framework\TestCase
+class DateTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\Data\Form\Element\Date
+     * @var Date
      */
     protected $model;
 
     /**
-     * @var \Magento\Framework\Data\Form\Element\Factory|\PHPUnit_Framework_MockObject_MockObject
+     * @var Factory|MockObject
      */
     protected $factoryMock;
 
     /**
-     * @var \Magento\Framework\Data\Form\Element\CollectionFactory|\PHPUnit_Framework_MockObject_MockObject
+     * @var CollectionFactory|MockObject
      */
     protected $collectionFactoryMock;
 
     /**
-     * @var \Magento\Framework\Escaper|\PHPUnit_Framework_MockObject_MockObject
+     * @var Escaper|MockObject
      */
     protected $escaperMock;
 
     /**
-     * @var \Magento\Framework\Stdlib\DateTime\TimezoneInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var TimezoneInterface|MockObject
      */
     protected $localeDateMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->factoryMock = $this->createMock(\Magento\Framework\Data\Form\Element\Factory::class);
-        $this->collectionFactoryMock = $this->createMock(\Magento\Framework\Data\Form\Element\CollectionFactory::class);
-        $this->escaperMock = $this->createMock(\Magento\Framework\Escaper::class);
-        $this->localeDateMock = $this->createMock(\Magento\Framework\Stdlib\DateTime\TimezoneInterface::class);
+        $this->factoryMock = $this->createMock(Factory::class);
+        $this->collectionFactoryMock = $this->createMock(CollectionFactory::class);
+        $this->escaperMock = $this->createMock(Escaper::class);
+        $this->localeDateMock = $this->getMockForAbstractClass(TimezoneInterface::class);
         $this->model = new Date(
             $this->factoryMock,
             $this->collectionFactoryMock,
@@ -72,18 +79,20 @@ class DateTest extends \PHPUnit\Framework\TestCase
         $formMock = $this->getFormMock('once');
         $this->model->setForm($formMock);
 
-        $this->model->setData([
+        $this->model->setData(
+            [
                 $fieldName => 'yyyy-MM-dd',
                 'name' => 'test_name',
                 'html_id' => 'test_name',
-            ]);
+            ]
+        );
         $this->model->getElementHtml();
     }
 
     /**
      * @return array
      */
-    public function providerGetElementHtmlDateFormat()
+    public static function providerGetElementHtmlDateFormat()
     {
         return [
             ['date_format'],
@@ -93,13 +102,16 @@ class DateTest extends \PHPUnit\Framework\TestCase
 
     /**
      * @param $exactly
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return MockObject
      */
     protected function getFormMock($exactly)
     {
-        $functions = ['getFieldNameSuffix', 'getHtmlIdPrefix', 'getHtmlIdSuffix'];
-        $formMock = $this->createPartialMock(\stdClass::class, $functions);
-        foreach ($functions as $method) {
+        $formMock = $this->getMockBuilder(\stdClass::class)->addMethods(
+            ['getFieldNameSuffix', 'getHtmlIdPrefix', 'getHtmlIdSuffix']
+        )
+            ->disableOriginalConstructor()
+            ->getMock();
+        foreach (['getFieldNameSuffix', 'getHtmlIdPrefix', 'getHtmlIdSuffix'] as $method) {
             switch ($exactly) {
                 case 'once':
                     $count = $this->once();
@@ -112,5 +124,46 @@ class DateTest extends \PHPUnit\Framework\TestCase
         }
 
         return $formMock;
+    }
+
+    /**
+     * @dataProvider providerGetValue
+     * @param string|null $dateFormat
+     * @param string|null $format
+     * @param string|null $timeFormat
+     * @param string $expectedFormat
+     */
+    public function testGetValue(?string $dateFormat, ?string $format, ?string $timeFormat, string $expectedFormat)
+    {
+        $dateTime = new \DateTime('2025-10-13 10:36:00', new \DateTimeZone('America/Los_Angeles'));
+        $this->model->setValue($dateTime);
+        $this->model->setDateFormat($dateFormat);
+        $this->model->setFormat($format);
+        $this->model->setTimeFormat($timeFormat);
+
+        $this->localeDateMock->expects($this->once())
+            ->method('formatDateTime')
+            ->with(
+                $dateTime,
+                null,
+                null,
+                null,
+                $this->equalTo($dateTime->getTimezone()),
+                $this->equalTo($expectedFormat)
+            )
+            ->willReturn('2025-10-13 10:36:00');
+
+        $this->model->getValue();
+    }
+
+    public function providerGetValue()
+    {
+        return [
+            [null, 'yyyy-mm-dd', 'hh:mm:ss', 'yyyy-mm-dd hh:mm:ss'],
+            [null, 'yy-mm-dd', null, 'yy-mm-dd'],
+            ['yyyy-mm-dd', null, null, 'yyyy-mm-dd'],
+            ['yyyy-mm-dd', 'yy-mm-dd', 'hh:mm:ss', 'yyyy-mm-dd hh:mm:ss'],
+            ['yyyy-mm-dd', 'yy-mm-dd', null, 'yyyy-mm-dd']
+        ];
     }
 }

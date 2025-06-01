@@ -37,7 +37,7 @@ class Config implements \Magento\Framework\Interception\ConfigInterface
 
     /**
      * Cache
-     * @deprecated
+     * @deprecated 102.0.1
      * @var \Magento\Framework\Cache\FrontendInterface
      */
     protected $_cache;
@@ -103,8 +103,8 @@ class Config implements \Magento\Framework\Interception\ConfigInterface
         \Magento\Framework\Interception\ObjectManager\ConfigInterface $omConfig,
         \Magento\Framework\ObjectManager\DefinitionInterface $classDefinitions,
         $cacheId = 'interception',
-        SerializerInterface $serializer = null,
-        CacheManager $cacheManager = null
+        ?SerializerInterface $serializer = null,
+        ?CacheManager $cacheManager = null
     ) {
         $this->_omConfig = $omConfig;
         $this->_relations = $relations;
@@ -144,7 +144,7 @@ class Config implements \Magento\Framework\Interception\ConfigInterface
      */
     protected function _inheritInterception($type)
     {
-        $type = ltrim($type, '\\');
+        $type = ltrim((string)$type, '\\');
         if (!isset($this->_intercepted[$type])) {
             $realType = $this->_omConfig->getOriginalInstanceType($type);
             if ($type !== $realType) {
@@ -187,8 +187,6 @@ class Config implements \Magento\Framework\Interception\ConfigInterface
      */
     private function initializeUncompiled($classDefinitions = [])
     {
-        $this->cacheManager->clean($this->_cacheId);
-
         $this->generateIntercepted($classDefinitions);
 
         $this->cacheManager->save($this->_cacheId, $this->_intercepted);

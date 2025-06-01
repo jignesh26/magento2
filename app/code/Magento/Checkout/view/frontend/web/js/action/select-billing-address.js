@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 
 /**
@@ -18,7 +18,7 @@ define([
         if (quote.shippingAddress() && billingAddress.getCacheKey() == //eslint-disable-line eqeqeq
             quote.shippingAddress().getCacheKey()
         ) {
-            address = $.extend({}, billingAddress);
+            address = $.extend(true, {}, billingAddress);
             address.saveInAddressBook = null;
         } else {
             address = billingAddress;

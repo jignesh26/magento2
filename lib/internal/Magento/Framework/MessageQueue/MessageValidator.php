@@ -5,14 +5,14 @@
  */
 namespace Magento\Framework\MessageQueue;
 
-use Doctrine\Instantiator\Exception\InvalidArgumentException;
+use InvalidArgumentException;
+use Magento\Framework\App\ObjectManager;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Phrase;
 use Magento\Framework\Communication\ConfigInterface as CommunicationConfig;
 
 /**
- * Class MessageValidator to validate message with topic schema
- *
+ * Class MessageValidator to validate message with topic schema.
  */
 class MessageValidator
 {
@@ -20,6 +20,15 @@ class MessageValidator
      * @var CommunicationConfig
      */
     private $communicationConfig;
+
+    /**
+     * @param CommunicationConfig|null $communicationConfig
+     */
+    public function __construct(?CommunicationConfig $communicationConfig = null)
+    {
+        $this->communicationConfig = $communicationConfig
+            ?? ObjectManager::getInstance()->get(CommunicationConfig::class);
+    }
 
     /**
      * Identify message data schema by topic.
@@ -31,7 +40,7 @@ class MessageValidator
      */
     protected function getTopicSchema($topic, $requestType)
     {
-        $topicConfig = $this->getCommunicationConfig()->getTopic($topic);
+        $topicConfig = $this->communicationConfig->getTopic($topic);
         if ($topicConfig === null) {
             throw new LocalizedException(new Phrase('Specified topic "%topic" is not declared.', ['topic' => $topic]));
         }
@@ -58,6 +67,7 @@ class MessageValidator
      * @param bool $requestType
      * @return void
      * @throws InvalidArgumentException
+     * @throws LocalizedException
      */
     public function validate($topic, $message, $requestType = true)
     {
@@ -89,6 +99,8 @@ class MessageValidator
     }
 
     /**
+     * Validate queue message.
+     *
      * @param string $message
      * @param string $messageType
      * @param string $topic
@@ -104,6 +116,8 @@ class MessageValidator
     }
 
     /**
+     * Validate message primitive type.
+     *
      * @param string $message
      * @param string $messageType
      * @param string $topic
@@ -113,12 +127,14 @@ class MessageValidator
     {
         $compareType = $messageType;
         $realType = $this->getRealType($message);
-        if ($realType == 'array' && count($message) == 0) {
-            return;
-        } elseif ($realType == 'array' && count($message) > 0) {
-            $realType = $this->getRealType($message[0]);
+        if ($realType == 'array') {
             $compareType = preg_replace('/\[\]/', '', $messageType);
+            foreach ($message as $subMessage) {
+                $this->validatePrimitiveType($subMessage, $compareType, $topic);
+            }
+            return;
         }
+
         if ($realType !== $compareType) {
             throw new InvalidArgumentException(
                 new Phrase(
@@ -135,6 +151,8 @@ class MessageValidator
     }
 
     /**
+     * Validate class type
+     *
      * @param string $message
      * @param string $messageType
      * @param string $topic
@@ -145,12 +163,14 @@ class MessageValidator
         $origMessage = $message;
         $compareType = $messageType;
         $realType = $this->getRealType($message);
-        if ($realType == 'array' && count($message) == 0) {
-            return;
-        } elseif ($realType == 'array' && count($message) > 0) {
-            $message = $message[0];
+        if ($realType == 'array') {
             $compareType = preg_replace('/\[\]/', '', $messageType);
+            foreach ($message as $subMessage) {
+                $this->validateClassType($subMessage, $compareType, $topic);
+            }
+            return;
         }
+
         if (!($message instanceof $compareType)) {
             throw new InvalidArgumentException(
                 new Phrase(
@@ -167,6 +187,8 @@ class MessageValidator
     }
 
     /**
+     * Returns message real type
+     *
      * @param string $message
      * @return string
      */
@@ -176,22 +198,5 @@ class MessageValidator
         $type = $type == 'boolean' ? 'bool' : $type;
         $type = $type == 'double' ? 'float' : $type;
         return $type == "integer" ? "int" : $type;
-    }
-
-    /**
-     * Get communication config.
-     *
-     * @return CommunicationConfig
-     *
-     * @deprecated 100.2.0
-     */
-    private function getCommunicationConfig()
-    {
-        if ($this->communicationConfig === null) {
-            $this->communicationConfig = \Magento\Framework\App\ObjectManager::getInstance()->get(
-                CommunicationConfig::class
-            );
-        }
-        return $this->communicationConfig;
     }
 }

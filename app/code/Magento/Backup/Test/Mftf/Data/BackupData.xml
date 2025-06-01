@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
- /**
-  * Copyright © Magento, Inc. All rights reserved.
-  * See COPYING.txt for license details.
-  */
+/**
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
+ */
 -->
 
 <entities xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -18,6 +18,10 @@
     </entity>
     <entity name="DatabaseBackup" type="backup">
         <data key="name" unique="suffix">databaseBackup</data>
+        <data key="type">Database</data>
+    </entity>
+    <entity name="WebSetupWizardBackup" type="backup">
+        <data key="name">WebSetupWizard</data>
         <data key="type">Database</data>
     </entity>
 </entities>

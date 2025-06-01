@@ -11,7 +11,8 @@
 
 namespace ArgumentSequence;
 
-class ContextObject implements \Magento\Framework\ObjectManager\ContextInterface
+use Magento\Framework\ObjectManager\ContextInterface;
+class ContextObject implements ContextInterface
 {
 }
 class ParentRequiredObject
@@ -53,7 +54,7 @@ class ParentClass
         ContextObject $contextObject,
         ParentRequiredObject $parentRequiredObject,
         array $parentRequiredScalar,
-        ParentOptionalObject $parentOptionalObject = null,
+        ?ParentOptionalObject $parentOptionalObject = null,
         array $data = [],
         array $parentOptionalScalar = []
     ) {
@@ -84,10 +85,10 @@ class ValidChildClass extends ParentClass
         array $parentRequiredScalar,
         ChildRequiredObject $childRequiredObject,
         array $childRequiredScalar,
-        ParentOptionalObject $parentOptionalObject = null,
+        ?ParentOptionalObject $parentOptionalObject = null,
         array $data = [],
         array $parentOptionalScalar = [],
-        ChildOptionalObject $childOptionalObject = null,
+        ?ChildOptionalObject $childOptionalObject = null,
         array $childOptionalScalar = []
     ) {
         $this->childRequiredObject = $childRequiredObject;
@@ -124,10 +125,10 @@ class InvalidChildClass extends ParentClass
         ParentRequiredObject $parentRequiredObject,
         array $parentRequiredScalar,
         array $childRequiredScalar,
-        ParentOptionalObject $parentOptionalObject = null,
+        ?ParentOptionalObject $parentOptionalObject = null,
         array $data = [],
         array $parentOptionalScalar = [],
-        ChildOptionalObject $childOptionalObject = null,
+        ?ChildOptionalObject $childOptionalObject = null,
         array $childOptionalScalar = []
     ) {
         $this->childRequiredObject = $childRequiredObject;

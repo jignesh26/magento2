@@ -11,6 +11,8 @@ namespace Magento\Framework\GraphQl\Config\Element;
  * Class representing 'field' GraphQL config element.
  *
  * Fields are used to describe possible values for a type/interface.
+ *
+ * @api
  */
 class Field implements OutputFieldInterface
 {
@@ -49,6 +51,16 @@ class Field implements OutputFieldInterface
     private $description;
 
     /**
+     * @var array
+     */
+    private $cache;
+
+    /**
+     * @var array
+     */
+    private $deprecated;
+
+    /**
      * @param string $name
      * @param string $type
      * @param bool $required
@@ -57,6 +69,9 @@ class Field implements OutputFieldInterface
      * @param string $resolver
      * @param string $description
      * @param array $arguments
+     * @param array $cache
+     * @param array $deprecated
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         string $name,
@@ -66,7 +81,9 @@ class Field implements OutputFieldInterface
         string $itemType = '',
         string $resolver = '',
         string $description = '',
-        array $arguments = []
+        array $arguments = [],
+        array $cache = [],
+        array $deprecated = []
     ) {
         $this->name = $name;
         $this->type = $isList ? $itemType : $type;
@@ -75,6 +92,8 @@ class Field implements OutputFieldInterface
         $this->resolver = $resolver;
         $this->description = $description;
         $this->arguments = $arguments;
+        $this->cache = $cache;
+        $this->deprecated = $deprecated;
     }
 
     /**
@@ -145,5 +164,25 @@ class Field implements OutputFieldInterface
     public function getDescription() : string
     {
         return $this->description;
+    }
+
+    /**
+     * Return the cache tag for the field.
+     *
+     * @return array|null
+     */
+    public function getCache() : array
+    {
+        return $this->cache;
+    }
+
+    /**
+     * Return the deprecated annotation for the field
+     *
+     * @return array
+     */
+    public function getDeprecated() : array
+    {
+        return $this->deprecated;
     }
 }

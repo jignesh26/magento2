@@ -1,19 +1,22 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 declare(strict_types=1);
 
 namespace Magento\CatalogRule\Test\Unit\Model\Rule\Condition;
 
-use Magento\Eav\Model\Config as EavConfig;
-use Magento\CatalogRule\Model\Rule\Condition\MappableConditionsProcessor;
-use Magento\Framework\Api\SearchCriteria\CollectionProcessor\ConditionProcessor\CustomConditionProviderInterface;
 use Magento\CatalogRule\Model\Rule\Condition\Combine as CombinedCondition;
+use Magento\CatalogRule\Model\Rule\Condition\MappableConditionsProcessor;
 use Magento\CatalogRule\Model\Rule\Condition\Product as SimpleCondition;
+use Magento\Eav\Model\Config as EavConfig;
+use Magento\Framework\Api\SearchCriteria\CollectionProcessor\ConditionProcessor\CustomConditionProviderInterface;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class MappableConditionProcessorTest extends \PHPUnit\Framework\TestCase
+class MappableConditionProcessorTest extends TestCase
 {
     /**
      * @var MappableConditionsProcessor
@@ -21,34 +24,34 @@ class MappableConditionProcessorTest extends \PHPUnit\Framework\TestCase
     private $mappableConditionProcessor;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     private $eavConfigMock;
 
     /**
-     * @var \Magento\Framework\TestFramework\Unit\Helper\ObjectManager
+     * @var ObjectManager
      */
     private $objectManagerHelper;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     private $customConditionProcessorBuilderMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->eavConfigMock = $this->getMockBuilder(EavConfig::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getAttribute'])
+            ->onlyMethods(['getAttribute'])
             ->getMock();
 
         $this->customConditionProcessorBuilderMock = $this->getMockBuilder(
             CustomConditionProviderInterface::class
         )->disableOriginalConstructor()
-        ->setMethods(['hasProcessorForField'])
-        ->getMockForAbstractClass();
+            ->onlyMethods(['hasProcessorForField'])
+            ->getMockForAbstractClass();
 
-        $this->objectManagerHelper = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $this->objectManagerHelper = new ObjectManager($this);
 
         $this->mappableConditionProcessor = $this->objectManagerHelper->getObject(
             MappableConditionsProcessor::class,
@@ -102,13 +105,11 @@ class MappableConditionProcessorTest extends \PHPUnit\Framework\TestCase
 
         $this->customConditionProcessorBuilderMock
             ->method('hasProcessorForField')
-            ->will(
-                $this->returnValueMap(
-                    [
-                        [$field1, true],
-                        [$field2, false],
-                    ]
-                )
+            ->willReturnMap(
+                [
+                    [$field1, true],
+                    [$field2, false],
+                ]
             );
 
         $this->eavConfigMock
@@ -171,13 +172,11 @@ class MappableConditionProcessorTest extends \PHPUnit\Framework\TestCase
 
         $this->customConditionProcessorBuilderMock
             ->method('hasProcessorForField')
-            ->will(
-                $this->returnValueMap(
-                    [
-                        [$field1, true],
-                        [$field2, false],
-                    ]
-                )
+            ->willReturnMap(
+                [
+                    [$field1, true],
+                    [$field2, false],
+                ]
             );
 
         $this->eavConfigMock
@@ -232,13 +231,11 @@ class MappableConditionProcessorTest extends \PHPUnit\Framework\TestCase
 
         $this->customConditionProcessorBuilderMock
             ->method('hasProcessorForField')
-            ->will(
-                $this->returnValueMap(
-                    [
-                        [$field1, false],
-                        [$field2, false],
-                    ]
-                )
+            ->willReturnMap(
+                [
+                    [$field1, false],
+                    [$field2, false],
+                ]
             );
 
         $this->eavConfigMock
@@ -368,15 +365,13 @@ class MappableConditionProcessorTest extends \PHPUnit\Framework\TestCase
 
         $this->customConditionProcessorBuilderMock
             ->method('hasProcessorForField')
-            ->will(
-                $this->returnValueMap(
-                    [
-                        [$field1, false],
-                        [$field2, true],
-                        [$field3, true],
-                        [$field4, true],
-                    ]
-                )
+            ->willReturnMap(
+                [
+                    [$field1, false],
+                    [$field2, true],
+                    [$field3, true],
+                    [$field4, true],
+                ]
             );
 
         $this->eavConfigMock
@@ -491,15 +486,13 @@ class MappableConditionProcessorTest extends \PHPUnit\Framework\TestCase
 
         $this->customConditionProcessorBuilderMock
             ->method('hasProcessorForField')
-            ->will(
-                $this->returnValueMap(
-                    [
-                        [$field1, false],
-                        [$field2, true],
-                        [$field3, true],
-                        [$field4, true],
-                    ]
-                )
+            ->willReturnMap(
+                [
+                    [$field1, false],
+                    [$field2, true],
+                    [$field3, true],
+                    [$field4, true],
+                ]
             );
 
         $this->eavConfigMock
@@ -568,15 +561,13 @@ class MappableConditionProcessorTest extends \PHPUnit\Framework\TestCase
 
         $this->customConditionProcessorBuilderMock
             ->method('hasProcessorForField')
-            ->will(
-                $this->returnValueMap(
-                    [
-                        [$field1, true],
-                        [$field2, true],
-                        [$field3, true],
-                        [$field4, true],
-                    ]
-                )
+            ->willReturnMap(
+                [
+                    [$field1, true],
+                    [$field2, true],
+                    [$field3, true],
+                    [$field4, true],
+                ]
             );
 
         $this->eavConfigMock
@@ -768,18 +759,16 @@ class MappableConditionProcessorTest extends \PHPUnit\Framework\TestCase
 
         $this->customConditionProcessorBuilderMock
             ->method('hasProcessorForField')
-            ->will(
-                $this->returnValueMap(
-                    [
-                        [$field1, true],
-                        [$field2, true],
-                        [$field3, false],
-                        [$field4, true],
-                        [$field5, false],
-                        [$field6, true],
-                        [$field7, true],
-                    ]
-                )
+            ->willReturnMap(
+                [
+                    [$field1, true],
+                    [$field2, true],
+                    [$field3, false],
+                    [$field4, true],
+                    [$field5, false],
+                    [$field6, true],
+                    [$field7, true],
+                ]
             );
 
         $this->eavConfigMock
@@ -870,15 +859,13 @@ class MappableConditionProcessorTest extends \PHPUnit\Framework\TestCase
 
         $this->customConditionProcessorBuilderMock
             ->method('hasProcessorForField')
-            ->will(
-                $this->returnValueMap(
-                    [
-                        [$field1, false],
-                        [$field2, true],
-                        [$field3, true],
-                        [$field4, false],
-                    ]
-                )
+            ->willReturnMap(
+                [
+                    [$field1, false],
+                    [$field2, true],
+                    [$field3, true],
+                    [$field4, false],
+                ]
             );
 
         $this->eavConfigMock
@@ -974,16 +961,14 @@ class MappableConditionProcessorTest extends \PHPUnit\Framework\TestCase
 
         $this->customConditionProcessorBuilderMock
             ->method('hasProcessorForField')
-            ->will(
-                $this->returnValueMap(
-                    [
-                        [$field1, false],
-                        [$field2, true],
-                        [$field3, true],
-                        [$field4, false],
-                        [$field5, true],
-                    ]
-                )
+            ->willReturnMap(
+                [
+                    [$field1, false],
+                    [$field2, true],
+                    [$field3, true],
+                    [$field4, false],
+                    [$field5, true],
+                ]
             );
 
         $this->eavConfigMock
@@ -995,12 +980,10 @@ class MappableConditionProcessorTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($validResult, $result);
     }
 
-    /**
-     * @expectedException \Magento\Framework\Exception\InputException
-     * @expectedExceptionMessage Undefined condition type "olo-lo" passed in.
-     */
     public function testException()
     {
+        $this->expectException('Magento\Framework\Exception\InputException');
+        $this->expectExceptionMessage('Undefined condition type "olo-lo" passed in.');
         $simpleCondition = $this->getMockForSimpleCondition('field');
         $simpleCondition->setType('olo-lo');
         $inputCondition = $this->getMockForCombinedCondition([$simpleCondition], 'any');
@@ -1011,13 +994,13 @@ class MappableConditionProcessorTest extends \PHPUnit\Framework\TestCase
     /**
      * @param $subConditions
      * @param $aggregator
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return MockObject
      */
     protected function getMockForCombinedCondition($subConditions, $aggregator)
     {
         $mock = $this->getMockBuilder(CombinedCondition::class)
             ->disableOriginalConstructor()
-            ->setMethods()
+            ->onlyMethods([])
             ->getMock();
 
         $mock->setConditions($subConditions);
@@ -1029,13 +1012,13 @@ class MappableConditionProcessorTest extends \PHPUnit\Framework\TestCase
 
     /**
      * @param $attribute
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return MockObject
      */
     protected function getMockForSimpleCondition($attribute)
     {
         $mock = $this->getMockBuilder(SimpleCondition::class)
             ->disableOriginalConstructor()
-            ->setMethods()
+            ->onlyMethods([])
             ->getMock();
 
         $mock->setAttribute($attribute);

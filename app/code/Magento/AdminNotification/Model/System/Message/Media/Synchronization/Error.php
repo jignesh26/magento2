@@ -1,12 +1,14 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\AdminNotification\Model\System\Message\Media\Synchronization;
 
 /**
+ * Media synchronization error message class.
+ *
  * @api
  * @since 100.0.2
  */
@@ -27,7 +29,7 @@ class Error extends \Magento\AdminNotification\Model\System\Message\Media\Abstra
     protected function _shouldBeDisplayed()
     {
         $data = $this->_syncFlag->getFlagData();
-        return isset($data['has_errors']) && true == $data['has_errors'];
+        return !empty($data['has_errors']);
     }
 
     /**

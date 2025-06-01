@@ -3,30 +3,40 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Downloadable\Test\Unit\Model\Link;
 
 use Magento\Downloadable\Api\Data\LinkInterface;
+use Magento\Downloadable\Helper\Download;
+use Magento\Downloadable\Helper\File;
 use Magento\Downloadable\Model\Link;
 use Magento\Downloadable\Model\Link\Builder;
-use Magento\Downloadable\Helper\Download;
+use Magento\Downloadable\Model\LinkFactory;
+use Magento\Framework\Api\DataObjectHelper;
+use Magento\Framework\DataObject\Copy;
+use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
- * Class BuilderTest
+ * Unit test for downloadable products' builder link class
  */
-class BuilderTest extends \PHPUnit\Framework\TestCase
+class BuilderTest extends TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     private $downloadFileMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     private $objectCopyServiceMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     private $dataObjectHelperMock;
 
@@ -36,39 +46,42 @@ class BuilderTest extends \PHPUnit\Framework\TestCase
     private $service;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     private $mockComponentFactory;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     private $linkMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $objectManagerHelper = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $objectManagerHelper = new ObjectManager($this);
         $this->downloadFileMock = $this->getMockBuilder(
-            \Magento\Downloadable\Helper\File::class
-        )->disableOriginalConstructor()->getMock();
+            File::class
+        )->disableOriginalConstructor()
+            ->getMock();
 
         $this->objectCopyServiceMock = $this->getMockBuilder(
-            \Magento\Framework\DataObject\Copy::class
-        )->disableOriginalConstructor()->getMock();
+            Copy::class
+        )->disableOriginalConstructor()
+            ->getMock();
 
         $this->dataObjectHelperMock = $this->getMockBuilder(
-            \Magento\Framework\Api\DataObjectHelper::class
-        )->disableOriginalConstructor()->getMock();
+            DataObjectHelper::class
+        )->disableOriginalConstructor()
+            ->getMock();
 
-        $this->mockComponentFactory = $this->getMockBuilder(\Magento\Downloadable\Model\LinkFactory::class)
+        $this->mockComponentFactory = $this->getMockBuilder(LinkFactory::class)
             ->disableOriginalConstructor()
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->getMock();
 
         $this->linkMock = $this->getMockBuilder(LinkInterface::class)
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
-        
+
         $this->service = $objectManagerHelper->getObject(
             Builder::class,
             [
@@ -84,7 +97,9 @@ class BuilderTest extends \PHPUnit\Framework\TestCase
      * @dataProvider buildProvider
      * @param array $data
      * @param float $expectedPrice
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws LocalizedException
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function testBuild($data, $expectedPrice)
     {
@@ -94,39 +109,35 @@ class BuilderTest extends \PHPUnit\Framework\TestCase
         $basePath = 'l/e/f/gm';
         $baseSamplePath = 's/l/e/f/gm';
         $linkFileName = 'cat1.png';
-        $this->objectCopyServiceMock->expects($this->exactly(2))->method('getDataFromFieldset')->withConsecutive(
-            [
-                'downloadable_data',
-                'to_link',
-                $data
-            ],
-            [
-                'downloadable_link_sample_data',
-                'to_link_sample',
-                $data['sample']
-            ]
-        )->willReturn($downloadableData);
+        $this->objectCopyServiceMock->expects($this->exactly(2))->method('getDataFromFieldset')
+            ->willReturnCallback(
+                function ($arg1, $arg2, $arg3) use ($data, $downloadableData) {
+                    if ($arg1 == 'downloadable_data' &&
+                        $arg2 == 'to_link' &&
+                        $arg3 == $data) {
+                        return $downloadableData;
+                    } elseif ($arg1 == 'downloadable_link_sample_data' &&
+                        $arg2 == 'to_link_sample'
+                        && $arg3 == $data['sample']) {
+                        return $downloadableData;
+                    }
+                }
+            );
         $this->service->setData($data);
         $this->dataObjectHelperMock->method('populateWithArray')
-            ->withConsecutive(
-                [
-                    $this->linkMock,
-                    array_merge(
-                        $data,
-                        $downloadableData
-                    ),
-                    LinkInterface::class
-                ],
-                [
-                    $this->linkMock,
-                    array_merge(
-                        $data,
-                        $downloadableData,
-                        $data['sample']
-                    ),
-                    LinkInterface::class
-                ]
-            )->willReturn($this->linkMock);
+            ->willReturnCallback(
+                function ($arg1, $arg2, $arg3) use ($data, $downloadableData) {
+                    if ($arg1 === $this->linkMock &&
+                        $arg2 === array_merge($data, $downloadableData) &&
+                        $arg3 === LinkInterface::class) {
+                        return $this->linkMock;
+                    } elseif ($arg1 === $this->linkMock &&
+                        $arg2 === array_merge($data, $downloadableData, $data['sample']) &&
+                        $arg3 === LinkInterface::class) {
+                        return $this->linkMock;
+                    }
+                }
+            );
         $this->linkMock->expects($this->once())->method('getLinkType')->willReturn(Download::LINK_TYPE_FILE);
         $linkModel = $this->getMockBuilder(Link::class)
             ->disableOriginalConstructor()
@@ -138,18 +149,30 @@ class BuilderTest extends \PHPUnit\Framework\TestCase
         $linkModel->expects($this->once())->method('getBaseSamplePath')->willReturn($baseSamplePath);
         $this->downloadFileMock->expects($this->exactly(2))
             ->method('moveFileFromTmp')
-            ->withConsecutive(
-                [
+            ->willReturnCallback(
+                function (
+                    $arg1,
+                    $arg2,
+                    $arg3
+                ) use (
                     $baseTmpPath,
                     $basePath,
-                    $data['file']
-                ],
-                [
+                    $data,
                     $baseSampleTmpPath,
                     $baseSamplePath,
-                    $data['sample']['file']
-                ]
-            )->willReturn($linkFileName);
+                    $linkFileName
+                ) {
+                    if ($arg1 == $baseTmpPath &&
+                        $arg2 == $basePath &&
+                        $arg3 == $data['file']) {
+                        return $linkFileName;
+                    } elseif ($arg1 == $baseSampleTmpPath &&
+                        $arg2 == $baseSamplePath &&
+                        $arg3 == $data['sample']['file']) {
+                        return $linkFileName;
+                    }
+                }
+            );
         $this->linkMock->expects($this->once())->method('setLinkFile')->with($linkFileName);
         $this->linkMock->expects($this->once())->method('setLinkUrl')->with(null);
         $this->linkMock->expects($this->once())->method('getSampleType')->willReturn(Download::LINK_TYPE_FILE);
@@ -160,6 +183,10 @@ class BuilderTest extends \PHPUnit\Framework\TestCase
         if (isset($data['is_unlimited'])) {
             $this->linkMock->expects($this->once())->method('setNumberOfDownloads')->with(0);
         }
+        $useDefaultTitle = $data['use_default_title'] ?? false;
+        if ($useDefaultTitle) {
+            $this->linkMock->expects($this->once())->method('setTitle')->with(null);
+        }
         if (isset($data['price'])) {
             $this->linkMock->expects($this->once())->method('getPrice')->willReturn($data['price']);
         } else {
@@ -169,12 +196,10 @@ class BuilderTest extends \PHPUnit\Framework\TestCase
         $this->service->build($this->linkMock);
     }
 
-    /**
-     * @expectedException \Magento\Framework\Exception\LocalizedException
-     * @expectedExceptionMessage Link file not provided
-     */
     public function testBuildFileNotProvided()
     {
+        $this->expectException('Magento\Framework\Exception\LocalizedException');
+        $this->expectExceptionMessage('Link file not provided');
         $data = [
             'type' => 'file',
             'sample' => [
@@ -183,13 +208,14 @@ class BuilderTest extends \PHPUnit\Framework\TestCase
             ]
         ];
         $downloadableData = ['sort_order' => 1];
-        $this->objectCopyServiceMock->expects($this->once())->method('getDataFromFieldset')->withConsecutive(
-            [
-                'downloadable_data',
-                'to_link',
-                $data
-            ]
-        )->willReturn($downloadableData);
+        $this->objectCopyServiceMock->expects($this->once())->method('getDataFromFieldset')
+            ->willReturnCallback(
+                function ($arg1, $arg2, $arg3) use ($data, $downloadableData) {
+                    if ($arg1 == 'downloadable_data' && $arg2 == 'to_link' && $arg3 == $data) {
+                        return $downloadableData;
+                    }
+                }
+            );
         $this->service->setData($data);
         $this->dataObjectHelperMock->method('populateWithArray')
             ->with(
@@ -210,22 +236,21 @@ class BuilderTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function buildProvider()
+    public static function buildProvider()
     {
         $expectedPrice = 0;
-        $expectedOrder = 1;
         return [
             'price_0' => [
                 [
                     'file' => 'cXVlIHRhbA==',
                     'type' => 'file',
+                    'use_default_title' => '1',
                     'sample' => [
                         'file' => 'cXVlIHRhbA==',
                         'type' => 'file'
                     ]
                 ],
-                'expectedPrice' => $expectedPrice,
-                'expectedOrder' => $expectedOrder
+                'expectedPrice' => $expectedPrice
             ],
             'price_declared' => [
                 [
@@ -239,8 +264,7 @@ class BuilderTest extends \PHPUnit\Framework\TestCase
                         'type' => 'file'
                     ]
                 ],
-                'expectedPrice' => 150,
-                'expectedOrder' => 2
+                'expectedPrice' => 150
             ]
         ];
     }

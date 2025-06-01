@@ -1,11 +1,18 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Indexer\Test\Unit;
 
-class XsdTest extends \PHPUnit\Framework\TestCase
+use Magento\Framework\Config\Dom\UrnResolver;
+use Magento\Framework\TestFramework\Unit\Utility\XsdValidator;
+use PHPUnit\Framework\AssertionFailedError;
+use PHPUnit\Framework\TestCase;
+
+class XsdTest extends TestCase
 {
     /**
      * Path to xsd schema file
@@ -14,23 +21,23 @@ class XsdTest extends \PHPUnit\Framework\TestCase
     protected $_xsdSchema;
 
     /**
-     * @var \Magento\Framework\Config\Dom\UrnResolver
+     * @var UrnResolver
      */
     protected $urnResolver;
 
     /**
-     * @var \Magento\Framework\TestFramework\Unit\Utility\XsdValidator
+     * @var XsdValidator
      */
     protected $_xsdValidator;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         if (!function_exists('libxml_set_external_entity_loader')) {
             $this->markTestSkipped('Skipped on HHVM. Will be fixed in MAGETWO-45033');
         }
-        $this->urnResolver = new \Magento\Framework\Config\Dom\UrnResolver();
+        $this->urnResolver = new UrnResolver();
         $this->_xsdSchema = $this->urnResolver->getRealPath('urn:magento:framework:Indexer/etc/indexer.xsd');
-        $this->_xsdValidator = new \Magento\Framework\TestFramework\Unit\Utility\XsdValidator();
+        $this->_xsdValidator = new XsdValidator();
     }
 
     /**
@@ -40,11 +47,27 @@ class XsdTest extends \PHPUnit\Framework\TestCase
      */
     public function testSchemaCorrectlyIdentifiesInvalidXml($xmlString, $expectedError)
     {
-        $actualError = $this->_xsdValidator->validate(
+        $actualErrors = $this->_xsdValidator->validate(
             $this->urnResolver->getRealPath('urn:magento:framework:Indexer/etc/indexer_merged.xsd'),
             $xmlString
         );
-        $this->assertEquals($expectedError, $actualError);
+        $this->assertNotEmpty($actualErrors);
+        foreach ($expectedError as [$error, $isRegex]) {
+            if ($isRegex) {
+                $matched = false;
+                foreach ($actualErrors as $actualError) {
+                    try {
+                        $this->assertMatchesRegularExpression($error, $actualError);
+                        $matched = true;
+                        break;
+                    } catch (AssertionFailedError) {
+                    }
+                }
+                $this->assertTrue($matched, "None of the errors matched: $error");
+            } else {
+                $this->assertContains($error, $actualErrors);
+            }
+        }
     }
 
     public function testSchemaCorrectlyIdentifiesValidXml()
@@ -58,7 +81,7 @@ class XsdTest extends \PHPUnit\Framework\TestCase
     /**
      * Data provider with invalid xml array according to events.xsd
      */
-    public function schemaCorrectlyIdentifiesInvalidXmlDataProvider()
+    public static function schemaCorrectlyIdentifiesInvalidXmlDataProvider()
     {
         return include __DIR__ . '/_files/invalidIndexerXmlArray.php';
     }

@@ -21,7 +21,7 @@ use PHPUnit\Framework\MockObject\Invocation as BaseInvocation;
  *
  * @package Magento\TestFramework\Matcher
  */
-class MethodInvokedAtIndex implements \PHPUnit\Framework\MockObject\Matcher\Invocation
+class MethodInvokedAtIndex extends \PHPUnit\Framework\MockObject\Rule\InvocationOrder
 {
     /**
      * @var int
@@ -61,26 +61,17 @@ class MethodInvokedAtIndex implements \PHPUnit\Framework\MockObject\Matcher\Invo
     public function matches(BaseInvocation $invocation): bool
     {
         /** @noinspection PhpUndefinedFieldInspection */
-        if (!isset($this->indexes[$invocation->getMethodName()])) {
+        if (!isset($this->indexes[$invocation->methodName()])) {
             /** @noinspection PhpUndefinedFieldInspection */
-            $this->indexes[$invocation->getMethodName()] = 0;
+            $this->indexes[$invocation->methodName()] = 0;
         } else {
             /** @noinspection PhpUndefinedFieldInspection */
-            $this->indexes[$invocation->getMethodName()]++;
+            $this->indexes[$invocation->methodName()]++;
         }
         $this->currentIndex++;
 
         /** @noinspection PhpUndefinedFieldInspection */
-        return $this->indexes[$invocation->getMethodName()] == $this->sequenceIndex;
-    }
-
-    /**
-     * @param BaseInvocation $invocation
-     * @return mixed
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
-     */
-    public function invoked(BaseInvocation $invocation)
-    {
+        return $this->indexes[$invocation->methodName()] == $this->sequenceIndex;
     }
 
     /**
@@ -99,5 +90,9 @@ class MethodInvokedAtIndex implements \PHPUnit\Framework\MockObject\Matcher\Invo
                 )
             );
         }
+    }
+
+    protected function invokedDo(BaseInvocation $invocation): void
+    {
     }
 }

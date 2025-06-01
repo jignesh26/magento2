@@ -3,47 +3,54 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Sales\Test\Unit\Block\Adminhtml\Order\Create;
 
 use Magento\Catalog\Model\Product;
 use Magento\Catalog\Pricing\Price\FinalPrice;
+use Magento\Downloadable\Pricing\Price\LinkPrice;
+use Magento\Framework\Pricing\PriceInfo\Base;
+use Magento\Sales\Block\Adminhtml\Order\Create\AbstractCreate;
+use Magento\Wishlist\Model\Item;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class AbstractCreateTest extends \PHPUnit\Framework\TestCase
+class AbstractCreateTest extends TestCase
 {
     /**
-     * @var \Magento\Sales\Block\Adminhtml\Order\Create\AbstractCreate|\PHPUnit_Framework_MockObject_MockObject
+     * @var AbstractCreate|MockObject
      */
     protected $model;
 
     /**
-     * @var \Magento\Catalog\Model\Product|\PHPUnit_Framework_MockObject_MockObject
+     * @var Product|MockObject
      */
     protected $productMock;
 
     /**
-     * @var \Magento\Framework\Pricing\PriceInfo\Base|\PHPUnit_Framework_MockObject_MockObject
+     * @var Base|MockObject
      */
     protected $priceInfoMock;
 
     /**
-     * @var \Magento\Downloadable\Pricing\Price\LinkPrice|\PHPUnit_Framework_MockObject_MockObject
+     * @var LinkPrice|MockObject
      */
     protected $linkPriceMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->model = $this->getMockBuilder(\Magento\Sales\Block\Adminhtml\Order\Create\AbstractCreate::class)
-            ->setMethods(['convertPrice'])
+        $this->model = $this->getMockBuilder(AbstractCreate::class)
+            ->onlyMethods(['convertPrice'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
-        $this->priceInfoMock = $this->getMockBuilder(\Magento\Framework\Pricing\PriceInfo\Base::class)
+        $this->priceInfoMock = $this->getMockBuilder(Base::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $this->productMock = $this->getMockBuilder(\Magento\Catalog\Model\Product::class)
+        $this->productMock = $this->getMockBuilder(Product::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $this->linkPriceMock = $this->getMockBuilder(\Magento\Downloadable\Pricing\Price\LinkPrice::class)
+        $this->linkPriceMock = $this->getMockBuilder(LinkPrice::class)
             ->disableOriginalConstructor()
             ->getMock();
         $this->productMock->expects($this->any())
@@ -77,9 +84,18 @@ class AbstractCreateTest extends \PHPUnit\Framework\TestCase
      */
     public function testGetProduct($item)
     {
+        $item = $item($this);
         $product = $this->model->getProduct($item);
 
         self::assertInstanceOf(Product::class, $product);
+    }
+
+    protected function getMockForItemClass() {
+        $productMock = $this->createMock(Product::class);
+        $itemMock = $this->createMock(Item::class);
+        $itemMock->expects($this->once())->method('getProduct')->willReturn($productMock);
+
+        return $itemMock;
     }
 
     /**
@@ -87,12 +103,10 @@ class AbstractCreateTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function getProductDataProvider()
+    public static function getProductDataProvider()
     {
-        $productMock = $this->createMock(Product::class);
-
-        $itemMock = $this->createMock(\Magento\Wishlist\Model\Item::class);
-        $itemMock->expects($this->once())->method('getProduct')->willReturn($productMock);
+        $productMock = static fn (self $testCase) => $testCase->createMock(Product::class);
+        $itemMock = static fn (self $testCase) => $testCase->getMockForItemClass();
 
         return [
             [$productMock],

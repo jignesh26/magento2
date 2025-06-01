@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 
 define([
@@ -10,10 +10,11 @@ define([
     'Magento_Ui/js/modal/alert',
     'Magento_Ui/js/modal/confirm',
     'underscore',
-    'jquery/ui',
+    'jquery-ui-modules/widget',
     'mage/decorate',
     'mage/collapsible',
-    'mage/cookies'
+    'mage/cookies',
+    'jquery-ui-modules/effect-fade'
 ], function ($, authenticationPopup, customerData, alert, confirm, _) {
     'use strict';
 
@@ -25,6 +26,7 @@ define([
             }
         },
         scrollHeight: 0,
+        shoppingCartUrl: window.checkout.shoppingCartUrl,
 
         /**
          * Create sidebar.
@@ -40,7 +42,6 @@ define([
         update: function () {
             $(this.options.targetElement).trigger('contentUpdated');
             this._calcHeight();
-            this._isOverflowed();
         },
 
         /**
@@ -133,23 +134,6 @@ define([
 
             this._on(this.element, events);
             this._calcHeight();
-            this._isOverflowed();
-        },
-
-        /**
-         * Add 'overflowed' class to minicart items wrapper element
-         *
-         * @private
-         */
-        _isOverflowed: function () {
-            var list = $(this.options.minicart.list),
-                cssOverflowClass = 'overflowed';
-
-            if (this.scrollHeight > list.innerHeight()) {
-                list.parent().addClass(cssOverflowClass);
-            } else {
-                list.parent().removeClass(cssOverflowClass);
-            }
         },
 
         /**
@@ -227,6 +211,10 @@ define([
 
             if (!_.isUndefined(productData)) {
                 $(document).trigger('ajax:updateCartItemQty');
+
+                if (window.location.href === this.shoppingCartUrl) {
+                    window.location.reload(false);
+                }
             }
             this._hideItemButton(elem);
         },
@@ -254,8 +242,17 @@ define([
 
             if (!_.isUndefined(productData)) {
                 $(document).trigger('ajax:removeFromCart', {
-                    productIds: [productData['product_id']]
+                    productIds: [productData['product_id']],
+                    productInfo: [
+                        {
+                            'id': productData['product_id']
+                        }
+                    ]
                 });
+
+                if (window.location.href.indexOf(this.shoppingCartUrl) === 0) {
+                    window.location.reload();
+                }
             }
         },
 
@@ -338,7 +335,7 @@ define([
                 if ($(this).find('.options').length > 0) {
                     $(this).collapsible();
                 }
-                outerHeight = $(this).outerHeight();
+                outerHeight = $(this).outerHeight(true);
 
                 if (counter-- > 0) {
                     height += outerHeight;

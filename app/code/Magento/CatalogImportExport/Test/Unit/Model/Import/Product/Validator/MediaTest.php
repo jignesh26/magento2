@@ -1,19 +1,21 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\CatalogImportExport\Test\Unit\Model\Import\Product\Validator;
 
 use Magento\CatalogImportExport\Model\Import\Product;
 use Magento\CatalogImportExport\Model\Import\Product\Validator\Media;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
-use Magento\ImportExport\Model\Import;
 use Magento\Framework\Url\Validator;
-use PHPUnit_Framework_MockObject_MockObject as MockObject;
+use Magento\ImportExport\Model\Import;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class MediaTest extends \PHPUnit\Framework\TestCase
+class MediaTest extends TestCase
 {
     /** @var Media */
     protected $media;
@@ -26,7 +28,7 @@ class MediaTest extends \PHPUnit\Framework\TestCase
      */
     private $validatorMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->validatorMock = $this->getMockBuilder(Validator::class)
             ->disableOriginalConstructor()
@@ -126,7 +128,7 @@ class MediaTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isMediaValidDataProvider()
+    public static function isMediaValidDataProvider()
     {
         return [
             'valid' => [
@@ -147,7 +149,7 @@ class MediaTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isValidAdditionalImagesPathDataProvider()
+    public static function isValidAdditionalImagesPathDataProvider()
     {
         return [
             'additional_images' => [
@@ -164,7 +166,7 @@ class MediaTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isValidAdditionalImagesUrlDataProvider()
+    public static function isValidAdditionalImagesUrlDataProvider()
     {
         return [
             'additional_images_wrong_domain' => [

@@ -23,7 +23,7 @@ class MviewConfigFilesTest extends \PHPUnit\Framework\TestCase
      */
     protected $schemaFile;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $urnResolver = new \Magento\Framework\Config\Dom\UrnResolver();
         $this->schemaFile = $urnResolver->getRealPath('urn:magento:framework:Mview/etc/mview.xsd');
@@ -51,7 +51,7 @@ class MviewConfigFilesTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function mviewConfigFileDataProvider()
+    public static function mviewConfigFileDataProvider()
     {
         return \Magento\Framework\App\Utility\Files::init()->getConfigFiles('mview.xml');
     }

@@ -3,6 +3,7 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Sitemap\Test\Unit\Model\ItemProvider;
 
@@ -14,8 +15,10 @@ use Magento\Sitemap\Model\ResourceModel\Catalog\Product as ProductResource;
 use Magento\Sitemap\Model\ResourceModel\Catalog\ProductFactory;
 use Magento\Sitemap\Model\SitemapItem;
 use Magento\Sitemap\Model\SitemapItemInterfaceFactory;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class ProductTest extends \PHPUnit\Framework\TestCase
+class ProductTest extends TestCase
 {
     public function testGetItemsEmpty()
     {
@@ -43,7 +46,7 @@ class ProductTest extends \PHPUnit\Framework\TestCase
         $resolver = new ProductItemResolver($configReaderMock, $productFactoryMock, $itemFactoryMock);
         $items = $resolver->getItems(1);
 
-        self::assertTrue(count($items) == count($products));
+        self::assertCount(count($products), $items);
         foreach ($products as $index => $product) {
             self::assertSame($product->getUpdatedAt(), $items[$index]->getUpdatedAt());
             self::assertSame('daily', $items[$index]->getChangeFrequency());
@@ -56,9 +59,9 @@ class ProductTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function productProvider()
+    public static function productProvider()
     {
-        $storeBaseMediaUrl = 'http://store.com/pub/media/catalog/product/cache/c9e0b0ef589f3508e5ba515cde53c5ff/';
+        $storeBaseMediaUrl = 'http://store.com/media/catalog/product/cache/c9e0b0ef589f3508e5ba515cde53c5ff/';
         return [
             [
                 [
@@ -98,12 +101,12 @@ class ProductTest extends \PHPUnit\Framework\TestCase
 
     /**
      * @param $returnValue
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return MockObject
      */
     private function getProductFactoryMock($returnValue)
     {
         $cmsPageFactoryMock = $this->getMockBuilder(ProductFactory::class)
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->disableOriginalConstructor()
             ->getMock();
 
@@ -115,12 +118,12 @@ class ProductTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return MockObject
      */
     private function getItemFactoryMock()
     {
         $itemFactoryMock = $this->getMockBuilder(SitemapItemInterfaceFactory::class)
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->disableOriginalConstructor()
             ->getMock();
 
@@ -136,7 +139,7 @@ class ProductTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return MockObject
      */
     private function getConfigReaderMock()
     {
@@ -153,12 +156,12 @@ class ProductTest extends \PHPUnit\Framework\TestCase
 
     /**
      * @param $returnValue
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return MockObject
      */
     private function getProductCollectionMock($returnValue)
     {
         $sitemapCmsPageMock = $this->getMockBuilder(ProductResource::class)
-            ->setMethods(['getCollection'])
+            ->onlyMethods(['getCollection'])
             ->disableOriginalConstructor()
             ->getMock();
 

@@ -3,14 +3,16 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Sitemap\Test\Unit\Model\ItemProvider;
 
 use Magento\Sitemap\Model\ItemProvider\Composite as CompositeItemResolver;
 use Magento\Sitemap\Model\ItemProvider\ItemProviderInterface;
 use Magento\Sitemap\Model\SitemapItemInterface;
+use PHPUnit\Framework\TestCase;
 
-class CompositeTest extends \PHPUnit\Framework\TestCase
+class CompositeTest extends TestCase
 {
     public function testNoResolvers()
     {
@@ -45,7 +47,7 @@ class CompositeTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function sitemapItemsProvider()
+    public static function sitemapItemsProvider()
     {
         $testCases = [];
 
@@ -53,11 +55,11 @@ class CompositeTest extends \PHPUnit\Framework\TestCase
             $itemProviders = [];
             $expectedItems = [];
             $maxProviders = random_int(1, 5);
-            for ($i = 1; $i < $maxProviders; $i++) {
+            for ($j = 1; $j < $maxProviders; $j++) {
                 $items = [];
                 $maxItems = random_int(2, 5);
-                for ($i = 1; $i < $maxItems; $i++) {
-                    $sitemapItem = $this->getMockForAbstractClass(SitemapItemInterface::class);
+                for ($k = 1; $k < $maxItems; $k++) {
+                    $sitemapItem = static fn (self $testCase) => $testCase->getMockForAbstractClass(SitemapItemInterface::class);
                     $items[] = $sitemapItem;
                     $expectedItems[]  = $sitemapItem;
                 }

@@ -1,18 +1,22 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Cms\Test\Unit\Model\Page\Source;
 
 use Magento\Cms\Model\Page\Source\Theme;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
 use Magento\Framework\View\Design\Theme\Label\ListInterface;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class ThemeTest extends \PHPUnit\Framework\TestCase
+class ThemeTest extends TestCase
 {
     /**
-     * @var ListInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ListInterface|MockObject
      */
     protected $listMock;
 
@@ -29,13 +33,13 @@ class ThemeTest extends \PHPUnit\Framework\TestCase
     /**
      * {@inheritdoc}
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManagerHelper = new ObjectManager($this);
-        $this->listMock = $this->getMockBuilder(\Magento\Framework\View\Design\Theme\Label\ListInterface::class)
+        $this->listMock = $this->getMockBuilder(ListInterface::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getLabels'])
-            ->getMock();
+            ->onlyMethods(['getLabels'])
+            ->getMockForAbstractClass();
 
         $this->object = $this->objectManagerHelper->getObject($this->getClassName(), [
             'themeList' => $this->listMock,
@@ -47,7 +51,7 @@ class ThemeTest extends \PHPUnit\Framework\TestCase
      */
     protected function getClassName()
     {
-        return \Magento\Cms\Model\Page\Source\Theme::class;
+        return Theme::class;
     }
 
     /**
@@ -68,7 +72,7 @@ class ThemeTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getOptionsDataProvider()
+    public static function getOptionsDataProvider()
     {
         return [
             [

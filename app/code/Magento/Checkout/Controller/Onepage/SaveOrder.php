@@ -1,15 +1,19 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Checkout\Controller\Onepage;
 
+use Magento\Framework\App\Action\HttpPostActionInterface;
 use Magento\Framework\DataObject;
 use Magento\Framework\Exception\PaymentException;
 
-class SaveOrder extends \Magento\Checkout\Controller\Onepage
+/**
+ * One Page Checkout saveOrder action
+ */
+class SaveOrder extends \Magento\Checkout\Controller\Onepage implements HttpPostActionInterface
 {
     /**
      * Create order action
@@ -31,7 +35,7 @@ class SaveOrder extends \Magento\Checkout\Controller\Onepage
         $result = new DataObject();
         try {
             $agreementsValidator = $this->_objectManager->get(
-                \Magento\CheckoutAgreements\Model\AgreementsValidator::class
+                \Magento\Checkout\Api\AgreementsValidatorInterface::class
             );
             if (!$agreementsValidator->isValid(array_keys($this->getRequest()->getPost('agreement', [])))) {
                 $result->setData('success', false);

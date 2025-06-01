@@ -14,6 +14,10 @@ use Magento\Ui\DataProvider\Modifier\PoolInterface;
 
 /**
  * Data Provider for the Release Notifications UI component.
+ *
+ * @deprecated Starting from Magento OS 2.4.7 Magento_ReleaseNotification module is deprecated
+ * in favor of another in-product messaging mechanism
+ * @see Current in-product messaging mechanism
  */
 class NotificationDataProvider implements DataProviderInterface
 {
@@ -82,7 +86,7 @@ class NotificationDataProvider implements DataProviderInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function getData()
     {
@@ -95,7 +99,7 @@ class NotificationDataProvider implements DataProviderInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function getMeta()
     {
@@ -107,7 +111,7 @@ class NotificationDataProvider implements DataProviderInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function getName()
     {
@@ -115,15 +119,15 @@ class NotificationDataProvider implements DataProviderInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function getConfigData()
     {
-        return isset($this->data['config']) ? $this->data['config'] : [];
+        return $this->data['config'] ?? [];
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function setConfigData($config)
     {
@@ -133,7 +137,7 @@ class NotificationDataProvider implements DataProviderInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function getFieldMetaInfo($fieldSetName, $fieldName)
@@ -142,7 +146,7 @@ class NotificationDataProvider implements DataProviderInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function getFieldSetMetaInfo($fieldSetName)
@@ -151,7 +155,7 @@ class NotificationDataProvider implements DataProviderInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function getFieldsMetaInfo($fieldSetName)
@@ -160,7 +164,7 @@ class NotificationDataProvider implements DataProviderInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function getPrimaryFieldName()
     {
@@ -168,7 +172,7 @@ class NotificationDataProvider implements DataProviderInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function getRequestFieldName()
     {
@@ -176,31 +180,33 @@ class NotificationDataProvider implements DataProviderInterface
     }
 
     /**
-     * {@inheritdoc}
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     * @inheritdoc
+     * phpcs:disable Magento2.CodeAnalysis.EmptyBlock
      */
     public function addFilter(\Magento\Framework\Api\Filter $filter)
     {
+        // phpcs:ignore Squiz.PHP.NonExecutableCode.ReturnNotRequired
+        return;
     }
 
     /**
-     * {@inheritdoc}
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     * @inheritdoc
+     * phpcs:disable Magento2.CodeAnalysis.EmptyBlock
      */
     public function addOrder($field, $direction)
     {
     }
 
     /**
-     * {@inheritdoc}
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     * @inheritdoc
+     * phpcs:disable Magento2.CodeAnalysis.EmptyBlock
      */
     public function setLimit($offset, $size)
     {
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function getSearchCriteria()
     {
@@ -208,7 +214,7 @@ class NotificationDataProvider implements DataProviderInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function getSearchResult()
     {

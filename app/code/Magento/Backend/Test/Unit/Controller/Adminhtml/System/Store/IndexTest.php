@@ -1,19 +1,22 @@
 <?php
 /**
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Backend\Test\Unit\Controller\Adminhtml\System\Store;
 
-use Magento\Framework\Controller\ResultFactory;
-use Magento\Backend\Model\View\Result\Page;
 use Magento\Backend\Controller\Adminhtml\System\Store\Index;
+use Magento\Backend\Model\View\Result\Page;
+use Magento\Framework\Controller\ResultFactory;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
 use Magento\Framework\View\Page\Config;
 use Magento\Framework\View\Page\Title;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class IndexTest extends \PHPUnit\Framework\TestCase
+class IndexTest extends TestCase
 {
     /**
      * @var ObjectManagerHelper
@@ -21,22 +24,22 @@ class IndexTest extends \PHPUnit\Framework\TestCase
     private $objectManagerHelper;
 
     /**
-     * @var ResultFactory|\PHPUnit_Framework_MockObject_MockObject
+     * @var ResultFactory|MockObject
      */
     private $resultFactoryMock;
 
     /**
-     * @var Page|\PHPUnit_Framework_MockObject_MockObject
+     * @var Page|MockObject
      */
     private $pageMock;
 
     /**
-     * @var Config|\PHPUnit_Framework_MockObject_MockObject
+     * @var Config|MockObject
      */
     private $pageConfigMock;
 
     /**
-     * @var Title|\PHPUnit_Framework_MockObject_MockObject
+     * @var Title|MockObject
      */
     private $titleMock;
 
@@ -45,7 +48,7 @@ class IndexTest extends \PHPUnit\Framework\TestCase
      */
     private $indexController;
 
-    public function setUp()
+    protected function setUp(): void
     {
         $this->resultFactoryMock = $this->getMockBuilder(ResultFactory::class)
             ->disableOriginalConstructor()
@@ -54,7 +57,7 @@ class IndexTest extends \PHPUnit\Framework\TestCase
             ->disableOriginalConstructor()
             ->getMock();
         $this->pageConfigMock = $this->getMockBuilder(Config::class)
-            ->setMethods(['getTitle'])
+            ->onlyMethods(['getTitle'])
             ->disableOriginalConstructor()
             ->getMock();
         $this->titleMock = $this->getMockBuilder(Title::class)
@@ -82,9 +85,14 @@ class IndexTest extends \PHPUnit\Framework\TestCase
             ->willReturnSelf();
         $this->pageMock->expects($this->exactly(2))
             ->method('addBreadcrumb')
-            ->withConsecutive(
-                [__('Stores'), __('Stores')],
-                [__('All Stores'), __('All Stores')]
+            ->willReturnCallback(
+                function ($arg1, $arg2) {
+                    if ($arg1 == __('Stores') && $arg2 == __('Stores')) {
+                        return null;
+                    } elseif ($arg1 == __('All Stores') && $arg2 == __('All Stores')) {
+                        return null;
+                    }
+                }
             );
         $this->pageMock->expects($this->once())
             ->method('getConfig')

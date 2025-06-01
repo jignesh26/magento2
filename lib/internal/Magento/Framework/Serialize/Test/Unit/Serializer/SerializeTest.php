@@ -3,22 +3,24 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Serialize\Test\Unit\Serializer;
 
 use Magento\Framework\Serialize\Serializer\Serialize;
-use Magento\Framework\Serialize\Signer;
-use Magento\Framework\Serialize\InvalidSignatureException;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\TestCase;
 
-class SerializeTest extends \PHPUnit\Framework\TestCase
+class SerializeTest extends TestCase
 {
     /**
      * @var Serialize
      */
     private $serialize;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $objectManager = new ObjectManager($this);
         $this->serialize = $objectManager->getObject(Serialize::class);
     }
 
@@ -35,7 +37,7 @@ class SerializeTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function serializeDataProvider()
+    public static function serializeDataProvider()
     {
         return [
             ['string', 's:6:"string";'],
@@ -61,7 +63,7 @@ class SerializeTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function unserializeDataProvider()
+    public static function unserializeDataProvider()
     {
         return [
             ['s:6:"string";', 'string'],
@@ -74,29 +76,27 @@ class SerializeTest extends \PHPUnit\Framework\TestCase
         ];
     }
 
-    /**
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Unable to serialize value.
-     */
     public function testSerializeException()
     {
+        $this->expectException('InvalidArgumentException');
+        $this->expectExceptionMessage('Unable to serialize value.');
         $this->serialize->serialize(STDOUT);
     }
 
     /**
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Unable to unserialize value.
      * @dataProvider unserializeExceptionDataProvider
      */
     public function testUnserializeException($value)
     {
+        $this->expectException('InvalidArgumentException');
+        $this->expectExceptionMessage('Unable to unserialize value.');
         $this->serialize->unserialize($value);
     }
 
     /**
      * @return array
      */
-    public function unserializeExceptionDataProvider()
+    public static function unserializeExceptionDataProvider()
     {
         return [
             [''],
@@ -105,12 +105,10 @@ class SerializeTest extends \PHPUnit\Framework\TestCase
         ];
     }
 
-    /**
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Unable to unserialize value, string is corrupted.
-     */
     public function testUnserializeExceptionCorruptedString()
     {
+        $this->expectException('InvalidArgumentException');
+        $this->expectExceptionMessage('Unable to unserialize value, string is corrupted.');
         $this->serialize->unserialize('a:');
     }
 }

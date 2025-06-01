@@ -9,18 +9,20 @@ namespace Magento\Elasticsearch\Test\Unit\Model\Adapter\FieldMapper\Product\Fiel
 
 use Magento\Catalog\Api\Data\CategoryInterface;
 use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\AttributeAdapter;
-use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
+use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldName\Resolver\Position;
 use Magento\Framework\Registry;
-use Magento\Store\Model\StoreManagerInterface as StoreManager;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
 use Magento\Store\Api\Data\StoreInterface;
+use Magento\Store\Model\StoreManagerInterface as StoreManager;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @SuppressWarnings(PHPMD)
  */
-class PositionTest extends \PHPUnit\Framework\TestCase
+class PositionTest extends TestCase
 {
     /**
-     * @var \Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldName\Resolver\Position
+     * @var Position
      */
     private $resolver;
 
@@ -39,21 +41,21 @@ class PositionTest extends \PHPUnit\Framework\TestCase
      *
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->storeManager = $this->getMockBuilder(StoreManager::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getStore'])
+            ->onlyMethods(['getStore'])
             ->getMockForAbstractClass();
         $this->coreRegistry = $this->getMockBuilder(Registry::class)
             ->disableOriginalConstructor()
-            ->setMethods(['registry'])
+            ->onlyMethods(['registry'])
             ->getMock();
 
         $objectManager = new ObjectManagerHelper($this);
 
         $this->resolver = $objectManager->getObject(
-            \Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldName\Resolver\Position::class,
+            Position::class,
             [
                 'storeManager' => $this->storeManager,
                 'coreRegistry' => $this->coreRegistry,
@@ -73,14 +75,14 @@ class PositionTest extends \PHPUnit\Framework\TestCase
     {
         $attributeMock = $this->getMockBuilder(AttributeAdapter::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getAttributeCode'])
+            ->onlyMethods(['getAttributeCode'])
             ->getMock();
         $attributeMock->expects($this->any())
             ->method('getAttributeCode')
             ->willReturn($attributeCode);
         $store = $this->getMockBuilder(StoreInterface::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getRootCategoryId'])
+            ->addMethods(['getRootCategoryId'])
             ->getMockForAbstractClass();
         $store->expects($this->any())
             ->method('getRootCategoryId')
@@ -92,7 +94,7 @@ class PositionTest extends \PHPUnit\Framework\TestCase
         if ($fromRegistry) {
             $category = $this->getMockBuilder(CategoryInterface::class)
                 ->disableOriginalConstructor()
-                ->setMethods(['getId'])
+                ->onlyMethods(['getId'])
                 ->getMockForAbstractClass();
             $category->expects($this->any())
                 ->method('getId')
@@ -111,7 +113,7 @@ class PositionTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getFieldNameProvider()
+    public static function getFieldNameProvider()
     {
         return [
             ['position', [], true, 'position_category_1'],

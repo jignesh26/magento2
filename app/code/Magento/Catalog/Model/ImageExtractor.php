@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Model;
 
@@ -20,6 +20,7 @@ class ImageExtractor implements TypeDataExtractorInterface
      * @param \DOMElement $mediaNode
      * @param string $mediaParentTag
      * @return array
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function process(\DOMElement $mediaNode, $mediaParentTag)
     {
@@ -37,9 +38,15 @@ class ImageExtractor implements TypeDataExtractorInterface
                 $attributeTagName = $attribute->tagName;
                 if ((bool)$attribute->getAttribute('xsi:nil') !== true) {
                     if ($attributeTagName === 'background') {
-                        $nodeValue = $this->processImageBackground($attribute->nodeValue);
+                        $nodeValue = $this->processImageBackground($attribute->nodeValue ?? '');
                     } elseif ($attributeTagName === 'width' || $attributeTagName === 'height') {
                         $nodeValue = (int) $attribute->nodeValue;
+                    } elseif ($attributeTagName === 'constrain'
+                        || $attributeTagName === 'aspect_ratio'
+                        || $attributeTagName === 'frame'
+                        || $attributeTagName === 'transparency'
+                    ) {
+                        $nodeValue = in_array($attribute->nodeValue, [true, 1, 'true', '1'], true) ?? false;
                     } else {
                         $nodeValue = $attribute->nodeValue;
                     }

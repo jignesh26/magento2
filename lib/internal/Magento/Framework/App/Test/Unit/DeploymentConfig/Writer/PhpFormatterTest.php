@@ -3,11 +3,14 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\App\Test\Unit\DeploymentConfig\Writer;
 
 use Magento\Framework\App\DeploymentConfig\Writer\PhpFormatter;
+use PHPUnit\Framework\TestCase;
 
-class PhpFormatterTest extends \PHPUnit\Framework\TestCase
+class PhpFormatterTest extends TestCase
 {
     /**
      * @dataProvider formatWithCommentDataProvider
@@ -24,7 +27,7 @@ class PhpFormatterTest extends \PHPUnit\Framework\TestCase
     /**
      * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
-    public function formatWithCommentDataProvider()
+    public static function formatWithCommentDataProvider()
     {
         $array = [
             'ns1' => [

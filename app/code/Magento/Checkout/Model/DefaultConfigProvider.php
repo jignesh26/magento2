@@ -1,15 +1,18 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Checkout\Model;
 
+use Magento\Captcha\Api\CaptchaConfigPostProcessorInterface;
 use Magento\Catalog\Helper\Product\ConfigurationPool;
 use Magento\Checkout\Helper\Data as CheckoutHelper;
 use Magento\Checkout\Model\Session as CheckoutSession;
 use Magento\Customer\Api\AddressMetadataInterface;
 use Magento\Customer\Api\CustomerRepositoryInterface as CustomerRepository;
+use Magento\Customer\Api\Data\CustomerInterface;
+use Magento\Customer\Model\Address\CustomerAddressDataProvider;
 use Magento\Customer\Model\Context as CustomerContext;
 use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Customer\Model\Url as CustomerUrlManager;
@@ -28,12 +31,14 @@ use Magento\Quote\Api\ShippingMethodManagementInterface as ShippingMethodManager
 use Magento\Quote\Model\QuoteIdMaskFactory;
 use Magento\Store\Model\ScopeInterface;
 use Magento\Ui\Component\Form\Element\Multiline;
+use Magento\Framework\Escaper;
 
 /**
- * Default Config Provider
+ * Default Config Provider for checkout
  *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  * @SuppressWarnings(PHPMD.TooManyFields)
+ * @SuppressWarnings(PHPMD.CookieAndSessionMisuse)
  */
 class DefaultConfigProvider implements ConfigProviderInterface
 {
@@ -93,7 +98,7 @@ class DefaultConfigProvider implements ConfigProviderInterface
     private $configurationPool;
 
     /**
-     * @param QuoteIdMaskFactory
+     * @var QuoteIdMaskFactory
      */
     protected $quoteIdMaskFactory;
 
@@ -178,6 +183,21 @@ class DefaultConfigProvider implements ConfigProviderInterface
     private $addressMetadata;
 
     /**
+     * @var CustomerAddressDataProvider
+     */
+    private $customerAddressData;
+
+    /**
+     * @var CaptchaConfigPostProcessorInterface
+     */
+    private $configPostProcessor;
+
+    /**
+     * @var Escaper
+     */
+    private $escaper;
+
+    /**
      * @param CheckoutHelper $checkoutHelper
      * @param Session $checkoutSession
      * @param CustomerRepository $customerRepository
@@ -204,8 +224,11 @@ class DefaultConfigProvider implements ConfigProviderInterface
      * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Quote\Api\PaymentMethodManagementInterface $paymentMethodManagement
      * @param UrlInterface $urlBuilder
+     * @param CaptchaConfigPostProcessorInterface $configPostProcessor
      * @param AddressMetadataInterface $addressMetadata
      * @param AttributeOptionManagementInterface $attributeOptionManager
+     * @param CustomerAddressDataProvider|null $customerAddressData
+     * @param Escaper|null $escaper
      * @codeCoverageIgnore
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
@@ -236,8 +259,11 @@ class DefaultConfigProvider implements ConfigProviderInterface
         \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Quote\Api\PaymentMethodManagementInterface $paymentMethodManagement,
         UrlInterface $urlBuilder,
-        AddressMetadataInterface $addressMetadata = null,
-        AttributeOptionManagementInterface $attributeOptionManager = null
+        CaptchaConfigPostProcessorInterface $configPostProcessor,
+        ?AddressMetadataInterface $addressMetadata = null,
+        ?AttributeOptionManagementInterface $attributeOptionManager = null,
+        ?CustomerAddressDataProvider $customerAddressData = null,
+        ?Escaper $escaper = null
     ) {
         $this->checkoutHelper = $checkoutHelper;
         $this->checkoutSession = $checkoutSession;
@@ -268,6 +294,10 @@ class DefaultConfigProvider implements ConfigProviderInterface
         $this->addressMetadata = $addressMetadata ?: ObjectManager::getInstance()->get(AddressMetadataInterface::class);
         $this->attributeOptionManager = $attributeOptionManager ??
             ObjectManager::getInstance()->get(AttributeOptionManagementInterface::class);
+        $this->customerAddressData = $customerAddressData ?:
+            ObjectManager::getInstance()->get(CustomerAddressDataProvider::class);
+        $this->configPostProcessor = $configPostProcessor;
+        $this->escaper = $escaper ?? ObjectManager::getInstance()->get(Escaper::class);
     }
 
     /**
@@ -282,20 +312,19 @@ class DefaultConfigProvider implements ConfigProviderInterface
         $quote = $this->checkoutSession->getQuote();
         $quoteId = $quote->getId();
         $email = $quote->getShippingAddress()->getEmail();
+        $quoteItemData = $this->getQuoteItemData();
         $output['formKey'] = $this->formKey->getFormKey();
         $output['customerData'] = $this->getCustomerData();
         $output['quoteData'] = $this->getQuoteData();
-        $output['quoteItemData'] = $this->getQuoteItemData();
+        $output['quoteItemData'] = $quoteItemData;
+        $output['quoteMessages'] = $this->getQuoteItemsMessages($quoteItemData);
         $output['isCustomerLoggedIn'] = $this->isCustomerLoggedIn();
         $output['selectedShippingMethod'] = $this->getSelectedShippingMethod();
         if ($email && !$this->isCustomerLoggedIn()) {
-            $shippingAddressFromData = $this->getAddressFromData($quote->getShippingAddress());
-            $billingAddressFromData = $this->getAddressFromData($quote->getBillingAddress());
-            $output['shippingAddressFromData'] = $shippingAddressFromData;
-            if ($shippingAddressFromData != $billingAddressFromData) {
-                $output['billingAddressFromData'] = $billingAddressFromData;
-            }
             $output['validatedEmailValue'] = $email;
+        }
+        if (!$this->isCustomerLoggedIn() || !$this->getCustomer()->getAddresses()) {
+            $output = array_merge($output, $this->getQuoteAddressData());
         }
         $output['storeCode'] = $this->getStoreCode();
         $output['isGuestCheckoutAllowed'] = $this->isGuestCheckoutAllowed();
@@ -316,25 +345,31 @@ class DefaultConfigProvider implements ConfigProviderInterface
         );
         $output['postCodes'] = $this->postCodesConfig->getPostCodes();
         $output['imageData'] = $this->imageProvider->getImages($quoteId);
+
         $output['totalsData'] = $this->getTotalsData();
+
+        $policyContent = $this->scopeConfig->getValue(
+            'shipping/shipping_policy/shipping_policy_content',
+            ScopeInterface::SCOPE_STORE
+        );
+        $policyContent = $this->escaper->escapeHtml($policyContent);
         $output['shippingPolicy'] = [
             'isEnabled' => $this->scopeConfig->isSetFlag(
                 'shipping/shipping_policy/enable_shipping_policy',
                 ScopeInterface::SCOPE_STORE
             ),
-            'shippingPolicyContent' => nl2br(
-                $this->scopeConfig->getValue(
-                    'shipping/shipping_policy/shipping_policy_content',
-                    ScopeInterface::SCOPE_STORE
-                )
-            )
+            'shippingPolicyContent' => $policyContent ? nl2br($policyContent) : ''
         ];
+        $output['useQty'] = $this->scopeConfig->isSetFlag(
+            'checkout/cart_link/use_qty',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
         $output['activeCarriers'] = $this->getActiveCarriers();
         $output['originCountryCode'] = $this->getOriginCountryCode();
         $output['paymentMethods'] = $this->getPaymentMethods();
         $output['autocomplete'] = $this->isAutocompleteEnabled();
         $output['displayBillingOnPaymentMethod'] = $this->checkoutHelper->isDisplayBillingOnPaymentMethodAvailable();
-        return $output;
+        return $this->configPostProcessor->process($output);
     }
 
     /**
@@ -356,55 +391,15 @@ class DefaultConfigProvider implements ConfigProviderInterface
      *
      * @return array
      */
-    private function getCustomerData()
+    private function getCustomerData(): array
     {
         $customerData = [];
         if ($this->isCustomerLoggedIn()) {
-            $customer = $this->customerRepository->getById($this->customerSession->getCustomerId());
+            $customer = $this->getCustomer();
             $customerData = $customer->__toArray();
-            foreach ($customer->getAddresses() as $key => $address) {
-                $customerData['addresses'][$key]['inline'] = $this->getCustomerAddressInline($address);
-                if ($address->getCustomAttributes()) {
-                    $customerData['addresses'][$key]['custom_attributes'] = $this->filterNotVisibleAttributes(
-                        $customerData['addresses'][$key]['custom_attributes']
-                    );
-                }
-            }
+            $customerData['addresses'] = $this->customerAddressData->getAddressDataByCustomer($customer);
         }
         return $customerData;
-    }
-
-    /**
-     * Filter not visible on storefront custom attributes.
-     *
-     * @param array $attributes
-     * @return array
-     */
-    private function filterNotVisibleAttributes(array $attributes)
-    {
-        $attributesMetadata = $this->addressMetadata->getAllAttributesMetadata();
-        foreach ($attributesMetadata as $attributeMetadata) {
-            if (!$attributeMetadata->isVisible()) {
-                unset($attributes[$attributeMetadata->getAttributeCode()]);
-            }
-        }
-
-        return $this->setLabelsToAttributes($attributes);
-    }
-
-    /**
-     * Set additional customer address data
-     *
-     * @param \Magento\Customer\Api\Data\AddressInterface $address
-     * @return string
-     */
-    private function getCustomerAddressInline($address)
-    {
-        $builtOutputAddressData = $this->addressMapper->toFlatArray($address);
-        return $this->addressConfig
-            ->getFormatByCode(\Magento\Customer\Model\Address\Config::DEFAULT_ADDRESS_FORMAT)
-            ->getRenderer()
-            ->renderArray($builtOutputAddressData);
     }
 
     /**
@@ -418,6 +413,9 @@ class DefaultConfigProvider implements ConfigProviderInterface
         if ($this->checkoutSession->getQuote()->getId()) {
             $quote = $this->quoteRepository->get($this->checkoutSession->getQuote()->getId());
             $quoteData = $quote->toArray();
+            if (null !== $quote->getExtensionAttributes()) {
+                $quoteData['extension_attributes'] = $quote->getExtensionAttributes()->__toArray();
+            }
             $quoteData['is_virtual'] = $quote->getIsVirtual();
 
             if (!$quote->getCustomer()->getId()) {
@@ -450,6 +448,7 @@ class DefaultConfigProvider implements ConfigProviderInterface
                     $quoteItem->getProduct(),
                     'product_thumbnail_image'
                 )->getUrl();
+                $quoteItemData[$index]['message'] = $quoteItem->getMessage();
             }
         }
         return $quoteItemData;
@@ -723,57 +722,59 @@ class DefaultConfigProvider implements ConfigProviderInterface
     }
 
     /**
-     * Set Labels to custom Attributes
+     * Get notification messages for the quote items
      *
-     * @param array $customAttributes
-     * @return array $customAttributes
-     * @throws \Magento\Framework\Exception\InputException
-     * @throws \Magento\Framework\Exception\StateException
+     * @param array $quoteItemData
+     * @return array
      */
-    private function setLabelsToAttributes(array $customAttributes) : array
+    private function getQuoteItemsMessages(array $quoteItemData): array
     {
-        if (!empty($customAttributes)) {
-            foreach ($customAttributes as $customAttributeCode => $customAttribute) {
-                $attributeOptionLabels = $this->getAttributeLabels($customAttribute, $customAttributeCode);
-                if (!empty($attributeOptionLabels)) {
-                    $customAttributes[$customAttributeCode]['label'] = implode(', ', $attributeOptionLabels);
-                }
+        $quoteItemsMessages = [];
+        if ($quoteItemData) {
+            foreach ($quoteItemData as $item) {
+                $quoteItemsMessages[$item['item_id']] = $item['message'];
             }
         }
 
-        return $customAttributes;
+        return $quoteItemsMessages;
     }
 
     /**
-     * Get Labels by CustomAttribute and CustomAttributeCode
+     * Get quote address data for checkout
      *
-     * @param array $customAttribute
-     * @param string|integer $customAttributeCode
-     * @return array $attributeOptionLabels
-     * @throws \Magento\Framework\Exception\InputException
-     * @throws \Magento\Framework\Exception\StateException
+     * @return array
      */
-    private function getAttributeLabels(array $customAttribute, string $customAttributeCode) : array
+    private function getQuoteAddressData(): array
     {
-        $attributeOptionLabels = [];
-
-        if (!empty($customAttribute['value'])) {
-            $customAttributeValues = explode(',', $customAttribute['value']);
-            $attributeOptions = $this->attributeOptionManager->getItems(
-                \Magento\Customer\Model\Indexer\Address\AttributeProvider::ENTITY,
-                $customAttributeCode
-            );
-
-            if (!empty($attributeOptions)) {
-                foreach ($attributeOptions as $attributeOption) {
-                    $attributeOptionValue = $attributeOption->getValue();
-                    if (in_array($attributeOptionValue, $customAttributeValues)) {
-                        $attributeOptionLabels[] = $attributeOption->getLabel() ?? $attributeOptionValue;
-                    }
-                }
+        $output = [];
+        $quote = $this->checkoutSession->getQuote();
+        $shippingAddressFromData = [];
+        if ($quote->getShippingAddress()->getEmail()) {
+            $shippingAddressFromData = $this->getAddressFromData($quote->getShippingAddress());
+            if ($shippingAddressFromData) {
+                $output['isShippingAddressFromDataValid'] = $quote->getShippingAddress()->validate() === true;
+                $output['shippingAddressFromData'] = $shippingAddressFromData;
             }
         }
 
-        return $attributeOptionLabels;
+        if ($quote->getBillingAddress()->getEmail()) {
+            $billingAddressFromData = $this->getAddressFromData($quote->getBillingAddress());
+            if ($billingAddressFromData && $shippingAddressFromData != $billingAddressFromData) {
+                $output['isBillingAddressFromDataValid'] = $quote->getBillingAddress()->validate() === true;
+                $output['billingAddressFromData'] = $billingAddressFromData;
+            }
+        }
+
+        return $output;
+    }
+
+    /**
+     * Get logged-in customer
+     *
+     * @return CustomerInterface
+     */
+    private function getCustomer(): CustomerInterface
+    {
+        return $this->customerRepository->getById($this->customerSession->getCustomerId());
     }
 }

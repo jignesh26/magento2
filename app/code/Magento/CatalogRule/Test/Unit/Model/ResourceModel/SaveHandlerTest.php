@@ -1,42 +1,58 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\CatalogRule\Test\Unit\Model\ResourceModel;
 
-class SaveHandlerTest extends \PHPUnit\Framework\TestCase
+use Magento\CatalogRule\Api\Data\RuleInterface;
+use Magento\CatalogRule\Model\ResourceModel\Rule;
+use Magento\CatalogRule\Model\ResourceModel\SaveHandler;
+use Magento\Framework\EntityManager\EntityMetadata;
+use Magento\Framework\EntityManager\MetadataPool;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+
+class SaveHandlerTest extends TestCase
 {
     /**
-     * @var \Magento\CatalogRule\Model\ResourceModel\SaveHandler
+     * @var SaveHandler
      */
     protected $subject;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $resourceMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $metadataMock;
 
-    protected function setUp()
+    /**
+     * @inheritDoc
+     */
+    protected function setUp(): void
     {
-        $this->resourceMock = $this->createMock(\Magento\CatalogRule\Model\ResourceModel\Rule::class);
-        $this->metadataMock = $this->createMock(\Magento\Framework\EntityManager\MetadataPool::class);
-        $this->subject = new \Magento\CatalogRule\Model\ResourceModel\SaveHandler(
+        $this->resourceMock = $this->createMock(Rule::class);
+        $this->metadataMock = $this->createMock(MetadataPool::class);
+        $this->subject = new SaveHandler(
             $this->resourceMock,
             $this->metadataMock
         );
     }
 
-    public function testExecute()
+    /**
+     * @return void
+     */
+    public function testExecute(): void
     {
         $linkedField = 'entity_id';
         $entityId = 100;
-        $entityType = \Magento\CatalogRule\Api\Data\RuleInterface::class;
+        $entityType = RuleInterface::class;
 
         $customerGroupIds = '1, 2, 3';
         $websiteIds = '4, 5, 6';
@@ -47,7 +63,7 @@ class SaveHandlerTest extends \PHPUnit\Framework\TestCase
         ];
 
         $metadataMock = $this->createPartialMock(
-            \Magento\Framework\EntityManager\EntityMetadata::class,
+            EntityMetadata::class,
             ['getLinkField']
         );
         $this->metadataMock->expects($this->once())
@@ -56,15 +72,17 @@ class SaveHandlerTest extends \PHPUnit\Framework\TestCase
             ->willReturn($metadataMock);
         $metadataMock->expects($this->once())->method('getLinkField')->willReturn($linkedField);
 
-        $this->resourceMock->expects($this->at(0))
+        $this->resourceMock
             ->method('bindRuleToEntity')
-            ->with($entityId, explode(',', (string)$websiteIds), 'website')
-            ->willReturnSelf();
-
-        $this->resourceMock->expects($this->at(1))
-            ->method('bindRuleToEntity')
-            ->with($entityId, explode(',', (string)$customerGroupIds), 'customer_group')
-            ->willReturnSelf();
+            ->willReturnCallback(function ($arg1, $arg2, $arg3) use ($entityId, $websiteIds, $customerGroupIds) {
+                $websiteIds = explode(',', (string) $websiteIds);
+                $customerGroupIds = explode(',', (string)$customerGroupIds);
+                if ($arg1== $entityId && $arg2== $websiteIds && $arg3 == 'website') {
+                    return $this->resourceMock;
+                } elseif ($arg1== $entityId && $arg2== $customerGroupIds && $arg3 == 'customer_group') {
+                    return $this->resourceMock;
+                }
+            });
 
         $this->assertEquals($entityData, $this->subject->execute($entityType, $entityData));
     }

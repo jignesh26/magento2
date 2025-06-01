@@ -24,11 +24,11 @@ class FieldMapperResolver implements FieldMapperInterface
     private $fieldMappers;
 
     /**
-     * Field Mapper instance
+     * Field Mapper instance per entity
      *
-     * @var FieldMapperInterface
+     * @var FieldMapperInterface[]
      */
-    private $fieldMapperEntity;
+    private $fieldMapperEntity = [];
 
     /**
      * @param ObjectManagerInterface $objectManager
@@ -43,7 +43,7 @@ class FieldMapperResolver implements FieldMapperInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function getFieldName($attributeCode, $context = [])
     {
@@ -52,7 +52,7 @@ class FieldMapperResolver implements FieldMapperInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function getAllAttributesTypes($context = [])
     {
@@ -69,8 +69,9 @@ class FieldMapperResolver implements FieldMapperInterface
      */
     private function getEntity($entityType)
     {
-        if (empty($this->fieldMapperEntity)) {
+        if (empty($this->fieldMapperEntity[$entityType])) {
             if (empty($entityType)) {
+                // phpcs:ignore Magento2.Exceptions.DirectThrow
                 throw new \Exception(
                     'No entity type given'
                 );
@@ -81,13 +82,13 @@ class FieldMapperResolver implements FieldMapperInterface
                 );
             }
             $fieldMapperClass = $this->fieldMappers[$entityType];
-            $this->fieldMapperEntity = $this->objectManager->create($fieldMapperClass);
-            if (!($this->fieldMapperEntity instanceof FieldMapperInterface)) {
+            $this->fieldMapperEntity[$entityType] = $this->objectManager->create($fieldMapperClass);
+            if (!($this->fieldMapperEntity[$entityType] instanceof FieldMapperInterface)) {
                 throw new \InvalidArgumentException(
                     'Field mapper must implement \Magento\Elasticsearch\Model\Adapter\FieldMapperInterface'
                 );
             }
         }
-        return $this->fieldMapperEntity;
+        return $this->fieldMapperEntity[$entityType];
     }
 }

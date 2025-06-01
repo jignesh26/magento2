@@ -1,16 +1,28 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\CatalogImportExport\Test\Unit\Model\Import\Product;
 
 use Magento\CatalogImportExport\Model\Import\Product;
+use Magento\CatalogImportExport\Model\Import\Product\Type\Simple;
+use Magento\CatalogImportExport\Model\Import\Product\UniqueAttributeValidator;
 use Magento\CatalogImportExport\Model\Import\Product\Validator;
+use Magento\CatalogImportExport\Model\Import\Product\Validator\Media;
+use Magento\CatalogImportExport\Model\Import\Product\Validator\Website;
+use Magento\Framework\Stdlib\StringUtils;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
 use Magento\ImportExport\Model\Import;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class ValidatorTest extends \PHPUnit\Framework\TestCase
+/**
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ */
+class ValidatorTest extends TestCase
 {
     /** @var Validator */
     protected $validator;
@@ -21,43 +33,59 @@ class ValidatorTest extends \PHPUnit\Framework\TestCase
     /** @var array */
     protected $validators = [];
 
-    /** @var \Magento\CatalogImportExport\Model\Import\Product|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Product|MockObject */
     protected $context;
 
-    /** @var Validator\Media|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Validator\Media|MockObject */
     protected $validatorOne;
 
-    /** @var Validator\Website|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Validator\Website|MockObject */
     protected $validatorTwo;
 
-    protected function setUp()
+    /**
+     * @var UniqueAttributeValidator|MockObject
+     */
+    private $uniqueAttributeValidator;
+
+    protected function setUp(): void
     {
         $entityTypeModel = $this->createPartialMock(
-            \Magento\CatalogImportExport\Model\Import\Product\Type\Simple::class,
+            Simple::class,
             ['retrieveAttributeFromCache']
         );
         $entityTypeModel->expects($this->any())->method('retrieveAttributeFromCache')->willReturn([]);
         $this->context = $this->createPartialMock(
-            \Magento\CatalogImportExport\Model\Import\Product::class,
-            ['retrieveProductTypeByName', 'retrieveMessageTemplate', 'getBehavior']
+            Product::class,
+            ['retrieveProductTypeByName', 'retrieveMessageTemplate', 'getBehavior', 'getMultipleValueSeparator']
         );
         $this->context->expects($this->any())->method('retrieveProductTypeByName')->willReturn($entityTypeModel);
         $this->context->expects($this->any())->method('retrieveMessageTemplate')->willReturn('error message');
 
         $this->validatorOne = $this->createPartialMock(
-            \Magento\CatalogImportExport\Model\Import\Product\Validator\Media::class,
+            Media::class,
             ['init', 'isValid']
         );
         $this->validatorTwo = $this->createPartialMock(
-            \Magento\CatalogImportExport\Model\Import\Product\Validator\Website::class,
+            Website::class,
             ['init', 'isValid', 'getMessages']
         );
+        $this->uniqueAttributeValidator = $this->createMock(UniqueAttributeValidator::class);
 
         $this->validators = [$this->validatorOne, $this->validatorTwo];
-        $this->objectManagerHelper = new ObjectManagerHelper($this);
-        $this->validator = $this->objectManagerHelper->getObject(
-            \Magento\CatalogImportExport\Model\Import\Product\Validator::class,
-            ['validators' => $this->validators]
+        $timezone = $this->createMock(\Magento\Framework\Stdlib\DateTime\TimezoneInterface::class);
+        $timezone->expects($this->any())
+            ->method('date')
+            ->willReturnCallback(
+                function ($date = null) {
+                    return new \DateTime($date);
+                }
+            );
+
+        $this->validator = new Validator(
+            new StringUtils(),
+            $this->validators,
+            $timezone,
+            $this->uniqueAttributeValidator
         );
         $this->validator->init($this->context);
     }
@@ -68,10 +96,19 @@ class ValidatorTest extends \PHPUnit\Framework\TestCase
      * @param array $rowData
      * @param bool $isValid
      * @param string $attrCode
+     * @param bool $uniqueAttributeValidatorResult
      * @dataProvider attributeValidationProvider
      */
-    public function testAttributeValidation($behavior, $attrParams, $rowData, $isValid, $attrCode = 'attribute_code')
-    {
+    public function testAttributeValidation(
+        string $behavior,
+        array $attrParams,
+        array $rowData,
+        bool $isValid,
+        string $attrCode = 'attribute_code',
+        bool $uniqueAttributeValidatorResult = true
+    ) {
+        $this->uniqueAttributeValidator->method('isValid')->willReturn($uniqueAttributeValidatorResult);
+        $this->context->method('getMultipleValueSeparator')->willReturn(Product::PSEUDO_MULTI_LINE_SEPARATOR);
         $this->context->expects($this->any())->method('getBehavior')->willReturn($behavior);
         $result = $this->validator->isAttributeValid(
             $attrCode,
@@ -88,7 +125,7 @@ class ValidatorTest extends \PHPUnit\Framework\TestCase
      * @return array
      * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
-    public function attributeValidationProvider()
+    public static function attributeValidationProvider()
     {
         return [
             [
@@ -205,6 +242,14 @@ class ValidatorTest extends \PHPUnit\Framework\TestCase
                 ['product_type' => 'any', 'unique_attribute' => 'unique-value', Product::COL_SKU => 'sku-0'],
                 true,
                 'unique_attribute'
+            ],
+            [
+                Import::BEHAVIOR_APPEND,
+                ['is_required' => true, 'type' => 'varchar', 'is_unique' => true],
+                ['product_type' => 'any', 'unique_attribute' => 'unique-value', Product::COL_SKU => 'sku-0'],
+                false,
+                'unique_attribute',
+                false
             ]
         ];
     }

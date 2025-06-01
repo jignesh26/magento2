@@ -12,6 +12,8 @@ use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldN
 
 /**
  * Resolver field name for not special attribute.
+ * @deprecated Elasticsearch is no longer supported by Adobe
+ * @see this class will be responsible for ES only
  */
 class SpecialAttribute implements ResolverInterface
 {
@@ -24,7 +26,9 @@ class SpecialAttribute implements ResolverInterface
      */
     public function getFieldName(AttributeAdapter $attribute, $context = []): ?string
     {
-        if (in_array($attribute->getAttributeCode(), ['id', 'sku', 'store_id', 'visibility'], true)) {
+        if (in_array($attribute->getAttributeCode(), ['id', 'sku', 'store_id', 'visibility'], true)
+            && empty($context['type'])
+        ) {
             return $attribute->getAttributeCode();
         }
 

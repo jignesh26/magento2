@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 
 define([
@@ -19,7 +19,7 @@ define([
          *
          * @returns {Boolean}
          */
-        validate: function () {
+        validate: function (hideError) {
             var isValid = true;
 
             if (!agreementsConfig.isEnabled || $(agreementsInputPath).length === 0) {
@@ -28,7 +28,8 @@ define([
 
             $(agreementsInputPath).each(function (index, element) {
                 if (!$.validator.validateSingleElement(element, {
-                    errorElement: 'div'
+                    errorElement: 'div',
+                    hideError: hideError || false
                 })) {
                     isValid = false;
                 }

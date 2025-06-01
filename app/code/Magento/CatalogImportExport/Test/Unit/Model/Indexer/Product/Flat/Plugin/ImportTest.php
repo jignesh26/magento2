@@ -1,44 +1,51 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\CatalogImportExport\Test\Unit\Model\Indexer\Product\Flat\Plugin;
 
+use Magento\Catalog\Model\Indexer\Product\Flat\Processor;
+use Magento\Catalog\Model\Indexer\Product\Flat\State;
+use Magento\CatalogImportExport\Model\Indexer\Product\Flat\Plugin\Import;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class ImportTest extends \PHPUnit\Framework\TestCase
+class ImportTest extends TestCase
 {
     /**
-     * @var \Magento\Catalog\Model\Indexer\Product\Flat\Processor|\PHPUnit_Framework_MockObject_MockObject
+     * @var Processor|MockObject
      */
     private $processorMock;
 
     /**
-     * @var \Magento\CatalogImportExport\Model\Indexer\Product\Flat\Plugin\Import
+     * @var Import
      */
     private $model;
 
     /**
-     * @var \Magento\Catalog\Model\Indexer\Product\Flat\State|\PHPUnit_Framework_MockObject_MockObject
+     * @var State|MockObject
      */
     private $flatStateMock;
 
     /**
-     * @var \Magento\ImportExport\Model\Import|\PHPUnit_Framework_MockObject_MockObject
+     * @var \Magento\ImportExport\Model\Import|MockObject
      */
     private $subjectMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->processorMock = $this->getMockBuilder(\Magento\Catalog\Model\Indexer\Product\Flat\Processor::class)
+        $this->processorMock = $this->getMockBuilder(Processor::class)
             ->disableOriginalConstructor()
-            ->setMethods(['markIndexerAsInvalid', 'isIndexerScheduled'])
+            ->onlyMethods(['markIndexerAsInvalid', 'isIndexerScheduled'])
             ->getMock();
 
-        $this->flatStateMock = $this->getMockBuilder(\Magento\Catalog\Model\Indexer\Product\Flat\State::class)
+        $this->flatStateMock = $this->getMockBuilder(State::class)
             ->disableOriginalConstructor()
-            ->setMethods(['isFlatEnabled'])
+            ->onlyMethods(['isFlatEnabled'])
             ->getMock();
 
         $this->subjectMock = $this->getMockBuilder(\Magento\ImportExport\Model\Import::class)
@@ -46,7 +53,7 @@ class ImportTest extends \PHPUnit\Framework\TestCase
             ->getMock();
 
         $this->model = (new ObjectManager($this))->getObject(
-            \Magento\CatalogImportExport\Model\Indexer\Product\Flat\Plugin\Import::class,
+            Import::class,
             [
                 'productFlatIndexerProcessor' => $this->processorMock,
                 'flatState' => $this->flatStateMock

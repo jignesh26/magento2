@@ -1,17 +1,19 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\CheckoutAgreements\Model;
 
+use Magento\Checkout\Api\AgreementsValidatorInterface;
+
 /**
- * Class AgreementsValidator
+ * Validator for Checkout Agreements
  */
-class AgreementsValidator implements \Magento\Checkout\Api\AgreementsValidatorInterface
+class AgreementsValidator implements AgreementsValidatorInterface
 {
     /**
-     * @var \Magento\CheckoutAgreements\Model\AgreementsProviderInterface[]
+     * @var AgreementsProviderInterface[]
      */
     protected $agreementsProviders;
 
@@ -35,9 +37,11 @@ class AgreementsValidator implements \Magento\Checkout\Api\AgreementsValidatorIn
         $agreementIds = $agreementIds === null ? [] : $agreementIds;
         $requiredAgreements = [];
         foreach ($this->agreementsProviders as $agreementsProvider) {
-            $requiredAgreements = array_merge($requiredAgreements, $agreementsProvider->getRequiredAgreementIds());
+            $requiredAgreements[] = $agreementsProvider->getRequiredAgreementIds();
         }
-        $agreementsDiff = array_diff($requiredAgreements, $agreementIds);
+
+        $agreementsDiff = array_diff(array_merge([], ...$requiredAgreements), $agreementIds);
+
         return empty($agreementsDiff);
     }
 }

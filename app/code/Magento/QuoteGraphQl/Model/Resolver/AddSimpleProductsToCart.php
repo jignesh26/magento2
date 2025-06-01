@@ -9,11 +9,11 @@ namespace Magento\QuoteGraphQl\Model\Resolver;
 
 use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Exception\GraphQlInputException;
+use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
 use Magento\Framework\GraphQl\Query\ResolverInterface;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
-use Magento\Framework\Stdlib\ArrayManager;
+use Magento\Quote\Model\QuoteMutexInterface;
 use Magento\QuoteGraphQl\Model\Cart\AddProductsToCart;
-use Magento\QuoteGraphQl\Model\Cart\ExtractDataFromCart;
 use Magento\QuoteGraphQl\Model\Cart\GetCartForUser;
 
 /**
@@ -22,11 +22,6 @@ use Magento\QuoteGraphQl\Model\Cart\GetCartForUser;
  */
 class AddSimpleProductsToCart implements ResolverInterface
 {
-    /**
-     * @var ArrayManager
-     */
-    private $arrayManager;
-
     /**
      * @var GetCartForUser
      */
@@ -38,52 +33,68 @@ class AddSimpleProductsToCart implements ResolverInterface
     private $addProductsToCart;
 
     /**
-     * @var ExtractDataFromCart
+     * @var QuoteMutexInterface
      */
-    private $extractDataFromCart;
+    private $quoteMutex;
 
     /**
-     * @param ArrayManager $arrayManager
      * @param GetCartForUser $getCartForUser
      * @param AddProductsToCart $addProductsToCart
-     * @param ExtractDataFromCart $extractDataFromCart
+     * @param QuoteMutexInterface $quoteMutex
      */
     public function __construct(
-        ArrayManager $arrayManager,
         GetCartForUser $getCartForUser,
         AddProductsToCart $addProductsToCart,
-        ExtractDataFromCart $extractDataFromCart
+        QuoteMutexInterface $quoteMutex
     ) {
-        $this->arrayManager = $arrayManager;
         $this->getCartForUser = $getCartForUser;
         $this->addProductsToCart = $addProductsToCart;
-        $this->extractDataFromCart = $extractDataFromCart;
+        $this->quoteMutex = $quoteMutex;
     }
 
     /**
      * @inheritdoc
      */
-    public function resolve(Field $field, $context, ResolveInfo $info, array $value = null, array $args = null)
+    public function resolve(Field $field, $context, ResolveInfo $info, ?array $value = null, ?array $args = null)
     {
-        $cartHash = $this->arrayManager->get('input/cart_id', $args);
-        $cartItems = $this->arrayManager->get('input/cartItems', $args);
-
-        if (!isset($cartHash)) {
-            throw new GraphQlInputException(__('Missing key "cart_id" in cart data'));
+        if (empty($args['input']['cart_id'])) {
+            throw new GraphQlInputException(__('Required parameter "cart_id" is missing'));
         }
 
-        if (!isset($cartItems) || !is_array($cartItems) || empty($cartItems)) {
-            throw new GraphQlInputException(__('Missing key "cartItems" in cart data'));
+        if (empty($args['input']['cart_items'])
+            || !is_array($args['input']['cart_items'])
+        ) {
+            throw new GraphQlInputException(__('Required parameter "cart_items" is missing'));
         }
 
-        $currentUserId = $context->getUserId();
-        $cart = $this->getCartForUser->execute((string)$cartHash, $currentUserId);
+        return $this->quoteMutex->execute(
+            [$args['input']['cart_id']],
+            \Closure::fromCallable([$this, 'run']),
+            [$context, $args]
+        );
+    }
 
+    /**
+     * Run the resolver.
+     *
+     * @param ContextInterface $context
+     * @param array|null $args
+     * @return array[]
+     * @throws GraphQlInputException
+     * @SuppressWarnings(PHPMD.UnusedPrivateMethod)
+     */
+    private function run($context, ?array $args): array
+    {
+        $maskedCartId = $args['input']['cart_id'];
+        $cartItems = $args['input']['cart_items'];
+        $storeId = (int)$context->getExtensionAttributes()->getStore()->getId();
+        $cart = $this->getCartForUser->execute($maskedCartId, $context->getUserId(), $storeId);
         $this->addProductsToCart->execute($cart, $cartItems);
-        $cartData = $this->extractDataFromCart->execute($cart);
 
         return [
-            'cart' => $cartData,
+            'cart' => [
+                'model' => $cart,
+            ],
         ];
     }
 }

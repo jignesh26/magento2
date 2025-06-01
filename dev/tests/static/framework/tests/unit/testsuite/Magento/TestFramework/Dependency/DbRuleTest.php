@@ -12,7 +12,7 @@ class DbRuleTest extends \PHPUnit\Framework\TestCase
      */
     protected $model;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->model = new DbRule(['some_table' => 'SomeModule']);
     }
@@ -29,7 +29,7 @@ class DbRuleTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($expected, $this->model->getDependencyInfo($module, 'php', $file, $contents));
     }
 
-    public function getDependencyInfoDataProvider()
+    public static function getDependencyInfoDataProvider()
     {
         return [
             ['any', 'non-resource-file-path.php', 'any', []],
@@ -37,7 +37,7 @@ class DbRuleTest extends \PHPUnit\Framework\TestCase
                 'any',
                 '/app/some/path/Setup/some-file.php',
                 '$install->getTableName("unknown_table")',
-                [['module' => 'Unknown', 'source' => 'unknown_table']]
+                [['modules' => ['Unknown'], 'source' => 'unknown_table']]
             ],
             [
                 'SomeModule',
@@ -51,7 +51,7 @@ class DbRuleTest extends \PHPUnit\Framework\TestCase
                 '$install->getTableName("some_table")',
                 [
                     [
-                        'module' => 'SomeModule',
+                        'modules' => ['SomeModule'],
                         'type' => \Magento\TestFramework\Dependency\RuleInterface::TYPE_HARD,
                         'source' => 'some_table',
                     ]

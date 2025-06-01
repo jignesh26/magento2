@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Model\Layer\Filter;
 
@@ -139,7 +139,7 @@ abstract class AbstractFilter extends \Magento\Framework\DataObject implements F
     }
 
     /**
-     * Get fiter items count
+     * Get filter items count
      *
      * @return int
      */

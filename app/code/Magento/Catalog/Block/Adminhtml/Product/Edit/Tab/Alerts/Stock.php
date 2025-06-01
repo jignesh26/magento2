@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Block\Adminhtml\Product\Edit\Tab\Alerts;
 
@@ -48,6 +48,8 @@ class Stock extends Extended
     }
 
     /**
+     * Construct.
+     *
      * @return void
      */
     protected function _construct()
@@ -63,6 +65,8 @@ class Stock extends Extended
     }
 
     /**
+     * @inheritDoc
+     *
      * @return Grid
      */
     protected function _prepareCollection()
@@ -80,6 +84,8 @@ class Stock extends Extended
     }
 
     /**
+     * @inheritDoc
+     *
      * @return $this
      */
     protected function _prepareColumns()
@@ -103,6 +109,8 @@ class Stock extends Extended
     }
 
     /**
+     * Get grid url.
+     *
      * @return string
      */
     public function getGridUrl()

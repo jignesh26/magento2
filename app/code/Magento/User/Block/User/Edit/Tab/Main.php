@@ -51,7 +51,7 @@ class Main extends \Magento\Backend\Block\Widget\Form\Generic
         \Magento\Backend\Model\Auth\Session $authSession,
         \Magento\Framework\Locale\ListsInterface $localeLists,
         array $data = [],
-        OptionInterface $deployedLocales = null
+        ?OptionInterface $deployedLocales = null
     ) {
         $this->_authSession = $authSession;
         $this->_LocaleLists = $localeLists;
@@ -184,7 +184,7 @@ class Main extends \Magento\Backend\Block\Widget\Form\Generic
                 'label' => __('Your Password'),
                 'id' => self::CURRENT_USER_PASSWORD_FIELD,
                 'title' => __('Your Password'),
-                'class' => 'input-text validate-current-password required-entry',
+                'class' => 'validate-current-password required-entry',
                 'required' => true
             ]
         );

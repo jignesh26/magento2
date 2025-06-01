@@ -3,11 +3,14 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Paypal\Test\Unit\Model\Api;
 
 use Magento\Paypal\Model\Api\ProcessableException;
+use PHPUnit\Framework\TestCase;
 
-class ProcessableExceptionTest extends \PHPUnit\Framework\TestCase
+class ProcessableExceptionTest extends TestCase
 {
     const UNKNOWN_CODE = 10411;
 
@@ -31,7 +34,7 @@ class ProcessableExceptionTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getUserMessageDataProvider()
+    public static function getUserMessageDataProvider()
     {
         return [
             [

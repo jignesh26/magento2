@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\CatalogUrlRewrite\Observer;
@@ -12,6 +12,7 @@ use Magento\CatalogUrlRewrite\Model\Map\DatabaseMapPool;
 use Magento\CatalogUrlRewrite\Model\Map\DataCategoryUrlRewriteDatabaseMap;
 use Magento\CatalogUrlRewrite\Model\Map\DataProductUrlRewriteDatabaseMap;
 use Magento\CatalogUrlRewrite\Model\UrlRewriteBunchReplacer;
+use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\Event\ObserverInterface;
 use Magento\Store\Model\ResourceModel\Group\CollectionFactory;
 use Magento\Store\Model\ResourceModel\Group\Collection as StoreGroupCollection;
@@ -53,10 +54,16 @@ class CategoryProcessUrlRewriteSavingObserver implements ObserverInterface
     private $storeGroupFactory;
 
     /**
+     * @var ScopeConfigInterface
+     */
+    private $scopeConfig;
+
+    /**
      * @param CategoryUrlRewriteGenerator $categoryUrlRewriteGenerator
      * @param UrlRewriteHandler $urlRewriteHandler
      * @param UrlRewriteBunchReplacer $urlRewriteBunchReplacer
      * @param DatabaseMapPool $databaseMapPool
+     * @param ScopeConfigInterface $scopeConfig
      * @param string[] $dataUrlRewriteClassNames
      * @param CollectionFactory|null $storeGroupFactory
      */
@@ -65,11 +72,12 @@ class CategoryProcessUrlRewriteSavingObserver implements ObserverInterface
         UrlRewriteHandler $urlRewriteHandler,
         UrlRewriteBunchReplacer $urlRewriteBunchReplacer,
         DatabaseMapPool $databaseMapPool,
+        ScopeConfigInterface $scopeConfig,
         $dataUrlRewriteClassNames = [
             DataCategoryUrlRewriteDatabaseMap::class,
             DataProductUrlRewriteDatabaseMap::class
         ],
-        CollectionFactory $storeGroupFactory = null
+        ?CollectionFactory $storeGroupFactory = null
     ) {
         $this->categoryUrlRewriteGenerator = $categoryUrlRewriteGenerator;
         $this->urlRewriteHandler = $urlRewriteHandler;
@@ -78,6 +86,7 @@ class CategoryProcessUrlRewriteSavingObserver implements ObserverInterface
         $this->dataUrlRewriteClassNames = $dataUrlRewriteClassNames;
         $this->storeGroupFactory = $storeGroupFactory
             ?: ObjectManager::getInstance()->get(CollectionFactory::class);
+        $this->scopeConfig = $scopeConfig;
     }
 
     /**
@@ -100,16 +109,21 @@ class CategoryProcessUrlRewriteSavingObserver implements ObserverInterface
         }
 
         $mapsGenerated = false;
-        if ($category->dataHasChangedFor('url_key')
-            || $category->dataHasChangedFor('is_anchor')
-            || !empty($category->getChangedProductIds())
-        ) {
+        if ($this->isCategoryHasChanged($category)) {
             if ($category->dataHasChangedFor('url_key')) {
                 $categoryUrlRewriteResult = $this->categoryUrlRewriteGenerator->generate($category);
                 $this->urlRewriteBunchReplacer->doBunchReplace($categoryUrlRewriteResult);
             }
-            $productUrlRewriteResult = $this->urlRewriteHandler->generateProductUrlRewrites($category);
-            $this->urlRewriteBunchReplacer->doBunchReplace($productUrlRewriteResult);
+            if ($this->isCategoryRewritesEnabled()) {
+                if ($this->isChangedOnlyProduct($category)) {
+                    $productUrlRewriteResult =
+                        $this->urlRewriteHandler->updateProductUrlRewritesForChangedProduct($category);
+                    $this->urlRewriteBunchReplacer->doBunchReplace($productUrlRewriteResult);
+                } else {
+                    $productUrlRewriteResult = $this->urlRewriteHandler->generateProductUrlRewrites($category);
+                    $this->urlRewriteBunchReplacer->doBunchReplace($productUrlRewriteResult);
+                }
+            }
             $mapsGenerated = true;
         }
 
@@ -117,6 +131,38 @@ class CategoryProcessUrlRewriteSavingObserver implements ObserverInterface
         if ($mapsGenerated) {
             $this->resetUrlRewritesDataMaps($category);
         }
+    }
+
+    /**
+     * Check is category changed changed.
+     *
+     * @param Category $category
+     * @return bool
+     */
+    private function isCategoryHasChanged(Category $category): bool
+    {
+        if ($category->dataHasChangedFor('url_key')
+            || $category->dataHasChangedFor('is_anchor')
+            || !empty($category->getChangedProductIds())) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check is only product changed.
+     *
+     * @param Category $category
+     * @return bool
+     */
+    private function isChangedOnlyProduct(Category $category): bool
+    {
+        if (!empty($category->getChangedProductIds())
+            && !$category->dataHasChangedFor('is_anchor')
+            && !$category->dataHasChangedFor('url_key')) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -136,7 +182,7 @@ class CategoryProcessUrlRewriteSavingObserver implements ObserverInterface
 
         foreach ($storeGroupCollection as $storeGroup) {
             /** @var \Magento\Store\Model\Group $storeGroup */
-            if (in_array($storeGroup->getRootCategoryId(), explode('/', $category->getPath()))) {
+            if (in_array($storeGroup->getRootCategoryId(), explode('/', $category->getPath() ?? ''))) {
                 $category->setStoreId($storeGroup->getDefaultStoreId());
             }
         }
@@ -153,5 +199,15 @@ class CategoryProcessUrlRewriteSavingObserver implements ObserverInterface
         foreach ($this->dataUrlRewriteClassNames as $className) {
             $this->databaseMapPool->resetMap($className, $category->getEntityId());
         }
+    }
+
+    /**
+     * Check config value of generate_category_product_rewrites
+     *
+     * @return bool
+     */
+    private function isCategoryRewritesEnabled()
+    {
+        return (bool)$this->scopeConfig->getValue('catalog/seo/generate_category_product_rewrites');
     }
 }

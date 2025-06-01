@@ -22,7 +22,7 @@ class AuthTest extends \PHPUnit\Framework\TestCase
      */
     protected $_model;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -36,14 +36,15 @@ class AuthTest extends \PHPUnit\Framework\TestCase
      * @dataProvider getLoginDataProvider
      * @param string $userName
      * @param string $password
-     * @expectedException \Magento\Framework\Exception\AuthenticationException
      */
     public function testLoginFailed($userName, $password)
     {
+        $this->expectException(\Magento\Framework\Exception\AuthenticationException::class);
+
         $this->_model->login($userName, $password);
     }
 
-    public function getLoginDataProvider()
+    public static function getLoginDataProvider()
     {
         return [
             'Invalid credentials' => ['not_exists', 'not_exists'],

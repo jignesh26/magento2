@@ -1,17 +1,19 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\ConfigurableProduct\Block\Adminhtml\Product\Edit\Tab\Variations\Config;
 
 use Magento\Catalog\Api\ProductRepositoryInterface;
 use Magento\Catalog\Model\Locator\LocatorInterface;
 use Magento\Catalog\Model\Product;
+use Magento\Eav\Model\Entity\Attribute\AbstractAttribute;
 use Magento\Framework\Exception\NoSuchEntityException;
 
 /**
  * Product variations matrix block
+ * All disableTmpl flag are required here for configurable products
  *
  * @api
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
@@ -87,7 +89,7 @@ class Matrix extends \Magento\Backend\Block\Template
         LocatorInterface $locator,
         array $data = []
     ) {
-        parent::__construct($context, $data);
+        parent::__construct($context, $data, $data['jsonHelper'] ?? null, $data['directoryHelper'] ?? null);
         $this->_configurableType = $configurableType;
         $this->stockRegistry = $stockRegistry;
         $this->variationMatrix = $variationMatrix;
@@ -98,6 +100,8 @@ class Matrix extends \Magento\Backend\Block\Template
     }
 
     /**
+     * Return currency symbol.
+     *
      * @return string
      */
     public function getCurrencySymbol()
@@ -195,6 +199,7 @@ class Matrix extends \Magento\Backend\Block\Template
                 foreach ($attributes as $key => $attribute) {
                     if (isset($configurableData[$key])) {
                         $attributes[$key] = array_replace_recursive($attribute, $configurableData[$key]);
+                        // phpcs:ignore Magento2.Performance.ForeachArrayMerge
                         $attributes[$key]['values'] = array_merge(
                             isset($attribute['values']) ? $attribute['values'] : [],
                             isset($configurableData[$key]['values'])
@@ -239,6 +244,32 @@ class Matrix extends \Magento\Backend\Block\Template
     }
 
     /**
+     * Retrieves attributes that are used for configurable product variations
+     *
+     * @return array
+     */
+    private function getVariantAttributeComposition(): array
+    {
+        $variants = [];
+        foreach ($this->_getAssociatedProducts() as $product) {
+            /* @var $attribute AbstractAttribute */
+            foreach ($this->getUsedAttributes() as $attribute) {
+                $variants[$product->getId()][$attribute->getAttributeCode()] =
+                    [
+                        'value_id' => $product->getData($attribute->getAttributeCode()),
+                        'label' => $this->extractAttributeValueLabel(
+                            $attribute,
+                            $product->getData($attribute->getAttributeCode())
+                        ),
+                        'attribute' => $attribute
+                    ];
+            }
+        }
+
+        return $variants;
+    }
+
+    /**
      * Retrieve actual list of associated products (i.e. if product contains variations matrix form data
      * - previously saved in database relations are not considered)
      *
@@ -247,7 +278,7 @@ class Matrix extends \Magento\Backend\Block\Template
     protected function _getAssociatedProducts()
     {
         $product = $this->getProduct();
-        $ids = $this->getProduct()->getAssociatedProductIds();
+        $ids = $product->getAssociatedProductIds();
         if ($ids === null) {
             // form data overrides any relations stored in database
             return $this->_configurableType->getUsedProducts($product);
@@ -274,6 +305,8 @@ class Matrix extends \Magento\Backend\Block\Template
     }
 
     /**
+     * Return product qty.
+     *
      * @param Product $product
      * @return float
      */
@@ -283,6 +316,8 @@ class Matrix extends \Magento\Backend\Block\Template
     }
 
     /**
+     * Return variation wizard.
+     *
      * @param array $initData
      * @return string
      */
@@ -298,6 +333,8 @@ class Matrix extends \Magento\Backend\Block\Template
     }
 
     /**
+     * Return product configuration matrix.
+     *
      * @return array|null
      */
     public function getProductMatrix()
@@ -309,6 +346,8 @@ class Matrix extends \Magento\Backend\Block\Template
     }
 
     /**
+     * Return product attributes.
+     *
      * @return array|null
      */
     public function getProductAttributes()
@@ -316,83 +355,140 @@ class Matrix extends \Magento\Backend\Block\Template
         if ($this->productAttributes === null) {
             $this->prepareVariations();
         }
+
         return $this->productAttributes;
     }
 
     /**
+     * Prepare attribute details for child product configuration
+     *
+     * @param AbstractAttribute $attribute
+     * @return array
+     */
+    private function buildAttributeDetails(AbstractAttribute $attribute): array
+    {
+        $configurableAttributes = $this->getAttributes();
+        $details = [
+            'code' => $attribute->getAttributeCode(),
+            'label' => $attribute->getStoreLabel(),
+            'id' => $attribute->getAttributeId(),
+            'position' => $configurableAttributes[$attribute->getAttributeId()]['position'],
+            'chosen' => [],
+            '__disableTmpl' => true
+        ];
+
+        foreach ($attribute->getOptions() as $option) {
+            if ($option->getValue()) {
+                $details['options'][] = [
+                    'attribute_code' => $attribute->getAttributeCode(),
+                    'attribute_label' => $attribute->getStoreLabel(0),
+                    'id' => $option->getValue(),
+                    'label' => $option->getLabel(),
+                    'value' => $option->getValue(),
+                    '__disableTmpl' => true,
+                ];
+            }
+        }
+
+        return $details;
+    }
+
+    /**
+     * Generate configurable product child option
+     *
+     * @param array $attributeDetails
+     * @return array
+     */
+    private function buildChildProductOption(array $attributeDetails): array
+    {
+        return [
+            'attribute_code' => $attributeDetails['attribute']->getAttributeCode(),
+            'attribute_label' => $attributeDetails['attribute']->getStoreLabel(0),
+            'id' => $attributeDetails['value_id'],
+            'label' => $attributeDetails['label'],
+            'value' => $attributeDetails['value_id'],
+            '__disableTmpl' => true,
+        ];
+    }
+
+    /**
+     * Get label for a specific value of an attribute.
+     *
+     * @param AbstractAttribute $attribute
+     * @param mixed $valueId
+     * @return string
+     */
+    private function extractAttributeValueLabel(AbstractAttribute $attribute, mixed $valueId): string
+    {
+        foreach ($attribute->getOptions() as $attributeOption) {
+            if ($attributeOption->getValue() == $valueId) {
+                return $attributeOption->getLabel();
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Prepare product variations.
+     *
      * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      * @return void
      * TODO: move to class
      */
     protected function prepareVariations()
     {
-        $variations = $this->getVariations();
-        $productMatrix = [];
-        $attributes = [];
-        if ($variations) {
-            $usedProductAttributes = $this->getUsedAttributes();
-            $productByUsedAttributes = $this->getAssociatedProducts();
-            $configurableAttributes = $this->getAttributes();
-            foreach ($variations as $variation) {
-                $attributeValues = [];
-                foreach ($usedProductAttributes as $attribute) {
-                    $attributeValues[$attribute->getAttributeCode()] = $variation[$attribute->getId()]['value'];
-                }
-                $key = implode('-', $attributeValues);
-                if (isset($productByUsedAttributes[$key])) {
-                    $product = $productByUsedAttributes[$key];
-                    $price = $product->getPrice();
-                    $variationOptions = [];
-                    foreach ($usedProductAttributes as $attribute) {
-                        if (!isset($attributes[$attribute->getAttributeId()])) {
-                            $attributes[$attribute->getAttributeId()] = [
-                                'code' => $attribute->getAttributeCode(),
-                                'label' => $attribute->getStoreLabel(),
-                                'id' => $attribute->getAttributeId(),
-                                'position' => $configurableAttributes[$attribute->getAttributeId()]['position'],
-                                'chosen' => [],
-                            ];
-                            foreach ($attribute->getOptions() as $option) {
-                                if (!empty($option->getValue())) {
-                                    $attributes[$attribute->getAttributeId()]['options'][] = [
-                                        'attribute_code' => $attribute->getAttributeCode(),
-                                        'attribute_label' => $attribute->getStoreLabel(0),
-                                        'id' => $option->getValue(),
-                                        'label' => $option->getLabel(),
-                                        'value' => $option->getValue(),
-                                    ];
-                                }
-                            }
-                        }
-                        $optionId = $variation[$attribute->getId()]['value'];
-                        $variationOption = [
-                            'attribute_code' => $attribute->getAttributeCode(),
-                            'attribute_label' => $attribute->getStoreLabel(0),
-                            'id' => $optionId,
-                            'label' => $variation[$attribute->getId()]['label'],
-                            'value' => $optionId,
-                        ];
-                        $variationOptions[] = $variationOption;
-                        $attributes[$attribute->getAttributeId()]['chosen'][] = $variationOption;
-                    }
+        $productMatrix = $attributes = [];
+        $variants = $this->getVariantAttributeComposition();
+        foreach (array_reverse($this->getAssociatedProducts()) as $product) {
+            $childProductOptions = [];
+            foreach ($variants[$product->getId()] as $attributeComposition) {
+                $childProductOptions[] = $this->buildChildProductOption($attributeComposition);
 
-                    $productMatrix[] = [
-                        'productId' => $product->getId(),
-                        'images' => [
-                            'preview' => $this->image->init($product, 'product_thumbnail_image')->getUrl()
-                        ],
-                        'sku' => $product->getSku(),
-                        'name' => $product->getName(),
-                        'quantity' => $this->getProductStockQty($product),
-                        'price' => $price,
-                        'options' => $variationOptions,
-                        'weight' => $product->getWeight(),
-                        'status' => $product->getStatus()
-                    ];
+                /** @var AbstractAttribute $attribute */
+                $attribute = $attributeComposition['attribute'];
+                if (!isset($attributes[$attribute->getAttributeId()])) {
+                    $attributes[$attribute->getAttributeId()] = $this->buildAttributeDetails($attribute);
                 }
+                $variationOption = [
+                    'attribute_code' => $attribute->getAttributeCode(),
+                    'attribute_label' => $attribute->getStoreLabel(0),
+                    'id' => $attributeComposition['value_id'],
+                    'label' => $attributeComposition['label'],
+                    'value' => $attributeComposition['value_id'],
+                    '__disableTmpl' => true,
+                ];
+                $attributes[$attribute->getAttributeId()]['chosen'][] = $variationOption;
             }
+            $productMatrix[] = $this->buildChildProductDetails($product, $childProductOptions);
         }
+
         $this->productMatrix = $productMatrix;
         $this->productAttributes = array_values($attributes);
+    }
+
+    /**
+     * Create child product details
+     *
+     * @param Product $product
+     * @param array $childProductOptions
+     * @return array
+     */
+    private function buildChildProductDetails(Product $product, array $childProductOptions): array
+    {
+        return [
+            'productId' => $product->getId(),
+            'images' => [
+                'preview' => $this->image->init($product, 'product_thumbnail_image')->getUrl()
+            ],
+            'sku' => $product->getSku(),
+            'name' => $product->getName(),
+            'quantity' => $this->getProductStockQty($product),
+            'price' => $product->getPrice(),
+            'options' => $childProductOptions,
+            'weight' => $product->getWeight(),
+            'status' => $product->getStatus(),
+            '__disableTmpl' => true,
+        ];
     }
 }

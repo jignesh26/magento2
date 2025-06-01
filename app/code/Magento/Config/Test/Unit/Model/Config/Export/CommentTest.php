@@ -3,30 +3,34 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Config\Test\Unit\Model\Config\Export;
 
-use Magento\Config\Model\Config\Export\Comment;
 use Magento\Config\App\Config\Source\DumpConfigSourceInterface;
+use Magento\Config\Model\Config\Export\Comment;
 use Magento\Config\Model\Config\TypePool;
 use Magento\Config\Model\Placeholder\PlaceholderFactory;
 use Magento\Config\Model\Placeholder\PlaceholderInterface;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class CommentTest extends \PHPUnit\Framework\TestCase
+class CommentTest extends TestCase
 {
     /**
-     * @var DumpConfigSourceInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var DumpConfigSourceInterface|MockObject
      */
     private $configSourceMock;
 
     /**
-     * @var PlaceholderInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var PlaceholderInterface|MockObject
      */
     private $placeholderMock;
 
     /**
-     * @var TypePool|\PHPUnit_Framework_MockObject_MockObject
+     * @var TypePool|MockObject
      */
     private $typePoolMock;
 
@@ -35,7 +39,7 @@ class CommentTest extends \PHPUnit\Framework\TestCase
      */
     private $model;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $objectManager = new ObjectManager($this);
 
@@ -44,7 +48,7 @@ class CommentTest extends \PHPUnit\Framework\TestCase
             ->getMockForAbstractClass();
 
         $placeholderFactoryMock = $this->getMockBuilder(PlaceholderFactory::class)
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->disableOriginalConstructor()
             ->getMock();
 
@@ -100,7 +104,7 @@ class CommentTest extends \PHPUnit\Framework\TestCase
     /**
      * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
-    public function dataProviderForTestGet()
+    public static function dataProviderForTestGet()
     {
         return [
             [
@@ -109,13 +113,13 @@ class CommentTest extends \PHPUnit\Framework\TestCase
                 'expectedMocks' => [
                     'typePoolMock' => [
                         'isPresent' => [
-                            'expects' => $this->never(),
+                            'expects' => self::never(),
                             'returnMap' => [],
                         ]
                     ],
                     'placeholderMock' => [
                         'generate' => [
-                            'expects' => $this->never(),
+                            'expects' => self::never(),
                             'returnMap' => [],
                         ],
                     ],
@@ -131,7 +135,7 @@ class CommentTest extends \PHPUnit\Framework\TestCase
                 'expectedMocks' => [
                     'typePoolMock' => [
                         'isPresent' => [
-                            'expects' => $this->exactly(2),
+                            'expects' => self::exactly(2),
                             'returnMap' => [
                                 ['some/notSensitive/field1', TypePool::TYPE_SENSITIVE, false],
                                 ['some/notSensitive/field2', TypePool::TYPE_SENSITIVE, false],
@@ -140,7 +144,7 @@ class CommentTest extends \PHPUnit\Framework\TestCase
                     ],
                     'placeholderMock' => [
                         'generate' => [
-                            'expects' => $this->never(),
+                            'expects' => self::never(),
                             'returnMap' => [],
                         ],
                     ],
@@ -153,7 +157,7 @@ class CommentTest extends \PHPUnit\Framework\TestCase
                 'expectedMocks' => [
                     'typePoolMock' => [
                         'isPresent' => [
-                            'expects' => $this->exactly(5),
+                            'expects' => self::exactly(5),
                             'returnMap' => [
                                 ['some/sensitive/field1', TypePool::TYPE_SENSITIVE, true],
                                 ['some/sensitive/field2', TypePool::TYPE_SENSITIVE, true],
@@ -164,7 +168,7 @@ class CommentTest extends \PHPUnit\Framework\TestCase
                     ],
                     'placeholderMock' => [
                         'generate' => [
-                            'expects' => $this->exactly(3),
+                            'expects' => self::exactly(3),
                             'returnMap' => [
                                 [
                                     'some/sensitive/field1',

@@ -42,8 +42,8 @@ class Street extends \Magento\Framework\App\Config\Value
         \Magento\Framework\App\Cache\TypeListInterface $cacheTypeList,
         \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Eav\Model\Config $eavConfig,
-        \Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
-        \Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
+        ?\Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
+        ?\Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
         array $data = []
     ) {
         $this->_eavConfig = $eavConfig;
@@ -87,15 +87,20 @@ class Street extends \Magento\Framework\App\Config\Value
     {
         $result = parent::afterDelete();
 
-        if ($this->getScope() == \Magento\Store\Model\ScopeInterface::SCOPE_WEBSITES) {
-            $attribute = $this->_eavConfig->getAttribute('customer_address', 'street');
-            $website = $this->_storeManager->getWebsite($this->getScopeCode());
-            $attribute->setWebsite($website);
-            $attribute->load($attribute->getId());
-            $attribute->setData('scope_multiline_count', null);
-            $attribute->save();
-        }
+        $attribute = $this->_eavConfig->getAttribute('customer_address', 'street');
+        switch ($this->getScope()) {
+            case \Magento\Store\Model\ScopeInterface::SCOPE_WEBSITES:
+                $website = $this->_storeManager->getWebsite($this->getScopeCode());
+                $attribute->setWebsite($website);
+                $attribute->load($attribute->getId());
+                $attribute->setData('scope_multiline_count', null);
+                break;
 
+            case ScopeConfigInterface::SCOPE_TYPE_DEFAULT:
+                $attribute->setData('multiline_count', 2);
+                break;
+        }
+        $attribute->save();
         return $result;
     }
 }

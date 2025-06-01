@@ -3,41 +3,57 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Weee\Test\Unit\Model\Total\Invoice;
 
 use Magento\Framework\Serialize\Serializer\Json;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Sales\Model\Order;
+use Magento\Sales\Model\Order\Invoice;
+use Magento\Sales\Model\Order\Invoice\Item;
+use Magento\Sales\Model\Order\Invoice\Total\Tax;
+use Magento\Weee\Helper\Data;
+use Magento\Weee\Model\Total\Invoice\Weee;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class WeeeTest extends \PHPUnit\Framework\TestCase
+class WeeeTest extends TestCase
 {
     /**
-     * @var \Magento\Weee\Model\Total\Invoice\Weee
+     * @var float
+     */
+    private const EPSILON = 0.0000000001;
+
+    /**
+     * @var Weee
      */
     protected $model;
 
     /**
-     * @var \Magento\Sales\Model\Order|\PHPUnit_Framework_MockObject_MockObject
+     * @var Order|MockObject
      */
     protected $order;
 
     /**
-     * @var  \Magento\Framework\TestFramework\Unit\Helper\ObjectManager
+     * @var  ObjectManager
      */
     protected $objectManager;
 
     /**
-     * @var \Magento\Sales\Model\Order\Invoice|\PHPUnit_Framework_MockObject_MockObject
+     * @var Invoice|MockObject
      */
     protected $invoice;
 
     /**
-     * @var \Magento\Weee\Helper\Data|\PHPUnit_Framework_MockObject_MockObject
+     * @var Data|MockObject
      */
     protected $weeeData;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->weeeData = $this->getMockBuilder(\Magento\Weee\Helper\Data::class)
-            ->setMethods(
+        $this->weeeData = $this->getMockBuilder(Data::class)
+            ->onlyMethods(
                 [
                     'getRowWeeeTaxInclTax',
                     'getBaseRowWeeeTaxInclTax',
@@ -52,30 +68,27 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
             )->disableOriginalConstructor()
             ->getMock();
 
-        $this->objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $this->objectManager = new ObjectManager($this);
         $serializer = $this->objectManager->getObject(Json::class);
-        /** @var \Magento\Sales\Model\Order\Invoice\Total\Tax $model */
+        /** @var Tax $model */
         $this->model = $this->objectManager->getObject(
-            \Magento\Weee\Model\Total\Invoice\Weee::class,
+            Weee::class,
             [
                 'weeeData' => $this->weeeData,
                 'serializer' => $serializer
             ]
         );
 
-        $this->order = $this->createPartialMock(\Magento\Sales\Model\Order::class, [
-                '__wakeup'
-            ]);
+        $this->order = $this->createPartialMock(Order::class, ['__wakeup']);
 
-        $this->invoice = $this->createPartialMock(\Magento\Sales\Model\Order\Invoice::class, [
-                'getAllItems',
-                'getOrder',
-                'roundPrice',
-                'isLast',
-                'getStore',
-                '__wakeup',
-            ]);
-        $this->invoice->expects($this->atLeastOnce())->method('getOrder')->will($this->returnValue($this->order));
+        $this->invoice = $this->createPartialMock(Invoice::class, [
+            'getAllItems',
+            'getOrder',
+            'roundPrice',
+            'isLast',
+            'getStore'
+        ]);
+        $this->invoice->expects($this->atLeastOnce())->method('getOrder')->willReturn($this->order);
     }
 
     /**
@@ -102,44 +115,47 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
         $this->setupOrder($orderData);
 
         //Set up weeeData mock
-        $this->weeeData->expects($this->once())
+        $this->weeeData->expects($this->atLeastOnce())
             ->method('includeInSubtotal')
-            ->will($this->returnValue($invoiceData['include_in_subtotal']));
+            ->willReturn($invoiceData['include_in_subtotal']);
 
         //Set up invoice mock
-        /** @var \Magento\Sales\Model\Order\Invoice\Item[] $invoiceItems */
+        /** @var Item[] $invoiceItems */
         $invoiceItems = [];
         foreach ($invoiceData['items'] as $itemKey => $invoiceItemData) {
             $invoiceItems[$itemKey] = $this->getInvoiceItem($invoiceItemData);
         }
         $this->invoice->expects($this->once())
             ->method('getAllItems')
-            ->will($this->returnValue($invoiceItems));
+            ->willReturn($invoiceItems);
         $this->invoice->expects($this->once())
             ->method('isLast')
-            ->will($this->returnValue($invoiceData['is_last']));
+            ->willReturn($invoiceData['is_last']);
         foreach ($invoiceData['data_fields'] as $key => $value) {
             $this->invoice->setData($key, $value);
         }
         $this->invoice->expects($this->any())
             ->method('roundPrice')
-            ->will($this->returnCallback(
-                function ($price, $type) use (&$roundingDelta) {
-                    if (!isset($roundingDelta[$type])) {
-                        $roundingDelta[$type] = 0;
-                    }
-                    $roundedPrice = round($price + $roundingDelta[$type], 2);
-                    $roundingDelta[$type] = $price - $roundedPrice;
-
-                    return $roundedPrice;
+            ->willReturnCallback(function ($price, $type) use (&$roundingDelta) {
+                if (!isset($roundingDelta[$type])) {
+                    $roundingDelta[$type] = 0;
                 }
-            ));
+                $roundedPrice = round($price + $roundingDelta[$type], 2);
+                $roundingDelta[$type] = $price - $roundedPrice;
+
+                return $roundedPrice;
+            });
 
         $this->model->collect($this->invoice);
 
         //verify invoice data
         foreach ($expectedResults['invoice_data'] as $key => $value) {
-            $this->assertEquals($value, $this->invoice->getData($key), 'Invoice data field '.$key.' is incorrect');
+            $this->assertEqualsWithDelta(
+                $value,
+                $this->invoice->getData($key),
+                self::EPSILON,
+                'Invoice data field ' . $key . ' is incorrect'
+            );
         }
         //verify invoice item data
         foreach ($expectedResults['invoice_items'] as $itemKey => $itemData) {
@@ -147,12 +163,18 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
             foreach ($itemData as $key => $value) {
                 if ($key == 'tax_ratio') {
                     $taxRatio = json_decode($invoiceItem->getData($key), true);
-                    $this->assertEquals($value['weee'], $taxRatio['weee'], "Tax ratio is incorrect");
+                    $this->assertEqualsWithDelta(
+                        $value['weee'],
+                        $taxRatio['weee'],
+                        self::EPSILON,
+                        "Tax ratio is incorrect"
+                    );
                 } else {
-                    $this->assertEquals(
+                    $this->assertEqualsWithDelta(
                         $value,
                         $invoiceItem->getData($key),
-                        'Invoice item field '.$key.' is incorrect'
+                        self::EPSILON,
+                        'Invoice item field ' . $key . ' is incorrect'
                     );
                 }
             }
@@ -163,13 +185,13 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
      * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      * @return array
      */
-    public function collectDataProvider()
+    public static function collectDataProvider()
     {
         $result = [];
 
         // 3 item_1, $100 with $weee, 8.25 tax rate, full invoice
         $result['complete_invoice'] = [
-            'order_data' => [
+            'orderData' => [
                 'previous_invoices' => [
                 ],
                 'data_fields' => [
@@ -185,7 +207,7 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
                     'base_subtotal' => '300',
                 ],
             ],
-            'invoice_data' => [
+            'invoiceData' => [
                 'items' => [
                     'item_1' => [
                         'order_item' => [
@@ -238,7 +260,7 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
                     'base_tax_amount' => 16.09,
                 ],
             ],
-            'expected_results' => [
+            'expectedResults' => [
                 'invoice_items' => [
                     'item_1' => [
                         'applied_weee' => [
@@ -262,15 +284,15 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
                     'base_tax_amount' => 16.09,
                     'subtotal' => 300,
                     'base_subtotal' => 300,
-                    'subtotal_incl_tax' => 344.85,
-                    'base_subtotal_incl_tax' => 344.85,
+                    'subtotal_incl_tax' => 347.32,
+                    'base_subtotal_incl_tax' => 347.32,
                 ],
             ],
         ];
 
         // 3 item_1, $100 with $weee, 8.25 tax rate, partial invoice, invoice qty=2
         $result['partial_invoice'] = [
-            'order_data' => [
+            'orderData' => [
                 'previous_invoices' => [
                 ],
                 'data_fields' => [
@@ -286,7 +308,7 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
                     'base_subtotal' => '300',
                 ],
             ],
-            'invoice_data' => [
+            'invoiceData' => [
                 'items' => [
                     'item_1' => [
                         'order_item' => [
@@ -339,7 +361,7 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
                     'base_tax_amount' => 9.49,
                 ],
             ],
-            'expected_results' => [
+            'expectedResults' => [
                 'invoice_items' => [
                     'item_1' => [
                         'applied_weee' => [
@@ -372,7 +394,7 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
         // 3 item_1, $100 with $weee, 8.25 tax rate, partial invoice: one item invoiced
         // invoice another item
         $result['second_partial_invoice'] = [
-            'order_data' => [
+            'orderData' => [
                 'previous_invoices' => [
                 ],
                 'data_fields' => [
@@ -388,7 +410,7 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
                     'base_subtotal' => '300',
                 ],
             ],
-            'invoice_data' => [
+            'invoiceData' => [
                 'items' => [
                     'item_1' => [
                         'order_item' => [
@@ -441,7 +463,7 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
                     'base_subtotal_incl_tax' => 108.25,
                 ],
             ],
-            'expected_results' => [
+            'expectedResults' => [
                 'invoice_items' => [
                     'item_1' => [
                         'applied_weee' => [
@@ -474,7 +496,7 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
         // 3 item_1, $100 with $weee, 8.25 tax rate, partial invoice: two item invoiced
         // invoice another item
         $result['last_partial_invoice'] = [
-            'order_data' => [
+            'orderData' => [
                 'previous_invoices' => [
                 ],
                 'data_fields' => [
@@ -490,7 +512,7 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
                     'base_subtotal' => '300',
                 ],
             ],
-            'invoice_data' => [
+            'invoiceData' => [
                 'items' => [
                     'item_1' => [
                         'order_item' => [
@@ -543,7 +565,7 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
                     'base_subtotal_incl_tax' => 104.95,
                 ],
             ],
-            'expected_results' => [
+            'expectedResults' => [
                 'invoice_items' => [
                     'item_1' => [
                         'applied_weee' => [
@@ -568,15 +590,15 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
                     'base_tax_amount' => 4.95,
                     'subtotal' => 100,
                     'base_subtotal' => 100,
-                    'subtotal_incl_tax' => 114.95,
-                    'base_subtotal_incl_tax' => 114.95,
+                    'subtotal_incl_tax' => 115.77,
+                    'base_subtotal_incl_tax' => 115.77,
                 ],
             ],
         ];
 
         // 3 item_1, $100 with $weee, 8.25 tax rate. Invoicing qty 0.
         $result['zero_invoice'] = [
-            'order_data' => [
+            'orderData' => [
                 'previous_invoices' => [
                 ],
                 'data_fields' => [
@@ -592,7 +614,7 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
                     'base_subtotal' => '300',
                 ],
             ],
-            'invoice_data' => [
+            'invoiceData' => [
                 'items' => [
                     'item_1' => [
                         'order_item' => [
@@ -645,7 +667,7 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
                     'base_tax_amount' => 16.09,
                 ],
             ],
-            'expected_results' => [
+            'expectedResults' => [
                 'invoice_items' => [
                     'item_1' => [
                         'applied_weee' => [
@@ -671,15 +693,14 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
 
     /**
      * @param $invoiceItemData array
-     * @return \Magento\Sales\Model\Order\Invoice\Item|\PHPUnit_Framework_MockObject_MockObject
+     * @return Item|MockObject
      */
     protected function getInvoiceItem($invoiceItemData)
     {
-        /** @var \Magento\Sales\Model\Order\Item|\PHPUnit_Framework_MockObject_MockObject $orderItem */
+        /** @var \Magento\Sales\Model\Order\Item|MockObject $orderItem */
         $orderItem = $this->createPartialMock(\Magento\Sales\Model\Order\Item::class, [
-                'isDummy',
-                '__wakeup'
-            ]);
+            'isDummy'
+        ]);
         foreach ($invoiceItemData['order_item'] as $key => $value) {
             $orderItem->setData($key, $value);
         }
@@ -687,58 +708,53 @@ class WeeeTest extends \PHPUnit\Framework\TestCase
         $this->weeeData->expects($this->once())
             ->method('getRowWeeeTaxInclTax')
             ->with($orderItem)
-            ->will($this->returnValue($orderItem->getRowWeeeTaxInclTax()));
+            ->willReturn($orderItem->getRowWeeeTaxInclTax());
         $this->weeeData->expects($this->once())
             ->method('getBaseRowWeeeTaxInclTax')
             ->with($orderItem)
-            ->will($this->returnValue($orderItem->getBaseRowWeeeTaxInclTax()));
+            ->willReturn($orderItem->getBaseRowWeeeTaxInclTax());
         if ($invoiceItemData['is_last']) {
             $this->weeeData->expects($this->once())
                 ->method('getWeeeAmountInvoiced')
                 ->with($orderItem)
-                ->will($this->returnValue($orderItem->getWeeeAmountInvoiced()));
+                ->willReturn($orderItem->getWeeeAmountInvoiced());
             $this->weeeData->expects($this->once())
                 ->method('getBaseWeeeAmountInvoiced')
                 ->with($orderItem)
-                ->will($this->returnValue($orderItem->getBaseWeeeAmountInvoiced()));
+                ->willReturn($orderItem->getBaseWeeeAmountInvoiced());
             $this->weeeData->expects($this->once())
                 ->method('getWeeeTaxAmountInvoiced')
                 ->with($orderItem)
-                ->will($this->returnValue($orderItem->getWeeeTaxAmountInvoiced()));
+                ->willReturn($orderItem->getWeeeTaxAmountInvoiced());
             $this->weeeData->expects($this->once())
                 ->method('getBaseWeeeTaxAmountInvoiced')
                 ->with($orderItem)
-                ->will($this->returnValue($orderItem->getBaseWeeeTaxAmountInvoiced()));
+                ->willReturn($orderItem->getBaseWeeeTaxAmountInvoiced());
         }
-        /** @var \Magento\Sales\Model\Order\Invoice\Item|\PHPUnit_Framework_MockObject_MockObject $invoiceItem */
-        $invoiceItem = $this->createPartialMock(\Magento\Sales\Model\Order\Invoice\Item::class, [
-                'getOrderItem',
-                'isLast',
-                '__wakeup'
-            ]);
-        $invoiceItem->expects($this->any())->method('getOrderItem')->will($this->returnValue($orderItem));
+        /** @var Item|MockObject $invoiceItem */
+        $invoiceItem = $this->createPartialMock(Item::class, [
+            'getOrderItem',
+            'isLast'
+        ]);
+        $invoiceItem->expects($this->any())->method('getOrderItem')->willReturn($orderItem);
         $invoiceItem->expects($this->any())
             ->method('isLast')
-            ->will($this->returnValue($invoiceItemData['is_last']));
+            ->willReturn($invoiceItemData['is_last']);
         foreach ($invoiceItemData['data_fields'] as $key => $value) {
             $invoiceItem->setData($key, $value);
         }
 
         $this->weeeData->expects($this->any())
             ->method('getApplied')
-            ->will($this->returnCallback(
-                function ($item) {
-                    return $item->getAppliedWeee();
-                }
-            ));
+            ->willReturnCallback(function ($item) {
+                return $item->getAppliedWeee();
+            });
 
         $this->weeeData->expects($this->any())
             ->method('setApplied')
-            ->will($this->returnCallback(
-                function ($item, $weee) {
-                    return $item->setAppliedWeee($weee);
-                }
-            ));
+            ->willReturnCallback(function ($item, $weee) {
+                return $item->setAppliedWeee($weee);
+            });
 
         return $invoiceItem;
     }

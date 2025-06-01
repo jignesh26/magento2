@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Backend\Controller\Adminhtml\System;
@@ -88,7 +88,7 @@ abstract class Store extends Action
      *
      * @return bool
      *
-     * @deprecated Backup module is to be removed.
+     * @deprecated 100.2.7 Backup module is to be removed.
      */
     protected function _backupDatabase()
     {

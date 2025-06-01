@@ -1,20 +1,18 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 
-/**
- * Widget to display catalog link
- *
- * @author     Magento Core Team <core@magentocommerce.com>
- */
 namespace Magento\Catalog\Block\Widget;
 
 use Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGenerator;
 use Magento\UrlRewrite\Model\UrlFinderInterface;
 use Magento\UrlRewrite\Service\V1\Data\UrlRewrite;
 
+/**
+ * Render the URL of given entity
+ */
 class Link extends \Magento\Framework\View\Element\Html\Link implements \Magento\Widget\Block\BlockInterface
 {
     /**
@@ -53,7 +51,7 @@ class Link extends \Magento\Framework\View\Element\Html\Link implements \Magento
     public function __construct(
         \Magento\Framework\View\Element\Template\Context $context,
         UrlFinderInterface $urlFinder,
-        \Magento\Catalog\Model\ResourceModel\AbstractResource $entityResource = null,
+        ?\Magento\Catalog\Model\ResourceModel\AbstractResource $entityResource = null,
         array $data = []
     ) {
         parent::__construct($context, $data);
@@ -63,10 +61,9 @@ class Link extends \Magento\Framework\View\Element\Html\Link implements \Magento
 
     /**
      * Prepare url using passed id path and return it
-     * or return false if path was not found in url rewrites.
      *
      * @throws \RuntimeException
-     * @return string|false
+     * @return string|false if path was not found in url rewrites.
      * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function getHref()
@@ -84,6 +81,7 @@ class Link extends \Magento\Framework\View\Element\Html\Link implements \Magento
                 UrlRewrite::ENTITY_ID => $rewriteData[1],
                 UrlRewrite::ENTITY_TYPE => $rewriteData[0],
                 UrlRewrite::STORE_ID => $store->getId(),
+                UrlRewrite::REDIRECT_TYPE => 0,
             ];
             if (!empty($rewriteData[2]) && $rewriteData[0] == ProductUrlRewriteGenerator::ENTITY_TYPE) {
                 $filterData[UrlRewrite::METADATA]['category_id'] = $rewriteData[2];
@@ -93,13 +91,29 @@ class Link extends \Magento\Framework\View\Element\Html\Link implements \Magento
             if ($rewrite) {
                 $href = $store->getUrl('', ['_direct' => $rewrite->getRequestPath()]);
 
-                if (strpos($href, '___store') === false) {
+                if ($this->addStoreCodeParam($store, $href)) {
                     $href .= (strpos($href, '?') === false ? '?' : '&') . '___store=' . $store->getCode();
                 }
             }
             $this->_href = $href;
         }
         return $this->_href;
+    }
+
+    /**
+     * Checks whether store code query param should be appended to the URL
+     *
+     * @param \Magento\Store\Model\Store $store
+     * @param string $url
+     * @return bool
+     * @throws \Magento\Framework\Exception\NoSuchEntityException
+     */
+    private function addStoreCodeParam(\Magento\Store\Model\Store $store, string $url): bool
+    {
+        return $this->getStoreId()
+            && !$store->isUseStoreInUrl()
+            && $store->getId() !==  $this->_storeManager->getStore()->getId()
+            && strpos($url, '___store') === false;
     }
 
     /**
@@ -121,6 +135,7 @@ class Link extends \Magento\Framework\View\Element\Html\Link implements \Magento
 
     /**
      * Prepare label using passed text as parameter.
+     *
      * If anchor text was not specified get entity name from DB.
      *
      * @return string
@@ -131,7 +146,7 @@ class Link extends \Magento\Framework\View\Element\Html\Link implements \Magento
             if ($this->getData('anchor_text')) {
                 $this->_anchorText = $this->getData('anchor_text');
             } elseif ($this->_entityResource) {
-                $idPath = explode('/', $this->_getData('id_path'));
+                $idPath = $this->_getData('id_path') !== null ? explode('/', $this->_getData('id_path')) : [];
                 if (isset($idPath[1])) {
                     $id = $idPath[1];
                     if ($id) {
@@ -150,9 +165,8 @@ class Link extends \Magento\Framework\View\Element\Html\Link implements \Magento
 
     /**
      * Render block HTML
-     * or return empty string if url can't be prepared
      *
-     * @return string
+     * @return string empty string if url can't be prepared
      */
     protected function _toHtml()
     {

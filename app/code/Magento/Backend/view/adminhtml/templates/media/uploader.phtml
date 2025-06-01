@@ -1,28 +1,27 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 
-// @codingStandardsIgnoreFile
-
+// phpcs:disable PHPCompatibility.Miscellaneous.RemovedAlternativePHPTags.MaybeASPOpenTagFound
 /** @var $block \Magento\Backend\Block\Media\Uploader */
+/** @var \Magento\Framework\Escaper $escaper */
 ?>
 
 <div id="<?= $block->getHtmlId() ?>" class="uploader"
     data-mage-init='{
         "Magento_Backend/js/media-uploader" : {
-            "maxFileSize": <?= /* @escapeNotVerified */ $block->getFileSizeService()->getMaxFileSize() ?>,
-            "maxWidth": <?= /* @escapeNotVerified */ $block->getImageUploadMaxWidth() ?>,
-            "maxHeight": <?= /* @escapeNotVerified */ $block->getImageUploadMaxHeight() ?>,
+            "maxFileSize": <?= /* @noEscape */ $block->getFileSizeService()->getMaxFileSize() ?>,
+            "maxWidth": <?= /* @noEscape */ $block->getImageUploadMaxWidth() ?>,
+            "maxHeight": <?= /* @noEscape */ $block->getImageUploadMaxHeight() ?>,
             "isResizeEnabled": <?= /* @noEscape */ $block->getImageUploadConfigData()->getIsResizeEnabled() ?>
         }
     }'
 >
     <div class="fileinput-button form-buttons button">
-        <span><?= /* @escapeNotVerified */ __('Browse Files...') ?></span>
-        <input id="fileupload" type="file" name="<?= /* @escapeNotVerified */ $block->getConfig()->getFileField() ?>"
-            data-url="<?= /* @escapeNotVerified */ $block->getConfig()->getUrl() ?>" multiple="multiple" />
+        <span><?= $escaper->escapeHtml(__('Browse Files...')) ?></span>
+        <div id="fileUploader" data-url="<?= $escaper->escapeHtmlAttr($block->getConfig()->getUrl()) ?>"></div>
     </div>
     <div class="clear"></div>
     <script id="<?= $block->getHtmlId() ?>-template" type="text/x-magento-template" data-template="uploader">

@@ -1,17 +1,18 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\Backend\Test\Unit\Console\Command;
 
 use Magento\Backend\Console\Command\CacheDisableCommand;
 use Symfony\Component\Console\Tester\CommandTester;
 
-class CacheDisableCommandTest extends AbstractCacheSetCommandTest
+class CacheDisableCommandTest extends AbstractCacheSetCommandTestCase
 {
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->command = new CacheDisableCommand($this->cacheManagerMock);
@@ -43,8 +44,8 @@ class CacheDisableCommandTest extends AbstractCacheSetCommandTest
     /**
      * {@inheritdoc}
      */
-    public function getExpectedExecutionOutput(array $changes)
+    public static function getExpectedExecutionOutput(array $changes)
     {
-        return $this->getExpectedChangeOutput($changes, false);
+        return static::getExpectedChangeOutput($changes, false);
     }
 }

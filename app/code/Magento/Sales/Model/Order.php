@@ -1,27 +1,54 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Sales\Model;
 
+use Magento\Catalog\Model\Product\Type;
+use Magento\Catalog\Api\ProductRepositoryInterface;
+use Magento\Catalog\Model\Product\Visibility;
+use Magento\Config\Model\Config\Source\Nooptreq;
 use Magento\Directory\Model\Currency;
+use Magento\Directory\Model\CurrencyFactory;
+use Magento\Directory\Model\RegionFactory;
+use Magento\Directory\Model\ResourceModel\Region as RegionResource;
 use Magento\Framework\Api\AttributeValueFactory;
+use Magento\Framework\Api\ExtensionAttributesFactory;
+use Magento\Framework\Api\SearchCriteriaBuilder;
+use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\ObjectManager;
+use Magento\Framework\Data\Collection\AbstractDb;
+use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Locale\ResolverInterface;
+use Magento\Framework\Model\Context;
+use Magento\Framework\Model\ResourceModel\AbstractResource;
 use Magento\Framework\Pricing\PriceCurrencyInterface;
+use Magento\Framework\Registry;
+use Magento\Framework\Stdlib\DateTime\TimezoneInterface;
 use Magento\Sales\Api\Data\OrderInterface;
+use Magento\Sales\Api\Data\OrderItemInterface;
 use Magento\Sales\Api\Data\OrderStatusHistoryInterface;
+use Magento\Sales\Api\InvoiceManagementInterface;
+use Magento\Sales\Api\OrderItemRepositoryInterface;
+use Magento\Sales\Model\Order\Config;
+use Magento\Sales\Model\Order\CreditmemoValidator;
 use Magento\Sales\Model\Order\Payment;
 use Magento\Sales\Model\Order\ProductOption;
+use Magento\Sales\Model\Order\Status\HistoryFactory;
 use Magento\Sales\Model\ResourceModel\Order\Address\Collection;
 use Magento\Sales\Model\ResourceModel\Order\Creditmemo\Collection as CreditmemoCollection;
 use Magento\Sales\Model\ResourceModel\Order\Invoice\Collection as InvoiceCollection;
 use Magento\Sales\Model\ResourceModel\Order\Item\Collection as ItemCollection;
+use Magento\Sales\Model\ResourceModel\Order\Item\CollectionFactory;
 use Magento\Sales\Model\ResourceModel\Order\Payment\Collection as PaymentCollection;
 use Magento\Sales\Model\ResourceModel\Order\Shipment\Collection as ShipmentCollection;
 use Magento\Sales\Model\ResourceModel\Order\Shipment\Track\Collection as TrackCollection;
 use Magento\Sales\Model\ResourceModel\Order\Status\History\Collection as HistoryCollection;
+use Magento\Store\Model\ScopeInterface;
+use Magento\Framework\App\Area;
+use Magento\Sales\Model\Order\StatusLabel;
+use Magento\Store\Model\StoreManagerInterface;
 
 /**
  * Order model
@@ -35,17 +62,17 @@ use Magento\Sales\Model\ResourceModel\Order\Status\History\Collection as History
  *
  * @api
  * @method int getGiftMessageId()
- * @method \Magento\Sales\Model\Order setGiftMessageId(int $value)
+ * @method Order setGiftMessageId(int $value)
  * @method bool hasBillingAddressId()
- * @method \Magento\Sales\Model\Order unsBillingAddressId()
+ * @method Order unsBillingAddressId()
  * @method bool hasShippingAddressId()
- * @method \Magento\Sales\Model\Order unsShippingAddressId()
+ * @method Order unsShippingAddressId()
  * @method int getShippigAddressId()
  * @method bool hasCustomerNoteNotify()
  * @method bool hasForcedCanCreditmemo()
  * @method bool getIsInProcess()
- * @method \Magento\Customer\Model\Customer getCustomer()
- * @method \Magento\Sales\Model\Order setSendEmail(bool $value)
+ * @method \Magento\Customer\Model\Customer|null getCustomer()
+ * @method Order setSendEmail(bool $value)
  * @SuppressWarnings(PHPMD.ExcessivePublicCount)
  * @SuppressWarnings(PHPMD.TooManyFields)
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
@@ -54,59 +81,59 @@ use Magento\Sales\Model\ResourceModel\Order\Status\History\Collection as History
  */
 class Order extends AbstractModel implements EntityInterface, OrderInterface
 {
-    const ENTITY = 'order';
+    public const ENTITY = 'order';
 
     /**
      * Order states
      */
-    const STATE_NEW = 'new';
+    public const STATE_NEW = 'new';
 
-    const STATE_PENDING_PAYMENT = 'pending_payment';
+    public const STATE_PENDING_PAYMENT = 'pending_payment';
 
-    const STATE_PROCESSING = 'processing';
+    public const STATE_PROCESSING = 'processing';
 
-    const STATE_COMPLETE = 'complete';
+    public const STATE_COMPLETE = 'complete';
 
-    const STATE_CLOSED = 'closed';
+    public const STATE_CLOSED = 'closed';
 
-    const STATE_CANCELED = 'canceled';
+    public const STATE_CANCELED = 'canceled';
 
-    const STATE_HOLDED = 'holded';
+    public const STATE_HOLDED = 'holded';
 
-    const STATE_PAYMENT_REVIEW = 'payment_review';
+    public const STATE_PAYMENT_REVIEW = 'payment_review';
 
     /**
      * Order statuses
      */
-    const STATUS_FRAUD = 'fraud';
+    public const STATUS_FRAUD = 'fraud';
 
     /**
      * Order flags
      */
-    const ACTION_FLAG_CANCEL = 'cancel';
+    public const ACTION_FLAG_CANCEL = 'cancel';
 
-    const ACTION_FLAG_HOLD = 'hold';
+    public const ACTION_FLAG_HOLD = 'hold';
 
-    const ACTION_FLAG_UNHOLD = 'unhold';
+    public const ACTION_FLAG_UNHOLD = 'unhold';
 
-    const ACTION_FLAG_EDIT = 'edit';
+    public const ACTION_FLAG_EDIT = 'edit';
 
-    const ACTION_FLAG_CREDITMEMO = 'creditmemo';
+    public const ACTION_FLAG_CREDITMEMO = 'creditmemo';
 
-    const ACTION_FLAG_INVOICE = 'invoice';
+    public const ACTION_FLAG_INVOICE = 'invoice';
 
-    const ACTION_FLAG_REORDER = 'reorder';
+    public const ACTION_FLAG_REORDER = 'reorder';
 
-    const ACTION_FLAG_SHIP = 'ship';
+    public const ACTION_FLAG_SHIP = 'ship';
 
-    const ACTION_FLAG_COMMENT = 'comment';
+    public const ACTION_FLAG_COMMENT = 'comment';
 
     /**
      * Report date types
      */
-    const REPORT_DATE_TYPE_CREATED = 'created';
+    public const REPORT_DATE_TYPE_CREATED = 'created';
 
-    const REPORT_DATE_TYPE_UPDATED = 'updated';
+    public const REPORT_DATE_TYPE_UPDATED = 'updated';
 
     /**
      * @var string
@@ -186,7 +213,8 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
 
     /**
      * @var \Magento\Catalog\Api\ProductRepositoryInterface
-     * @deprecated 100.1.7 Remove unused dependency.
+     * @deprecated 100.1.0
+     * @see Remove unused dependency
      */
     protected $productRepository;
 
@@ -286,20 +314,60 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
     private $productOption;
 
     /**
-     * @param \Magento\Framework\Model\Context $context
-     * @param \Magento\Framework\Registry $registry
-     * @param \Magento\Framework\Api\ExtensionAttributesFactory $extensionFactory
+     * @var OrderItemRepositoryInterface
+     */
+    private $itemRepository;
+
+    /**
+     * @var SearchCriteriaBuilder
+     */
+    private $searchCriteriaBuilder;
+
+    /**
+     * @var ScopeConfigInterface;
+     */
+    private $scopeConfig;
+
+    /**
+     * @var RegionFactory
+     */
+    private $regionFactory;
+
+    /**
+     * @var array
+     */
+    private $regionItems;
+
+    /**
+     * @var RegionResource
+     */
+    private $regionResource;
+
+    /**
+     * @var StatusLabel
+     */
+    private $statusLabel;
+
+    /**
+     * @var ?CreditmemoValidator
+     */
+    private $creditmemoValidator;
+
+    /**
+     * @param Context $context
+     * @param Registry $registry
+     * @param ExtensionAttributesFactory $extensionFactory
      * @param AttributeValueFactory $customAttributeFactory
-     * @param \Magento\Framework\Stdlib\DateTime\TimezoneInterface $timezone
-     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
-     * @param Order\Config $orderConfig
-     * @param \Magento\Catalog\Api\ProductRepositoryInterface $productRepository
-     * @param \Magento\Sales\Model\ResourceModel\Order\Item\CollectionFactory $orderItemCollectionFactory
-     * @param \Magento\Catalog\Model\Product\Visibility $productVisibility
-     * @param \Magento\Sales\Api\InvoiceManagementInterface $invoiceManagement
-     * @param \Magento\Directory\Model\CurrencyFactory $currencyFactory
+     * @param TimezoneInterface $timezone
+     * @param StoreManagerInterface $storeManager
+     * @param Config $orderConfig
+     * @param ProductRepositoryInterface $productRepository
+     * @param CollectionFactory $orderItemCollectionFactory
+     * @param Visibility $productVisibility
+     * @param InvoiceManagementInterface $invoiceManagement
+     * @param CurrencyFactory $currencyFactory
      * @param \Magento\Eav\Model\Config $eavConfig
-     * @param Order\Status\HistoryFactory $orderHistoryFactory
+     * @param HistoryFactory $orderHistoryFactory
      * @param \Magento\Sales\Model\ResourceModel\Order\Address\CollectionFactory $addressCollectionFactory
      * @param \Magento\Sales\Model\ResourceModel\Order\Payment\CollectionFactory $paymentCollectionFactory
      * @param \Magento\Sales\Model\ResourceModel\Order\Status\History\CollectionFactory $historyCollectionFactory
@@ -310,12 +378,21 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      * @param ResourceModel\Order\CollectionFactory $salesOrderCollectionFactory
      * @param PriceCurrencyInterface $priceCurrency
      * @param \Magento\Catalog\Model\ResourceModel\Product\CollectionFactory $productListFactory
-     * @param \Magento\Framework\Model\ResourceModel\AbstractResource $resource
-     * @param \Magento\Framework\Data\Collection\AbstractDb $resourceCollection
+     * @param AbstractResource|null $resource
+     * @param AbstractDb|null $resourceCollection
      * @param array $data
-     * @param ResolverInterface $localeResolver
+     * @param ResolverInterface|null $localeResolver
      * @param ProductOption|null $productOption
+     * @param OrderItemRepositoryInterface|null $itemRepository
+     * @param SearchCriteriaBuilder|null $searchCriteriaBuilder
+     * @param ScopeConfigInterface|null $scopeConfig
+     * @param RegionFactory|null $regionFactory
+     * @param RegionResource|null $regionResource
+     * @param StatusLabel|null $statusLabel
+     * @param CreditmemoValidator|null $creditmemoValidator
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function __construct(
         \Magento\Framework\Model\Context $context,
@@ -342,11 +419,18 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
         \Magento\Sales\Model\ResourceModel\Order\CollectionFactory $salesOrderCollectionFactory,
         PriceCurrencyInterface $priceCurrency,
         \Magento\Catalog\Model\ResourceModel\Product\CollectionFactory $productListFactory,
-        \Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
-        \Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
+        ?\Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
+        ?\Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
         array $data = [],
-        ResolverInterface $localeResolver = null,
-        ProductOption $productOption = null
+        ?ResolverInterface $localeResolver = null,
+        ?ProductOption $productOption = null,
+        ?OrderItemRepositoryInterface $itemRepository = null,
+        ?SearchCriteriaBuilder $searchCriteriaBuilder = null,
+        ?ScopeConfigInterface $scopeConfig = null,
+        ?RegionFactory $regionFactory = null,
+        ?RegionResource $regionResource = null,
+        ?StatusLabel $statusLabel = null,
+        ?CreditmemoValidator $creditmemoValidator = null
     ) {
         $this->_storeManager = $storeManager;
         $this->_orderConfig = $orderConfig;
@@ -370,7 +454,17 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
         $this->priceCurrency = $priceCurrency;
         $this->localeResolver = $localeResolver ?: ObjectManager::getInstance()->get(ResolverInterface::class);
         $this->productOption = $productOption ?: ObjectManager::getInstance()->get(ProductOption::class);
-
+        $this->itemRepository = $itemRepository ?: ObjectManager::getInstance()
+            ->get(OrderItemRepositoryInterface::class);
+        $this->searchCriteriaBuilder = $searchCriteriaBuilder ?: ObjectManager::getInstance()
+            ->get(SearchCriteriaBuilder::class);
+        $this->scopeConfig = $scopeConfig ?: ObjectManager::getInstance()->get(ScopeConfigInterface::class);
+        $this->regionFactory = $regionFactory ?: ObjectManager::getInstance()->get(RegionFactory::class);
+        $this->regionResource = $regionResource ?: ObjectManager::getInstance()->get(RegionResource::class);
+        $this->regionItems = [];
+        $this->statusLabel = $statusLabel ?: ObjectManager::getInstance()->get(StatusLabel::class);
+        $this->creditmemoValidator = $creditmemoValidator ?:
+            ObjectManager::getInstance()->get(CreditmemoValidator::class);
         parent::__construct(
             $context,
             $registry,
@@ -461,7 +555,7 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      * Load order by system increment identifier
      *
      * @param string $incrementId
-     * @return \Magento\Sales\Model\Order
+     * @return Order
      */
     public function loadByIncrementId($incrementId)
     {
@@ -473,7 +567,7 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      *
      * @param string $incrementId
      * @param string $storeId
-     * @return \Magento\Sales\Model\Order
+     * @return Order
      */
     public function loadByIncrementIdAndStoreId($incrementId, $storeId)
     {
@@ -627,7 +721,7 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      */
     public function canCreditmemo()
     {
-        if ($this->hasForcedCanCreditmemo()) {
+        if ($this->hasForcedCanCreditmemo() && $this->getData('forced_can_creditmemo') === true) {
             return $this->getForcedCanCreditmemo();
         }
 
@@ -641,57 +735,76 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
          * for this we have additional diapason for 0
          * TotalPaid - contains amount, that were not rounded.
          */
-        $totalRefunded = $this->priceCurrency->round($this->getTotalPaid()) - $this->getTotalRefunded();
-        if (abs($this->getGrandTotal()) < .0001) {
-            return $this->canCreditmemoForZeroTotal($totalRefunded);
+        $totalRefundable = $this->priceCurrency->round($this->getTotalPaid()) - $this->getTotalRefunded();
+        if (abs((float) $this->getGrandTotal()) < .0001) {
+            return $this->canCreditmemoForZeroTotal($totalRefundable);
         }
 
-        return $this->canCreditmemoForZeroTotalRefunded($totalRefunded);
+        return $this->canCreditmemoForZeroTotalRefunded($totalRefundable);
     }
 
     /**
      * Retrieve credit memo for zero total refunded availability.
      *
-     * @param float $totalRefunded
+     * @param float $totalRefundable
      * @return bool
      */
-    private function canCreditmemoForZeroTotalRefunded($totalRefunded)
+    private function canCreditmemoForZeroTotalRefunded($totalRefundable)
     {
-        $isRefundZero = abs($totalRefunded) < .0001;
+        $isRefundZero = abs((float) $totalRefundable) < .0001;
         // Case when Adjustment Fee (adjustment_negative) has been used for first creditmemo
-        $hasAdjustmentFee = abs($totalRefunded - $this->getAdjustmentNegative()) < .0001;
-        $hasActinFlag = $this->getActionFlag(self::ACTION_FLAG_EDIT) === false;
-        if ($isRefundZero || $hasAdjustmentFee || $hasActinFlag) {
+        $hasAdjustmentFee = abs($totalRefundable - $this->getAdjustmentNegative()) < .0001;
+        $hasActionFlag = $this->getActionFlag(self::ACTION_FLAG_EDIT) === false;
+        if ($isRefundZero || $hasAdjustmentFee || $hasActionFlag) {
             return false;
         }
 
         return true;
     }
-    
+
     /**
      * Retrieve credit memo for zero total availability.
      *
-     * @param float $totalRefunded
+     * @param float $totalRefundable
      * @return bool
      */
-    public function canCreditmemoForZeroTotal($totalRefunded)
+    private function canCreditmemoForZeroTotal($totalRefundable)
     {
+        if ($this->areThereRefundableItems()) {
+            return true;
+        }
+
         $totalPaid = $this->getTotalPaid();
         //check if total paid is less than grandtotal
         $checkAmtTotalPaid = $totalPaid <= $this->getGrandTotal();
         //case when amount is due for invoice
-        $dueAmountCondition = $this->canInvoice() && ($checkAmtTotalPaid);
+        $hasDueAmount = $this->canInvoice() && ($checkAmtTotalPaid);
         //case when paid amount is refunded and order has creditmemo created
-
-        $creditmemos = ($this->getCreditmemosCollection() === false) ?
-             true : (count($this->getCreditmemosCollection()) > 0);
+        $creditmemos = $this->getCreditmemosCollection() === false ||
+            $this->_memoCollectionFactory->create()->setOrderFilter($this)->getTotalCount() > 0;
         $paidAmtIsRefunded = $this->getTotalRefunded() == $totalPaid && $creditmemos;
-        if (($dueAmountCondition || $paidAmtIsRefunded) ||
-            (!$checkAmtTotalPaid &&
-            abs($totalRefunded - $this->getAdjustmentNegative()) < .0001)) {
+        if ($hasDueAmount ||
+            $paidAmtIsRefunded ||
+            (!$checkAmtTotalPaid && abs($totalRefundable - $this->getAdjustmentNegative()) < .0001)) {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Check if there are order items available for refund.
+     *
+     * @return bool
+     */
+    private function areThereRefundableItems(): bool
+    {
+        foreach ($this->getAllItems() as $orderItem) {
+            if ($this->creditmemoValidator->canRefundItem($orderItem)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -748,7 +861,6 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      * Retrieve order shipment availability
      *
      * @return bool
-     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function canShip()
     {
@@ -764,11 +876,25 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
             return false;
         }
 
+        return $this->checkItemShipping();
+    }
+
+    /**
+     * Check if at least one of the order items can be shipped
+     *
+     * @return bool
+     */
+    private function checkItemShipping(): bool
+    {
         foreach ($this->getAllItems() as $item) {
-            if ($item->getQtyToShip() > 0 && !$item->getIsVirtual() && !$item->getLockedDoShip()) {
+            $qtyToShip = !$item->getParentItem() || $item->getParentItem()->getProductType() !== Type::TYPE_BUNDLE ?
+                $item->getQtyToShip() : $item->getSimpleQtyToShip();
+
+            if ($qtyToShip > 0 && !$item->getIsVirtual() && !$item->getLockedDoShip()) {
                 return true;
             }
         }
+
         return false;
     }
 
@@ -814,7 +940,7 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      */
     public function canReorder()
     {
-        return $this->_canReorder(false);
+        return $this->_canReorder();
     }
 
     /**
@@ -953,7 +1079,7 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      * @param \Magento\Sales\Api\Data\OrderAddressInterface $address
      * @return $this
      */
-    public function setBillingAddress(\Magento\Sales\Api\Data\OrderAddressInterface $address = null)
+    public function setBillingAddress(?\Magento\Sales\Api\Data\OrderAddressInterface $address = null)
     {
         $old = $this->getBillingAddress();
         if (!empty($old) && !empty($address)) {
@@ -973,7 +1099,7 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      * @param \Magento\Sales\Api\Data\OrderAddressInterface $address
      * @return $this
      */
-    public function setShippingAddress(\Magento\Sales\Api\Data\OrderAddressInterface $address = null)
+    public function setShippingAddress(?\Magento\Sales\Api\Data\OrderAddressInterface $address = null)
     {
         $old = $this->getShippingAddress();
         if (!empty($old) && !empty($address)) {
@@ -1029,13 +1155,29 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
     }
 
     /**
+     * Retrieve frontend label of order status
+     *
+     * @return string
+     * @since 102.0.1
+     */
+    public function getFrontendStatusLabel()
+    {
+        return $this->statusLabel->getStatusFrontendLabel(
+            $this->getStatus(),
+            Area::AREA_FRONTEND,
+            $this->getStoreId()
+        );
+    }
+
+    /**
      * Retrieve label of order status
      *
      * @return string
+     * @throws LocalizedException
      */
     public function getStatusLabel()
     {
-        return $this->getConfig()->getStatusLabel($this->getStatus());
+        return $this->statusLabel->getStatusLabel($this->getStatus());
     }
 
     /**
@@ -1060,14 +1202,14 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      * @param string $comment
      * @param bool|string $status
      * @return OrderStatusHistoryInterface
-     * @deprecated
+     * @deprecated 101.0.5
      * @see addCommentToStatusHistory
      */
     public function addStatusHistoryComment($comment, $status = false)
     {
         return $this->addCommentToStatusHistory($comment, $status, false);
     }
-    
+
     /**
      * Add a comment to order status history.
      *
@@ -1077,6 +1219,7 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      * @param bool|string $status
      * @param bool $isVisibleOnFront
      * @return OrderStatusHistoryInterface
+     * @since 101.0.5
      */
     public function addCommentToStatusHistory($comment, $status = false, $isVisibleOnFront = false)
     {
@@ -1139,12 +1282,12 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      * Hold order
      *
      * @return $this
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws LocalizedException
      */
     public function hold()
     {
         if (!$this->canHold()) {
-            throw new \Magento\Framework\Exception\LocalizedException(__('A hold action is not available.'));
+            throw new LocalizedException(__('A hold action is not available.'));
         }
         $this->setHoldBeforeState($this->getState());
         $this->setHoldBeforeStatus($this->getStatus());
@@ -1157,12 +1300,12 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      * Attempt to unhold the order
      *
      * @return $this
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws LocalizedException
      */
     public function unhold()
     {
         if (!$this->canUnhold()) {
-            throw new \Magento\Framework\Exception\LocalizedException(__('You cannot remove the hold.'));
+            throw new LocalizedException(__('You cannot remove the hold.'));
         }
 
         $this->setState($this->getHoldBeforeState())
@@ -1206,7 +1349,7 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      * @param string $comment
      * @param bool $graceful
      * @return $this
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws LocalizedException
      * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function registerCancellation($comment = '', $graceful = true)
@@ -1233,8 +1376,12 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
             $this->setShippingCanceled($this->getShippingAmount() - $this->getShippingInvoiced());
             $this->setBaseShippingCanceled($this->getBaseShippingAmount() - $this->getBaseShippingInvoiced());
 
-            $this->setDiscountCanceled(abs($this->getDiscountAmount()) - $this->getDiscountInvoiced());
-            $this->setBaseDiscountCanceled(abs($this->getBaseDiscountAmount()) - $this->getBaseDiscountInvoiced());
+            $this->setDiscountCanceled(
+                abs((float) $this->getDiscountAmount()) - abs((float) $this->getDiscountInvoiced())
+            );
+            $this->setBaseDiscountCanceled(
+                abs((float) $this->getBaseDiscountAmount()) - abs((float) $this->getBaseDiscountInvoiced())
+            );
 
             $this->setTotalCanceled($this->getGrandTotal() - $this->getTotalPaid());
             $this->setBaseTotalCanceled($this->getBaseGrandTotal() - $this->getBaseTotalPaid());
@@ -1245,7 +1392,7 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
                 $this->addStatusHistoryComment($comment, false);
             }
         } elseif (!$graceful) {
-            throw new \Magento\Framework\Exception\LocalizedException(__('We cannot cancel this order.'));
+            throw new LocalizedException(__('We cannot cancel this order.'));
         }
         return $this;
     }
@@ -1267,12 +1414,12 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      * Retrieve shipping method
      *
      * @param bool $asObject return carrier code and shipping method data as object
-     * @return string|\Magento\Framework\DataObject
+     * @return string|null|\Magento\Framework\DataObject
      */
     public function getShippingMethod($asObject = false)
     {
-        $shippingMethod = parent::getShippingMethod();
-        if (!$asObject) {
+        $shippingMethod = $this->getData('shipping_method');
+        if (!$asObject || !$shippingMethod) {
             return $shippingMethod;
         } else {
             list($carrierCode, $method) = explode('_', $shippingMethod, 2);
@@ -1292,6 +1439,18 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
         $collection = $this->_addressCollectionFactory->create()->setOrderFilter($this);
         if ($this->getId()) {
             foreach ($collection as $address) {
+                if (isset($this->regionItems[$address->getCountryId()][$address->getRegion()])) {
+                    if ($this->regionItems[$address->getCountryId()][$address->getRegion()]) {
+                        $address->setRegion($this->regionItems[$address->getCountryId()][$address->getRegion()]);
+                    }
+                } else {
+                    $region = $this->regionFactory->create();
+                    $this->regionResource->loadByName($region, $address->getRegion(), $address->getCountryId());
+                    $this->regionItems[$address->getCountryId()][$address->getRegion()] = $region->getName();
+                    if ($region->getName()) {
+                        $address->setRegion($region->getName());
+                    }
+                }
                 $address->setOrder($this);
             }
         }
@@ -1459,7 +1618,7 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      * Get item by quote item id
      *
      * @param mixed $quoteItemId
-     * @return  \Magento\Framework\DataObject|null
+     * @return \Magento\Framework\DataObject|null
      */
     public function getItemByQuoteItemId($quoteItemId)
     {
@@ -1539,7 +1698,7 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
     /**
      * @inheritdoc
      */
-    public function setPayment(\Magento\Sales\Api\Data\OrderPaymentInterface $payment = null)
+    public function setPayment(?\Magento\Sales\Api\Data\OrderPaymentInterface $payment = null)
     {
         $this->setData(OrderInterface::PAYMENT, $payment);
         if ($payment !== null) {
@@ -1632,7 +1791,17 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
     public function addStatusHistory(\Magento\Sales\Model\Order\Status\History $history)
     {
         $history->setOrder($this);
-        $this->setStatus($history->getStatus());
+        if (!$history->getStatus()) {
+            $previousStatus = $this->getStatusHistoryCollection()->getFirstItem()->getData('status');
+            if (!$previousStatus) {
+                $defaultStatus = $this->getConfig()->getStateDefaultStatus($this->getState());
+                $history->setStatus($defaultStatus);
+            } else {
+                $history->setStatus($previousStatus);
+            }
+        } else {
+            $this->setStatus($history->getStatus());
+        }
         if (!$history->getId()) {
             $this->setStatusHistories(array_merge($this->getStatusHistories(), [$history]));
             $this->setDataChanges(true);
@@ -1832,7 +2001,7 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
     {
         if (empty($this->_shipments)) {
             if ($this->getId()) {
-                $this->_shipments = $this->_shipmentCollectionFactory->create()->setOrderFilter($this)->load();
+                $this->_shipments = $this->_shipmentCollectionFactory->create()->setOrderFilter($this);
             } else {
                 return false;
             }
@@ -1849,7 +2018,7 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
     {
         if (empty($this->_creditmemos)) {
             if ($this->getId()) {
-                $this->_creditmemos = $this->_memoCollectionFactory->create()->setOrderFilter($this)->load();
+                $this->_creditmemos = $this->_memoCollectionFactory->create()->setOrderFilter($this);
             } else {
                 return false;
             }
@@ -1920,14 +2089,30 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      * Get customer name
      *
      * @return string
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function getCustomerName()
     {
-        if ($this->getCustomerFirstname()) {
-            $customerName = $this->getCustomerFirstname() . ' ' . $this->getCustomerLastname();
-        } else {
-            $customerName = (string)__('Guest');
+        if (null === $this->getCustomerFirstname()) {
+            return (string)__('Guest');
         }
+
+        $customerName = '';
+        $prefix = $this->getCustomerPrefix();
+        if ($prefix !== null && $this->isVisibleCustomerPrefix() && strlen($prefix)) {
+            $customerName .= $prefix . ' ';
+        }
+        $customerName .= $this->getCustomerFirstname();
+        $middlename = $this->getCustomerMiddlename();
+        if ($middlename !== null && $this->isVisibleCustomerMiddlename() && strlen($middlename)) {
+            $customerName .= ' ' . $middlename;
+        }
+        $customerName .= ' ' . $this->getCustomerLastname();
+        $suffix = $this->getCustomerSuffix();
+        if ($suffix !== null && $this->isVisibleCustomerSuffix() && strlen($suffix)) {
+            $customerName .= ' ' . $suffix;
+        }
+
         return $customerName;
     }
 
@@ -1946,13 +2131,14 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
     /**
      * Get formatted order created date in store timezone
      *
-     * @param string $format date format type (short|medium|long|full)
+     * @param int $format date format type (\IntlDateFormatter::SHORT|\IntlDateFormatter::MEDIUM
+     * |\IntlDateFormatter::LONG|\IntlDateFormatter::FULL)
      * @return string
      */
     public function getCreatedAtFormatted($format)
     {
         return $this->timezone->formatDateTime(
-            new \DateTime($this->getCreatedAt()),
+            new \DateTime($this->getCreatedAt() ?? 'now'),
             $format,
             $format,
             $this->localeResolver->getDefaultLocale(),
@@ -1982,7 +2168,7 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
     {
         $storeId = $this->getStoreId();
         if ($storeId === null) {
-            return $this->getStoreName(1);
+            return $this->getStoreName();
         }
         return $this->getStore()->getGroup()->getName();
     }
@@ -2063,9 +2249,12 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
     public function getItems()
     {
         if ($this->getData(OrderInterface::ITEMS) == null) {
+            $this->searchCriteriaBuilder->addFilter(OrderItemInterface::ORDER_ID, $this->getId());
+
+            $searchCriteria = $this->searchCriteriaBuilder->create();
             $this->setData(
                 OrderInterface::ITEMS,
-                $this->getItemsCollection()->getItems()
+                $this->itemRepository->getList($searchCriteria)->getItems()
             );
         }
         return $this->getData(OrderInterface::ITEMS);
@@ -2906,7 +3095,7 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
     }
 
     /**
-     * Return hold_before_state
+     * Returns hold_before_state
      *
      * @return string|null
      */
@@ -3428,7 +3617,7 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
     /**
      * @inheritdoc
      */
-    public function setStatusHistories(array $statusHistories = null)
+    public function setStatusHistories(?array $statusHistories = null)
     {
         return $this->setData(OrderInterface::STATUS_HISTORIES, $statusHistories);
     }
@@ -4484,6 +4673,49 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
     public function setShippingMethod($shippingMethod)
     {
         return $this->setData('shipping_method', $shippingMethod);
+    }
+
+    /**
+     * Is visible customer middlename
+     *
+     * @return bool
+     */
+    private function isVisibleCustomerMiddlename(): bool
+    {
+        return $this->scopeConfig->isSetFlag(
+            'customer/address/middlename_show',
+            ScopeInterface::SCOPE_STORE
+        );
+    }
+
+    /**
+     * Is visible customer prefix
+     *
+     * @return bool
+     */
+    private function isVisibleCustomerPrefix(): bool
+    {
+        $prefixShowValue = $this->scopeConfig->getValue(
+            'customer/address/prefix_show',
+            ScopeInterface::SCOPE_STORE
+        );
+
+        return $prefixShowValue !== Nooptreq::VALUE_NO;
+    }
+
+    /**
+     * Is visible customer suffix
+     *
+     * @return bool
+     */
+    private function isVisibleCustomerSuffix(): bool
+    {
+        $prefixShowValue = $this->scopeConfig->getValue(
+            'customer/address/suffix_show',
+            ScopeInterface::SCOPE_STORE
+        );
+
+        return $prefixShowValue !== Nooptreq::VALUE_NO;
     }
 
     //@codeCoverageIgnoreEnd

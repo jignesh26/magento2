@@ -1,41 +1,41 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Catalog\Test\Unit\Ui\Component\Listing\Columns;
 
 use Magento\Catalog\Ui\Component\Listing\Columns\AttributeSetText;
 use Magento\Eav\Api\AttributeSetRepositoryInterface;
 use Magento\Eav\Api\Data\AttributeSetInterface;
+use PHPUnit\Framework\MockObject\MockObject;
 
-/**
- * Class AttributeSetTextTest
- */
-class AttributeSetTextTest extends AbstractColumnTest
+class AttributeSetTextTest extends AbstractColumnTestCase
 {
-    const ATTRIBUTE_SET_ID = 4;
-    const ATTRIBUTE_SET_NAME = 'Default';
+    private const ATTRIBUTE_SET_ID = 4;
+    private const ATTRIBUTE_SET_NAME = 'Default';
 
     /**
-     * @var AttributeSetRepositoryInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var AttributeSetRepositoryInterface|MockObject
      */
     protected $attributeSetRepositoryMock;
 
     /**
-     * @var AttributeSetInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var AttributeSetInterface|MockObject
      */
     protected $attributeSetMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
 
         $this->attributeSetRepositoryMock = $this->getMockBuilder(AttributeSetRepositoryInterface::class)
-            ->setMethods(['get'])
+            ->onlyMethods(['get'])
             ->getMockForAbstractClass();
         $this->attributeSetMock = $this->getMockBuilder(AttributeSetInterface::class)
-            ->setMethods(['getAttributeSetName'])
+            ->onlyMethods(['getAttributeSetName'])
             ->getMockForAbstractClass();
     }
 

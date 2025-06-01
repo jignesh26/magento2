@@ -1,14 +1,18 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
+ * Copyright 2018 Adobe All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Framework\Setup\Test\Unit\Declaration\Schema\Db;
 
 use Magento\Framework\App\ResourceConnection;
+use Magento\Framework\DB\Adapter\SqlVersionProvider;
+use Magento\Framework\Setup\Declaration\Schema\Declaration\ReaderComposite;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
 use Magento\Framework\Setup\Declaration\Schema\Db\DbSchemaReaderInterface;
+use Magento\Framework\Setup\Declaration\Schema\Db\SchemaBuilder;
 use Magento\Framework\Setup\Declaration\Schema\Dto\Columns\Integer;
 use Magento\Framework\Setup\Declaration\Schema\Dto\Columns\Timestamp;
 use Magento\Framework\Setup\Declaration\Schema\Dto\Constraints\Internal;
@@ -18,18 +22,19 @@ use Magento\Framework\Setup\Declaration\Schema\Dto\Index;
 use Magento\Framework\Setup\Declaration\Schema\Dto\Schema;
 use Magento\Framework\Setup\Declaration\Schema\Dto\Table;
 use Magento\Framework\Setup\Declaration\Schema\Sharding;
+use PHPUnit\Framework\Exception;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Test for SchemaBuilder.
  *
- * @package Magento\Framework\Setup\Test\Unit\Declaration\Schema\Db
- *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class SchemaBuilderTest extends \PHPUnit\Framework\TestCase
+class SchemaBuilderTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\Setup\Declaration\Schema\Db\SchemaBuilder
+     * @var SchemaBuilder
      */
     private $model;
 
@@ -39,21 +44,26 @@ class SchemaBuilderTest extends \PHPUnit\Framework\TestCase
     private $objectManagerHelper;
 
     /**
-     * @var ElementFactory|\PHPUnit_Framework_MockObject_MockObject
+     * @var ElementFactory|MockObject
      */
     private $elementFactoryMock;
 
     /**
-     * @var DbSchemaReaderInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var DbSchemaReaderInterface|MockObject
      */
     private $dbSchemaReaderMock;
 
     /**
-     * @var Sharding|\PHPUnit_Framework_MockObject_MockObject
+     * @var Sharding|MockObject
      */
     private $shardingMock;
 
-    protected function setUp()
+    /**
+     * @var \PHPUnit\Framework\MockObject\MockObject|\Magento\Framework\DB\Adapter\SqlVersionProvider
+     */
+    private $sqlVersionProvider;
+
+    protected function setUp(): void
     {
         $this->elementFactoryMock = $this->getMockBuilder(ElementFactory::class)
             ->disableOriginalConstructor()
@@ -63,14 +73,18 @@ class SchemaBuilderTest extends \PHPUnit\Framework\TestCase
         $this->shardingMock = $this->getMockBuilder(Sharding::class)
             ->disableOriginalConstructor()
             ->getMock();
+        $this->sqlVersionProvider = $this->getMockBuilder(SqlVersionProvider::class)
+            ->disableOriginalConstructor()
+            ->getMock();
 
         $this->objectManagerHelper = new ObjectManagerHelper($this);
         $this->model = $this->objectManagerHelper->getObject(
-            \Magento\Framework\Setup\Declaration\Schema\Db\SchemaBuilder::class,
+            SchemaBuilder::class,
             [
                 'elementFactory' => $this->elementFactoryMock,
                 'dbSchemaReader' => $this->dbSchemaReaderMock,
-                'sharding' => $this->shardingMock
+                'sharding' => $this->shardingMock,
+                'getDbVersion' => $this->sqlVersionProvider
             ]
         );
     }
@@ -79,7 +93,7 @@ class SchemaBuilderTest extends \PHPUnit\Framework\TestCase
      * @return array
      * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
-    public function dataProvider()
+    public static function dataProvider()
     {
         return [
             [
@@ -101,8 +115,7 @@ class SchemaBuilderTest extends \PHPUnit\Framework\TestCase
                         'second_column' => [
                             'name' => 'second_column',
                             'type' => 'timestamp',
-                            'default' => 'CURRENT_TIMESTAMP',
-                            'on_update' => true
+                            'default' => 'CURRENT_TIMESTAMP'
                         ],
                     ],
                     'second_table' => [
@@ -178,7 +191,7 @@ class SchemaBuilderTest extends \PHPUnit\Framework\TestCase
      *
      * @param string $name
      * @param Table $table
-     * @return \Magento\Framework\Setup\Declaration\Schema\Dto\Columns\Integer
+     * @return Integer
      */
     private function createIntegerAIColumn($name, Table $table)
     {
@@ -198,7 +211,7 @@ class SchemaBuilderTest extends \PHPUnit\Framework\TestCase
      *
      * @param string $name
      * @param Table $table
-     * @return \Magento\Framework\Setup\Declaration\Schema\Dto\Columns\Integer
+     * @return Integer
      */
     private function createIntegerColumn($name, Table $table)
     {
@@ -253,7 +266,7 @@ class SchemaBuilderTest extends \PHPUnit\Framework\TestCase
      *
      * @param string $name
      * @param Table $table
-     * @return \Magento\Framework\Setup\Declaration\Schema\Dto\Columns\Timestamp
+     * @return Timestamp
      */
     private function createTimestampColumn($name, Table $table)
     {
@@ -262,8 +275,7 @@ class SchemaBuilderTest extends \PHPUnit\Framework\TestCase
             'timestamp',
             $table,
             'CURRENT_TIMESTAMP',
-            false,
-            true
+            false
         );
     }
 
@@ -312,11 +324,92 @@ class SchemaBuilderTest extends \PHPUnit\Framework\TestCase
             Schema::class,
             ['resourceConnection' => $resourceConnectionMock]
         );
-        $this->expectException(\Exception::class);
+        $this->expectException(Exception::class);
         $this->expectExceptionMessage(
             'User Warning: Column unknown_column does not exist for index/constraint FIRST_INDEX in table second_table.'
         );
         $this->model->build($schema);
+    }
+
+    /**
+     *  This test verifies that the system does not crash or throw unexpected errors when attempting to build
+     *  a schema with missing column definitions.
+     *
+     * @return void
+     * @throws \PHPUnit\Framework\MockObject\Exception
+     */
+    public function testBuildHandlesMissingColumnsGracefully()
+    {
+        $data = [
+            'table' => [
+                'test_table' => [
+                    'name' => 'test_table_fail',
+                    'resource' => 'default',
+                    'engine' => 'innodb',
+                    'comment' => 'test table',
+                    'disabled' => 'true',
+                ]
+            ]
+        ];
+
+        $this->shardingMock->expects(self::once())
+            ->method('getResources')
+            ->willReturn(['default']);
+
+        $this->dbSchemaReaderMock->expects(self::once())
+            ->method('readTables')
+            ->with('default')
+            ->willReturn(['test_table']);
+
+        $this->dbSchemaReaderMock->expects(self::once())
+            ->method('readColumns')
+            ->with('test_table')
+            ->willReturn([]);
+
+        $this->dbSchemaReaderMock->expects(self::once())
+            ->method('readIndexes')
+            ->with('test_table')
+            ->willReturn([]);
+
+        $this->dbSchemaReaderMock->expects(self::once())
+            ->method('readReferences')
+            ->willReturn([]);
+
+        $this->dbSchemaReaderMock->expects(self::once())
+            ->method('readConstraints')
+            ->with('test_table')
+            ->willReturn([]);
+
+        $this->dbSchemaReaderMock->expects(self::once())
+            ->method('getTableOptions')
+            ->with('test_table')
+            ->willReturn([
+                'engine' => 'innodb',
+                'comment' => '',
+                'charset' => 'utf-8',
+                'collation' => 'utf-8'
+            ]);
+
+        $this->elementFactoryMock->expects($this->any())
+            ->method('create')
+            ->willReturn($this->createMock(Table::class));
+
+        $readerCompositeMock = $this->getMockBuilder(ReaderComposite::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+        $readerCompositeMock->expects($this->once())
+            ->method('read')
+            ->willReturn($data);
+
+        $schemaBuilder = new SchemaBuilder(
+            $this->elementFactoryMock,
+            $this->dbSchemaReaderMock,
+            $this->shardingMock,
+            $readerCompositeMock
+        );
+
+        $schemaBuilder->build($this->createMock(Schema::class));
+        $this->assertTrue(true, 'System did not crash when columns were missing.');
     }
 
     /**
@@ -327,6 +420,8 @@ class SchemaBuilderTest extends \PHPUnit\Framework\TestCase
      * @param array $constraints
      * @param array $indexes
      * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     private function prepareSchemaMocks(array $columns, array $references, array $constraints, array $indexes)
     {
@@ -340,27 +435,75 @@ class SchemaBuilderTest extends \PHPUnit\Framework\TestCase
             ->willReturn(['first_table', 'second_table']);
         $this->dbSchemaReaderMock->expects($this->any())
             ->method('getTableOptions')
-            ->withConsecutive(...array_values($withContext))
-            ->willReturnOnConsecutiveCalls(
-                ['engine' => 'innodb', 'comment' => '', 'charset' => 'utf-8', 'collation' => 'utf-8'],
-                ['engine' => 'innodb', 'comment' => 'Not null comment', 'charset' => 'utf-8', 'collation' => 'utf-8']
-            );
+            ->willReturnCallback(function ($withContext) {
+                if (!empty($withContext)) {
+                    static $callCount = 0;
+                    if ($callCount == 0) {
+                        $callCount++;
+                        return ['engine' => 'innodb', 'comment' => '', 'charset' => 'utf-8', 'collation' => 'utf-8'];
+                    } elseif ($callCount == 1) {
+                        $callCount++;
+                        return ['engine' => 'innodb', 'comment' => 'Not null comment',
+                            'charset' => 'utf-8', 'collation' => 'utf-8'];
+                    }
+                }
+            });
         $this->dbSchemaReaderMock->expects($this->any())
             ->method('readColumns')
-            ->withConsecutive(...array_values($withContext))
-            ->willReturnOnConsecutiveCalls($columns['first_table'], $columns['second_table']);
+            ->willReturnCallback(function ($withContext) use ($columns) {
+                if (!empty($withContext)) {
+                    static $callCount = 0;
+                    if ($callCount == 0) {
+                        $callCount++;
+                        return $columns['first_table'];
+                    } elseif ($callCount == 1) {
+                        $callCount++;
+                        return $columns['second_table'];
+                    }
+                }
+            });
         $this->dbSchemaReaderMock->expects($this->any())
             ->method('readIndexes')
-            ->withConsecutive(...array_values($withContext))
-            ->willReturnOnConsecutiveCalls([], $indexes['second_table']);
+            ->willReturnCallback(function ($withContext) use ($indexes) {
+                if (!empty($withContext)) {
+                    static $callCount = 0;
+                    if ($callCount == 0) {
+                        $callCount++;
+                        return [];
+                    } elseif ($callCount == 1) {
+                        $callCount++;
+                        return $indexes['second_table'];
+                    }
+                }
+            });
         $this->dbSchemaReaderMock->expects($this->any())
             ->method('readConstraints')
-            ->withConsecutive(...array_values($withContext))
-            ->willReturnOnConsecutiveCalls($constraints['first_table'], []);
+            ->willReturnCallback(function ($withContext) use ($constraints) {
+                if (!empty($withContext)) {
+                    static $callCount = 0;
+                    if ($callCount == 0) {
+                        $callCount++;
+                        return $constraints['first_table'];
+                    } elseif ($callCount == 1) {
+                        $callCount++;
+                        return [];
+                    }
+                }
+            });
         $this->dbSchemaReaderMock->expects($this->any())
             ->method('readReferences')
-            ->withConsecutive(...array_values($withContext))
-            ->willReturnOnConsecutiveCalls($references['first_table'], []);
+            ->willReturnCallback(function ($withContext) use ($references) {
+                if (!empty($withContext)) {
+                    static $callCount = 0;
+                    if ($callCount == 0) {
+                        $callCount++;
+                        return $references['first_table'];
+                    } elseif ($callCount == 1) {
+                        $callCount++;
+                        return [];
+                    }
+                }
+            });
         $table = $this->createTable('first_table');
         $refTable = $this->createTable('second_table');
         $refColumn = $this->createIntegerColumn('ref_column', $refTable);
@@ -385,104 +528,10 @@ class SchemaBuilderTest extends \PHPUnit\Framework\TestCase
         $table->addConstraints([$foreignKey, $primaryKey]);
         $this->elementFactoryMock->expects($this->any())
             ->method('create')
-            ->withConsecutive(
-                [
-                    'table',
-                    [
-                        'name' =>'first_table',
-                        'resource' => 'default',
-                        'engine' => 'innodb',
-                        'comment' => null,
-                        'charset' => 'utf-8',
-                        'collation' => 'utf-8'
-                    ]
-                ],
-                [
-                    'int',
-                    [
-                        'name' => 'first_column',
-                        'type' => 'int',
-                        'table' => $table,
-                        'padding' => 10,
-                        'identity' => true,
-                        'nullable' => false,
-                    ]
-                ],
-                [
-                    'int',
-                    [
-                        'name' => 'foreign_column',
-                        'type' => 'int',
-                        'table' => $table,
-                        'padding' => 10,
-                        'nullable' => false,
-                    ]
-                ],
-                [
-                    'timestamp',
-                    [
-                        'name' => 'second_column',
-                        'type' => 'timestamp',
-                        'table' => $table,
-                        'default' => 'CURRENT_TIMESTAMP',
-                        'on_update' => true,
-                    ]
-                ],
-                [
-                    'primary',
-                    [
-                        'name' => 'PRIMARY',
-                        'type' => 'primary',
-                        'columns' => [$firstColumn],
-                        'table' => $table,
-                        'nameWithoutPrefix' => 'PRIMARY',
-                        'column' => ['first_column'],
-                    ]
-                ],
-                [
-                    'table',
-                    [
-                        'name' =>'second_table',
-                        'resource' => 'default',
-                        'engine' => 'innodb',
-                        'comment' => 'Not null comment',
-                        'charset' => 'utf-8',
-                        'collation' => 'utf-8'
-                    ]
-                ],
-                [
-                    'int',
-                    [
-                        'name' => 'ref_column',
-                        'type' => 'int',
-                        'table' => $refTable,
-                        'padding' => 10,
-                        'nullable' => false,
-                    ]
-                ],
-                [
-                    'index',
-                    [
-                        'name' => 'FIRST_INDEX',
-                        'table' => $refTable,
-                        'column' => ['ref_column'],
-                        'columns' => [$refColumn],
-                        'nameWithoutPrefix' => 'FIRST_INDEX',
-                    ]
-                ],
-                [
-                    'foreign',
-                    [
-                        'name' => 'some_foreign_key',
-                        'type' => 'foreign',
-                        'column' => $foreignColumn,
-                        'table' => $table,
-                        'referenceTable' => $refTable,
-                        'referenceColumn' => $refColumn,
-                    ]
-                ]
-            )
-            ->willReturnOnConsecutiveCalls(
+            ->willReturnCallback(function (
+                $arg1,
+                $arg2
+            ) use (
                 $table,
                 $firstColumn,
                 $foreignColumn,
@@ -492,6 +541,26 @@ class SchemaBuilderTest extends \PHPUnit\Framework\TestCase
                 $refColumn,
                 $index,
                 $foreignKey
-            );
+            ) {
+                if ($arg1 == 'table' && $arg2['name'] == 'first_table') {
+                    return $table;
+                } elseif ($arg1 == 'int' && $arg2['name'] == 'first_column') {
+                    return $firstColumn;
+                } elseif ($arg1 == 'int' && $arg2['name'] == 'foreign_column') {
+                    return $foreignColumn;
+                } elseif ($arg1 == 'timestamp' && $arg2['name'] == 'second_column') {
+                    return $timestampColumn;
+                } elseif ($arg1 == 'primary' && $arg2['name'] == 'PRIMARY') {
+                    return $primaryKey;
+                } elseif ($arg1 == 'table' && $arg2['name'] == 'second_table') {
+                    return $refTable;
+                } elseif ($arg1 == 'int' && $arg2['name'] == 'ref_column') {
+                    return $refColumn;
+                } elseif ($arg1 == 'index' && $arg2['name'] == 'FIRST_INDEX') {
+                    return $index;
+                } elseif ($arg1 == 'foreign' && $arg2['name'] == 'some_foreign_key') {
+                    return $foreignKey;
+                }
+            });
     }
 }

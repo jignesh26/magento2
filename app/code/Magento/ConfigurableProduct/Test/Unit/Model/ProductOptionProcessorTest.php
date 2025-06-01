@@ -3,19 +3,26 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\ConfigurableProduct\Test\Unit\Model;
 
+use Magento\Catalog\Api\Data\ProductOptionExtensionInterface;
+use Magento\Catalog\Api\Data\ProductOptionInterface;
 use Magento\ConfigurableProduct\Api\Data\ConfigurableItemOptionValueInterface;
 use Magento\ConfigurableProduct\Model\ProductOptionProcessor;
+use Magento\ConfigurableProduct\Model\Quote\Item\ConfigurableItemOptionValue;
 use Magento\ConfigurableProduct\Model\Quote\Item\ConfigurableItemOptionValueFactory;
 use Magento\Framework\DataObject;
 use Magento\Framework\DataObject\Factory as DataObjectFactory;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class ProductOptionProcessorTest extends \PHPUnit\Framework\TestCase
+class ProductOptionProcessorTest extends TestCase
 {
     /**
      * @var ProductOptionProcessor
@@ -23,36 +30,35 @@ class ProductOptionProcessorTest extends \PHPUnit\Framework\TestCase
     protected $processor;
 
     /**
-     * @var DataObject | \PHPUnit_Framework_MockObject_MockObject
+     * @var DataObject|MockObject
      */
     protected $dataObject;
 
     /**
-     * @var DataObjectFactory | \PHPUnit_Framework_MockObject_MockObject
+     * @var DataObjectFactory|MockObject
      */
     protected $dataObjectFactory;
 
     /**
-     * @var ConfigurableItemOptionValueFactory | \PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigurableItemOptionValueFactory|MockObject
      */
     protected $itemOptionValueFactory;
 
     /**
-     * @var ConfigurableItemOptionValueInterface | \PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigurableItemOptionValueInterface|MockObject
      */
     protected $itemOptionValue;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->dataObject = $this->getMockBuilder(\Magento\Framework\DataObject::class)
-            ->setMethods([
-                'getSuperAttribute', 'addData'
-            ])
+        $this->dataObject = $this->getMockBuilder(DataObject::class)
+            ->onlyMethods(['addData'])
+            ->addMethods(['getSuperAttribute'])
             ->disableOriginalConstructor()
             ->getMock();
 
         $this->dataObjectFactory = $this->getMockBuilder(\Magento\Framework\DataObject\Factory::class)
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->disableOriginalConstructor()
             ->getMock();
         $this->dataObjectFactory->expects($this->any())
@@ -60,14 +66,14 @@ class ProductOptionProcessorTest extends \PHPUnit\Framework\TestCase
             ->willReturn($this->dataObject);
 
         $this->itemOptionValue = $this->getMockBuilder(
-            \Magento\ConfigurableProduct\Api\Data\ConfigurableItemOptionValueInterface::class
+            ConfigurableItemOptionValueInterface::class
         )
             ->getMockForAbstractClass();
 
         $this->itemOptionValueFactory = $this->getMockBuilder(
-            \Magento\ConfigurableProduct\Model\Quote\Item\ConfigurableItemOptionValueFactory::class
+            ConfigurableItemOptionValueFactory::class
         )
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->disableOriginalConstructor()
             ->getMock();
         $this->itemOptionValueFactory->expects($this->any())
@@ -89,13 +95,16 @@ class ProductOptionProcessorTest extends \PHPUnit\Framework\TestCase
         $options,
         $requestData
     ) {
-        $productOptionMock = $this->getMockBuilder(\Magento\Catalog\Api\Data\ProductOptionInterface::class)
+        if (!empty($options[0]) && is_callable($options[0])) {
+            $options[0] = $options[0]($this);
+        }
+        $productOptionMock = $this->getMockBuilder(ProductOptionInterface::class)
             ->getMockForAbstractClass();
 
         $productOptionExtensionMock = $this->getMockBuilder(
-            \Magento\Catalog\Api\Data\ProductOptionExtensionInterface::class
+            ProductOptionExtensionInterface::class
         )
-            ->setMethods([
+            ->addMethods([
                 'getConfigurableItemOptions',
             ])
             ->getMockForAbstractClass();
@@ -116,19 +125,26 @@ class ProductOptionProcessorTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($this->dataObject, $this->processor->convertToBuyRequest($productOptionMock));
     }
 
-    /**
-     * @return array
-     */
-    public function dataProviderConvertToBuyRequest()
+    protected function getMockForOptionClass()
     {
         $objectManager = new ObjectManager($this);
 
-        /** @var \Magento\ConfigurableProduct\Model\Quote\Item\ConfigurableItemOptionValue $option */
+        /** @var ConfigurableItemOptionValue $option */
         $option = $objectManager->getObject(
-            \Magento\ConfigurableProduct\Model\Quote\Item\ConfigurableItemOptionValue::class
+            ConfigurableItemOptionValue::class
         );
         $option->setOptionId(1);
         $option->setOptionValue('test');
+
+        return $option;
+    }
+
+    /**
+     * @return array
+     */
+    public static function dataProviderConvertToBuyRequest()
+    {
+        $option = static fn (self $testCase) => $testCase->getMockForOptionClass();
 
         return [
             [
@@ -171,7 +187,7 @@ class ProductOptionProcessorTest extends \PHPUnit\Framework\TestCase
 
         if (!empty($expected)) {
             $this->assertArrayHasKey($expected, $result);
-            $this->assertTrue(is_array($result[$expected]));
+            $this->assertIsArray($result[$expected]);
         } else {
             $this->assertEmpty($result);
         }
@@ -180,7 +196,7 @@ class ProductOptionProcessorTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function dataProviderConvertToProductOption()
+    public static function dataProviderConvertToProductOption()
     {
         return [
             [

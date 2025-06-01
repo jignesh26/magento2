@@ -3,19 +3,21 @@
  *  Copyright © Magento, Inc. All rights reserved.
  *  See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Framework\TestFramework\Test\Unit\Autoloader;
 
 use Magento\Framework\TestFramework\Unit\Autoloader\FactoryGenerator;
+use PHPUnit\Framework\TestCase;
 
-class FactoryGeneratorTest extends \PHPUnit\Framework\TestCase
+class FactoryGeneratorTest extends TestCase
 {
     /**
      * @var FactoryGenerator
      */
     private $subject;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->subject = new FactoryGenerator();
     }
@@ -40,7 +42,7 @@ class FactoryGeneratorTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function generateNonFactoryDataProvider()
+    public static function generateNonFactoryDataProvider()
     {
         return [
             'non-factory class' => ['\My\SimpleClass'],

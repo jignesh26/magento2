@@ -1,60 +1,76 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\Catalog\Test\Unit\Model\Product\Price;
 
+use Magento\Catalog\Api\Data\CostInterface;
+use Magento\Catalog\Api\Data\CostInterfaceFactory;
+use Magento\Catalog\Api\Data\PriceUpdateResultInterface;
+use Magento\Catalog\Model\Product\Price\CostStorage;
+use Magento\Catalog\Model\Product\Price\PricePersistence;
+use Magento\Catalog\Model\Product\Price\PricePersistenceFactory;
+use Magento\Catalog\Model\Product\Price\Validation\InvalidSkuProcessor;
+use Magento\Catalog\Model\Product\Price\Validation\Result;
+use Magento\Catalog\Model\Product\Type;
+use Magento\Catalog\Model\ProductIdLocatorInterface;
+use Magento\Framework\Exception\NoSuchEntityException;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Store\Api\Data\StoreInterface;
+use Magento\Store\Api\StoreRepositoryInterface;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+
 /**
- * Class CostStorageTest.
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class CostStorageTest extends \PHPUnit\Framework\TestCase
+class CostStorageTest extends TestCase
 {
     /**
-     * @var \Magento\Catalog\Model\Product\Price\PricePersistenceFactory|\PHPUnit_Framework_MockObject_MockObject
+     * @var PricePersistenceFactory|MockObject
      */
     private $pricePersistenceFactory;
 
     /**
-     * @var \Magento\Catalog\Model\Product\Price\PricePersistence|\PHPUnit_Framework_MockObject_MockObject
+     * @var PricePersistence|MockObject
      */
     private $pricePersistence;
 
     /**
-     * @var \Magento\Catalog\Api\Data\CostInterfaceFactory|\PHPUnit_Framework_MockObject_MockObject
+     * @var CostInterfaceFactory|MockObject
      */
     private $costInterfaceFactory;
 
     /**
-     * @var \Magento\Catalog\Api\Data\CostInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var CostInterface|MockObject
      */
     private $costInterface;
 
     /**
-     * @var \Magento\Catalog\Model\ProductIdLocatorInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ProductIdLocatorInterface|MockObject
      */
     private $productIdLocator;
 
     /**
-     * @var \Magento\Store\Api\StoreRepositoryInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var StoreRepositoryInterface|MockObject
      */
     private $storeRepository;
 
     /**
-     * @var \Magento\Catalog\Model\Product\Price\Validation\InvalidSkuProcessor
-     *      |\PHPUnit_Framework_MockObject_MockObject
+     * @var InvalidSkuProcessor|MockObject
      */
     private $invalidSkuProcessor;
 
     /**
-     * @var \Magento\Catalog\Model\Product\Price\Validation\Result|\PHPUnit_Framework_MockObject_MockObject
+     * @var Result|MockObject
      */
     private $validationResult;
 
     /**
-     * @var \Magento\Catalog\Model\Product\Price\CostStorage
+     * @var CostStorage
      */
     private $model;
 
@@ -63,41 +79,41 @@ class CostStorageTest extends \PHPUnit\Framework\TestCase
      *
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->pricePersistenceFactory = $this->getMockBuilder(
-            \Magento\Catalog\Model\Product\Price\PricePersistenceFactory::class
+            PricePersistenceFactory::class
         )
             ->disableOriginalConstructor()
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->getMock();
-        $this->pricePersistence = $this->getMockBuilder(\Magento\Catalog\Model\Product\Price\PricePersistence::class)
+        $this->pricePersistence = $this->getMockBuilder(PricePersistence::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $this->costInterfaceFactory = $this->getMockBuilder(\Magento\Catalog\Api\Data\CostInterfaceFactory::class)
+        $this->costInterfaceFactory = $this->getMockBuilder(CostInterfaceFactory::class)
             ->disableOriginalConstructor()
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->getMock();
-        $this->costInterface = $this->getMockBuilder(\Magento\Catalog\Api\Data\CostInterface::class)
+        $this->costInterface = $this->getMockBuilder(CostInterface::class)
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
-        $this->productIdLocator = $this->getMockBuilder(\Magento\Catalog\Model\ProductIdLocatorInterface::class)
+        $this->productIdLocator = $this->getMockBuilder(ProductIdLocatorInterface::class)
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
-        $this->storeRepository = $this->getMockBuilder(\Magento\Store\Api\StoreRepositoryInterface::class)
+        $this->storeRepository = $this->getMockBuilder(StoreRepositoryInterface::class)
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
-        $this->validationResult = $this->getMockBuilder(\Magento\Catalog\Model\Product\Price\Validation\Result::class)
+        $this->validationResult = $this->getMockBuilder(Result::class)
             ->disableOriginalConstructor()
             ->getMock();
         $this->invalidSkuProcessor = $this
-            ->getMockBuilder(\Magento\Catalog\Model\Product\Price\Validation\InvalidSkuProcessor::class)
+            ->getMockBuilder(InvalidSkuProcessor::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        $objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $objectManager = new ObjectManager($this);
         $this->model = $objectManager->getObject(
-            \Magento\Catalog\Model\Product\Price\CostStorage::class,
+            CostStorage::class,
             [
                 'pricePersistenceFactory' => $this->pricePersistenceFactory,
                 'costInterfaceFactory' => $this->costInterfaceFactory,
@@ -153,18 +169,27 @@ class CostStorageTest extends \PHPUnit\Framework\TestCase
         $this->costInterface
             ->expects($this->atLeastOnce())
             ->method('setSku')
-            ->withConsecutive(['sku_1'], ['sku_2'])
-            ->willReturnSelf();
+            ->willReturnCallback(function ($arg) {
+                if ($arg == 'sku_1' || $arg == 'sku_2') {
+                    return $this->costInterface;
+                }
+            });
         $this->costInterface
             ->expects($this->atLeastOnce())
             ->method('setCost')
-            ->withConsecutive([15], [35])
-            ->willReturnSelf();
+            ->willReturnCallback(function ($arg) {
+                if ($arg == 15 || $arg == 35) {
+                    return $this->costInterface;
+                }
+            });
         $this->costInterface
             ->expects($this->atLeastOnce())
             ->method('setStoreId')
-            ->withConsecutive([1], [1])
-            ->willReturnSelf();
+            ->willReturnCallback(function ($arg) {
+                if ($arg == 1) {
+                    return $this->costInterface;
+                }
+            });
 
         $this->model->get($skus);
     }
@@ -176,15 +201,14 @@ class CostStorageTest extends \PHPUnit\Framework\TestCase
      */
     public function testUpdate()
     {
-        $store = $this->getMockBuilder(\Magento\Store\Api\Data\StoreInterface::class)
+        $store = $this->getMockBuilder(StoreInterface::class)
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
         $sku = 'sku_1';
         $idsBySku = [
-            'sku_1' =>
-                [
-                    1 => \Magento\Catalog\Model\Product\Type::TYPE_VIRTUAL
-                ]
+            'sku_1' => [
+                1 => Type::TYPE_VIRTUAL
+            ]
         ];
         $this->costInterface->expects($this->atLeastOnce())->method('getSku')->willReturn($sku);
         $this->invalidSkuProcessor
@@ -228,10 +252,11 @@ class CostStorageTest extends \PHPUnit\Framework\TestCase
      * Test update method with negative cost and without SKU.
      *
      * @return void
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function testUpdateWithNegativeCostAndWithoutSku()
     {
-        $exception = new \Magento\Framework\Exception\NoSuchEntityException();
+        $exception = new NoSuchEntityException();
         $this->costInterface->expects($this->atLeastOnce())->method('getSku')->willReturn(null);
         $this->costInterface->expects($this->atLeastOnce())->method('getCost')->willReturn(-15);
         $this->costInterface->expects($this->atLeastOnce())->method('getStoreId')->willReturn(10);
@@ -241,37 +266,26 @@ class CostStorageTest extends \PHPUnit\Framework\TestCase
             ->method('create')
             ->with(['attributeCode' => 'cost'])
             ->willReturn($this->pricePersistence);
-        $priceUpdateResult = $this->getMockBuilder(\Magento\Catalog\Api\Data\PriceUpdateResultInterface::class)
+        $priceUpdateResult = $this->getMockBuilder(PriceUpdateResultInterface::class)
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
         $this->validationResult->expects($this->atLeastOnce())
             ->method('addFailedItem')
-            ->withConsecutive(
-                [
-                    0,
-                    __(
-                        'Invalid attribute %fieldName = %fieldValue.',
-                        ['fieldName' => '%fieldName', 'fieldValue' => '%fieldValue']
-                    ),
-                    ['fieldName' => 'SKU', 'fieldValue' => null]
-                ],
-                [
-                    0,
-                    __(
-                        'Invalid attribute Cost = %cost. Row ID: SKU = %SKU, Store ID: %storeId.',
-                        ['cost' => -15, 'SKU' => null, 'storeId' => 10]
-                    ),
-                    ['cost' => -15, 'SKU' => null, 'storeId' => 10]
-                ],
-                [
-                    0,
-                    __(
-                        'Requested store is not found. Row ID: SKU = %SKU, Store ID: %storeId.',
-                        ['SKU' => null, 'storeId' => 10]
-                    ),
-                    ['SKU' => null, 'storeId' => 10]
-                ]
-            );
+            ->willReturnCallback(function ($arg1, $arg2, $arg3) {
+                if ($arg1 === 0 &&
+                    $arg2 === 'Invalid attribute %fieldName = %fieldValue.' &&
+                    $arg3 === ['fieldName' => 'SKU', 'fieldValue' => null]) {
+                    return null;
+                } elseif ($arg1 === 0 &&
+                    $arg2 === 'Invalid attribute Cost = %cost. Row ID: SKU = %SKU, Store ID: %storeId.' &&
+                    $arg3 === ['cost' => -15, 'SKU' => null, 'storeId' => 10]) {
+                    return null;
+                } elseif ($arg1 === 0 &&
+                    $arg2 === 'Requested store is not found. Row ID: SKU = %SKU, Store ID: %storeId.' &&
+                    $arg3 === ['SKU' => null, 'storeId' => 10]) {
+                    return null;
+                }
+            });
         $this->storeRepository->expects($this->once())->method('getById')->with(10)->willThrowException($exception);
         $this->invalidSkuProcessor
             ->expects($this->once())

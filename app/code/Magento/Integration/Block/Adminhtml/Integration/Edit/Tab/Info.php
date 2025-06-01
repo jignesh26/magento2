@@ -3,6 +3,9 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+
+declare(strict_types=1);
+
 namespace Magento\Integration\Block\Adminhtml\Integration\Edit\Tab;
 
 use Magento\Integration\Controller\Adminhtml\Integration;
@@ -19,23 +22,23 @@ class Info extends \Magento\Backend\Block\Widget\Form\Generic implements \Magent
     /**#@+
      * Form elements names.
      */
-    const HTML_ID_PREFIX = 'integration_properties_';
+    public const HTML_ID_PREFIX = 'integration_properties_';
 
-    const DATA_ID = 'integration_id';
+    public const DATA_ID = 'integration_id';
 
-    const DATA_NAME = 'name';
+    public const DATA_NAME = 'name';
 
-    const DATA_EMAIL = 'email';
+    public const DATA_EMAIL = 'email';
 
-    const DATA_ENDPOINT = 'endpoint';
+    public const DATA_ENDPOINT = 'endpoint';
 
-    const DATA_IDENTITY_LINK_URL = 'identity_link_url';
+    public const DATA_IDENTITY_LINK_URL = 'identity_link_url';
 
-    const DATA_SETUP_TYPE = 'setup_type';
+    public const DATA_SETUP_TYPE = 'setup_type';
 
-    const DATA_CONSUMER_ID = 'consumer_id';
+    public const DATA_CONSUMER_ID = 'consumer_id';
 
-    const DATA_CONSUMER_PASSWORD = 'current_password';
+    public const DATA_CONSUMER_PASSWORD = 'current_password';
 
     /**#@-*/
 
@@ -146,6 +149,7 @@ class Info extends \Magento\Backend\Block\Widget\Form\Generic implements \Magent
                 'label' => __('Callback URL'),
                 'name' => self::DATA_ENDPOINT,
                 'disabled' => $disabled,
+                'class' => 'validate-url',
                 // @codingStandardsIgnoreStart
                 'note' => __(
                     'Enter URL where Oauth credentials can be sent when using Oauth for token exchange. We strongly recommend using https://.'
@@ -160,6 +164,7 @@ class Info extends \Magento\Backend\Block\Widget\Form\Generic implements \Magent
                 'label' => __('Identity link URL'),
                 'name' => self::DATA_IDENTITY_LINK_URL,
                 'disabled' => $disabled,
+                'class' => 'validate-url',
                 'note' => __(
                     'URL to redirect user to link their 3rd party account with this Magento integration credentials.'
                 )
@@ -178,7 +183,7 @@ class Info extends \Magento\Backend\Block\Widget\Form\Generic implements \Magent
                 'label' => __('Your Password'),
                 'id' => self::DATA_CONSUMER_PASSWORD,
                 'title' => __('Your Password'),
-                'class' => 'input-text validate-current-password required-entry',
+                'class' => 'validate-current-password required-entry',
                 'required' => true
             ]
         );

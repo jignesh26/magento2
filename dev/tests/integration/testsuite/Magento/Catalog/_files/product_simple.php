@@ -60,6 +60,16 @@ $tierPrices[] = $tierPriceFactory->create(
     ]
 )->setExtensionAttributes($tierPriceExtensionAttributes1);
 
+$tierPrices[] = $tierPriceFactory->create(
+    [
+        'data' => [
+            'customer_group_id' => \Magento\Customer\Model\Group::NOT_LOGGED_IN_ID,
+            'qty' => 3.2,
+            'value' => 6,
+        ]
+    ]
+)->setExtensionAttributes($tierPriceExtensionAttributes1);
+
 $tierPriceExtensionAttributes2 = $tpExtensionAttributesFactory->create()
     ->setWebsiteId($adminWebsite->getId())
     ->setPercentageValue(50);
@@ -85,7 +95,7 @@ $product->setTypeId(\Magento\Catalog\Model\Product\Type::TYPE_SIMPLE)
     ->setPrice(10)
     ->setWeight(1)
     ->setShortDescription("Short description")
-    ->setTaxClassId(0)
+    ->setTaxClassId(2)
     ->setTierPrices($tierPrices)
     ->setDescription('Description with <b>html tag</b>')
     ->setExtensionAttributes($productExtensionAttributesWebsiteIds)

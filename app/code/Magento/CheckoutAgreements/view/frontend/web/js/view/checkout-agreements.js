@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 
 define([
@@ -23,6 +23,7 @@ define([
         agreements: agreementsConfig.agreements,
         modalTitle: ko.observable(null),
         modalContent: ko.observable(null),
+        contentHeight: ko.observable(null),
         modalWindow: null,
 
         /**
@@ -42,6 +43,7 @@ define([
         showContent: function (element) {
             this.modalTitle(element.checkboxText);
             this.modalContent(element.content);
+            this.contentHeight(element.contentHeight ? element.contentHeight : 'auto');
             agreementsModal.showModal();
         },
 

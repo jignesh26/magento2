@@ -3,10 +3,19 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Store\Test\Unit\Model\System;
 
-class StoreTest extends \PHPUnit\Framework\TestCase
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Store\Model\Group;
+use Magento\Store\Model\Store;
+use Magento\Store\Model\StoreManagerInterface;
+use Magento\Store\Model\Website;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+
+class StoreTest extends TestCase
 {
     /**
      * @var \Magento\Store\Model\System\Store
@@ -14,49 +23,46 @@ class StoreTest extends \PHPUnit\Framework\TestCase
     protected $model;
 
     /**
-     * @var \Magento\Store\Model\StoreManagerInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var StoreManagerInterface|MockObject
      */
     protected $storeManagerMock;
 
     /**
-     * @var \Magento\Store\Model\Website|\PHPUnit_Framework_MockObject_MockObject
+     * @var Website|MockObject
      */
     protected $websiteMock;
 
     /**
-     * @var \Magento\Store\Model\Group|\PHPUnit_Framework_MockObject_MockObject
+     * @var Group|MockObject
      */
     protected $groupMock;
 
     /**
-     * @var \Magento\Store\Model\Store|\PHPUnit_Framework_MockObject_MockObject
+     * @var \Magento\Store\Model\Store|MockObject
      */
     protected $storeMock;
 
     /**
      * @var int
      */
-    protected $groupId = 2;
+    protected static $groupId = 2;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
-        $this->websiteMock = $this->getMockBuilder(\Magento\Store\Model\Website::class)
+        $objectManager = new ObjectManager($this);
+        $this->websiteMock = $this->getMockBuilder(Website::class)
             ->disableOriginalConstructor()
-            ->setMethods([])
             ->getMock();
-        $this->groupMock = $this->getMockBuilder(\Magento\Store\Model\Group::class)
+        $this->groupMock = $this->getMockBuilder(Group::class)
             ->disableOriginalConstructor()
-            ->setMethods([])
             ->getMock();
 
-        $this->storeMock = $this->getMockBuilder(\Magento\Store\Model\Store::class)
+        $this->storeMock = $this->getMockBuilder(Store::class)
             ->disableOriginalConstructor()
-            ->setMethods([])
             ->getMock();
 
         $this->storeManagerMock = $this->getMockForAbstractClass(
-            \Magento\Store\Model\StoreManagerInterface::class,
+            StoreManagerInterface::class,
             [],
             '',
             false,
@@ -65,7 +71,7 @@ class StoreTest extends \PHPUnit\Framework\TestCase
             []
         );
         $this->groupMock->expects($this->any())->method('getStores')->willReturn([$this->storeMock]);
-        $this->groupMock->expects($this->atLeastOnce())->method('getId')->willReturn($this->groupId);
+        $this->groupMock->expects($this->atLeastOnce())->method('getId')->willReturn(self::$groupId);
         $this->websiteMock->expects($this->atLeastOnce())->method('getGroups')->willReturn([$this->groupMock]);
         $this->storeManagerMock->expects($this->atLeastOnce())->method('getWebsites')->willReturn([$this->websiteMock]);
         $this->storeManagerMock->expects($this->atLeastOnce())->method('getStores')->willReturn([$this->storeMock]);
@@ -107,13 +113,13 @@ class StoreTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getStoresStructureDataProvider()
+    public static function getStoresStructureDataProvider()
     {
         $websiteName = 'website';
         $groupName = 'group';
         $storeName = 'store';
         $storeId = 1;
-        $groupId = $this->groupId;
+        $groupId = self::$groupId;
         $websiteId = 3;
 
         return [
@@ -213,13 +219,13 @@ class StoreTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getStoreValuesForFormDataProvider()
+    public static function getStoreValuesForFormDataProvider()
     {
         $websiteName = 'website';
         $groupName = 'group';
         $storeName = 'store';
         $storeId = 1;
-        $groupId = $this->groupId;
+        $groupId = self::$groupId;
         $websiteId = 3;
         $nonEscapableNbspChar = html_entity_decode('&#160;', ENT_NOQUOTES, 'UTF-8');
 
@@ -262,14 +268,15 @@ class StoreTest extends \PHPUnit\Framework\TestCase
                 'storeGroupId' => $groupId,
                 'groupWebsiteId' => $websiteId,
                 'expectedResult' => [
-                    ['label' => '', 'value' => ''],
-                    ['label' => __('All Store Views'), 'value' => 0],
-                    ['label' => $websiteName, 'value' => []],
+                    ['label' => '', 'value' => '','__disableTmpl' => true],
+                    ['label' => __('All Store Views'), 'value' => 0,'__disableTmpl' => true],
+                    ['label' => $websiteName, 'value' => [],'__disableTmpl' => true],
                     [
                         'label' => str_repeat($nonEscapableNbspChar, 4) . $groupName,
                         'value' => [
                             ['label' => str_repeat($nonEscapableNbspChar, 4) . $storeName, 'value' => $storeId]
-                        ]
+                        ],
+                        '__disableTmpl' => true
                     ],
                 ]
             ],

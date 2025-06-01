@@ -3,17 +3,17 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Paypal\Test\Unit\Block\Adminhtml\System\Config\Fieldset;
 
 use Magento\Framework\Data\Form\Element\AbstractElement;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
 use Magento\Paypal\Block\Adminhtml\System\Config\Fieldset\Hint;
-use PHPUnit_Framework_MockObject_MockObject as MockObject;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-/**
- * Class HintTest
- */
-class HintTest extends \PHPUnit\Framework\TestCase
+class HintTest extends TestCase
 {
     /**
      * @var Hint
@@ -25,12 +25,13 @@ class HintTest extends \PHPUnit\Framework\TestCase
      */
     private $element;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $om = new ObjectManager($this);
 
         $this->element = $this->getMockBuilder(AbstractElement::class)
-            ->setMethods(['getComment', 'getHtmlId'])
+            ->addMethods(['getComment'])
+            ->onlyMethods(['getHtmlId'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
 

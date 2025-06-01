@@ -3,9 +3,18 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Directory\Test\Unit\Model\Config\Source;
 
-class AllRegionTest extends \PHPUnit\Framework\TestCase
+use Magento\Directory\Model\Config\Source\Allregion;
+use Magento\Directory\Model\Region;
+use Magento\Directory\Model\ResourceModel\Country\Collection;
+use Magento\Directory\Model\ResourceModel\Country\CollectionFactory;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\TestCase;
+
+class AllRegionTest extends TestCase
 {
     /**
      * @var \Magento\Directory\Model\Config\Source\AllRegion
@@ -13,7 +22,7 @@ class AllRegionTest extends \PHPUnit\Framework\TestCase
     protected $model;
 
     /**
-     * @var \Magento\Directory\Model\ResourceModel\Country\Collection
+     * @var Collection
      */
     protected $countryCollection;
 
@@ -22,42 +31,47 @@ class AllRegionTest extends \PHPUnit\Framework\TestCase
      */
     protected $regionCollection;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $objectManagerHelper = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $objectManagerHelper = new ObjectManager($this);
 
-        $countryCollectionFactory = $this->getMockBuilder(
-            \Magento\Directory\Model\ResourceModel\Country\CollectionFactory::class
-        )->setMethods(['create', '__wakeup', '__sleep'])->disableOriginalConstructor()->getMock();
+        $countryCollectionFactory = $this->getMockBuilder(CollectionFactory::class)
+            ->addMethods(['__wakeup', '__sleep'])
+            ->onlyMethods(['create'])
+            ->disableOriginalConstructor()
+            ->getMock();
 
         $this->countryCollection = $this->getMockBuilder(
-            \Magento\Directory\Model\ResourceModel\Country\Collection::class
-        )->setMethods(['load', 'toOptionArray', '__wakeup', '__sleep'])
+            Collection::class
+        )->onlyMethods(['load', 'toOptionArray', '__wakeup', '__sleep'])
             ->disableOriginalConstructor()
             ->getMock();
         $countryCollectionFactory->expects($this->once())
             ->method('create')
-            ->will($this->returnValue($this->countryCollection));
+            ->willReturn($this->countryCollection);
         $this->countryCollection->expects($this->once())
             ->method('load')
-            ->will($this->returnSelf());
+            ->willReturnSelf();
 
         $regionCollectionFactory = $this->getMockBuilder(
             \Magento\Directory\Model\ResourceModel\Region\CollectionFactory::class
-        )->disableOriginalConstructor()->setMethods(['create', '__wakeup', '__sleep'])->getMock();
+        )->disableOriginalConstructor()
+            ->addMethods(['__wakeup', '__sleep'])
+            ->onlyMethods(['create'])
+            ->getMock();
         $this->regionCollection = $this->getMockBuilder(\Magento\Directory\Model\ResourceModel\Region\Collection::class)
             ->disableOriginalConstructor()
-            ->setMethods(['load', 'getIterator', '__wakeup', '__sleep'])
+            ->onlyMethods(['load', 'getIterator', '__wakeup', '__sleep'])
             ->getMock();
         $regionCollectionFactory->expects($this->once())
             ->method('create')
-            ->will($this->returnValue($this->regionCollection));
+            ->willReturn($this->regionCollection);
         $this->regionCollection->expects($this->once())
             ->method('load')
-            ->will($this->returnValue($this->regionCollection));
+            ->willReturn($this->regionCollection);
 
         $this->model = $objectManagerHelper->getObject(
-            \Magento\Directory\Model\Config\Source\Allregion::class,
+            Allregion::class,
             [
                 'countryCollectionFactory' => $countryCollectionFactory,
                 'regionCollectionFactory' => $regionCollectionFactory
@@ -74,13 +88,25 @@ class AllRegionTest extends \PHPUnit\Framework\TestCase
      */
     public function testToOptionArray($isMultiselect, $countries, $regions, $expectedResult)
     {
+        $newRegions = [];
+        foreach ($regions as $region)
+        {
+            if(is_callable($region))
+            {
+                $newRegions[] = $region($this);
+            }
+            else
+            {
+                $newRegions[] = $region;
+            }
+        }
         $this->countryCollection->expects($this->once())
             ->method('toOptionArray')
             ->with(false)
-            ->will($this->returnValue(new \ArrayIterator($countries)));
+            ->willReturn(new \ArrayIterator($countries));
         $this->regionCollection->expects($this->once())
             ->method('getIterator')
-            ->will($this->returnValue(new \ArrayIterator($regions)));
+            ->willReturn(new \ArrayIterator($newRegions));
 
         $this->assertEquals($expectedResult, $this->model->toOptionArray($isMultiselect));
     }
@@ -90,16 +116,16 @@ class AllRegionTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function toOptionArrayDataProvider()
+    public static function toOptionArrayDataProvider()
     {
         return [
             [
                 false,
                 [
-                    $this->generateCountry('France', 'fr'),
+                    self::generateCountry('France', 'fr'),
                 ],
                 [
-                    $this->generateRegion('fr', 1, 'Paris')
+                    static fn (self $testCase) => $testCase->generateRegion('fr', 1, 'Paris')
                 ],
                 [
                     [
@@ -120,11 +146,11 @@ class AllRegionTest extends \PHPUnit\Framework\TestCase
             [
                 true,
                 [
-                    $this->generateCountry('France', 'fr'),
+                    self::generateCountry('France', 'fr'),
                 ],
                 [
-                    $this->generateRegion('fr', 1, 'Paris'),
-                    $this->generateRegion('fr', 2, 'Marseille')
+                    static fn (self $testCase) => $testCase->generateRegion('fr', 1, 'Paris'),
+                    static fn (self $testCase) => $testCase->generateRegion('fr', 2, 'Marseille')
                 ],
                 [
                     [
@@ -145,12 +171,12 @@ class AllRegionTest extends \PHPUnit\Framework\TestCase
             [
                 true,
                 [
-                    $this->generateCountry('France', 'fr'),
-                    $this->generateCountry('Germany', 'de'),
+                    self::generateCountry('France', 'fr'),
+                    self::generateCountry('Germany', 'de'),
                 ],
                 [
-                    $this->generateRegion('fr', 1, 'Paris'),
-                    $this->generateRegion('de', 2, 'Berlin')
+                    static fn (self $testCase) => $testCase->generateRegion('fr', 1, 'Paris'),
+                    static fn (self $testCase) => $testCase->generateRegion('de', 2, 'Berlin')
                 ],
                 [
                     [
@@ -183,7 +209,7 @@ class AllRegionTest extends \PHPUnit\Framework\TestCase
      * @param string $countryValue
      * @return array
      */
-    private function generateCountry($countryLabel, $countryValue)
+    private static function generateCountry($countryLabel, $countryValue)
     {
         return [
             'label' => $countryLabel,
@@ -197,23 +223,24 @@ class AllRegionTest extends \PHPUnit\Framework\TestCase
      * @param string $countryId
      * @param string $id
      * @param string $defaultName
-     * @return \Magento\Directory\Model\Region
+     * @return Region
      */
-    private function generateRegion($countryId, $id, $defaultName)
+    protected function generateRegion($countryId, $id, $defaultName)
     {
-        $region = $this->getMockBuilder(\Magento\Directory\Model\Region::class)
+        $region = $this->getMockBuilder(Region::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getCountryId', 'getId', 'getDefaultName', '__wakeup', '__sleep'])
+            ->addMethods(['getCountryId','getDefaultName'])
+            ->onlyMethods(['getId', '__wakeup', '__sleep'])
             ->getMock();
         $region->expects($this->once())
             ->method('getCountryId')
-            ->will($this->returnValue($countryId));
+            ->willReturn($countryId);
         $region->expects($this->once())
             ->method('getId')
-            ->will($this->returnValue($id));
+            ->willReturn($id);
         $region->expects($this->once())
             ->method('getDefaultName')
-            ->will($this->returnValue($defaultName));
+            ->willReturn($defaultName);
 
         return $region;
     }

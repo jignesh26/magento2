@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Model\Indexer\Product\Flat\Action;
 
@@ -52,7 +52,7 @@ class Row extends \Magento\Catalog\Model\Indexer\Product\Flat\AbstractAction
         FlatTableBuilder $flatTableBuilder,
         Indexer $flatItemWriter,
         Eraser $flatItemEraser,
-        MetadataPool $metadataPool = null
+        ?MetadataPool $metadataPool = null
     ) {
         parent::__construct(
             $resource,
@@ -85,10 +85,16 @@ class Row extends \Magento\Catalog\Model\Indexer\Product\Flat\AbstractAction
         $ids = [$id];
         $linkField = $this->metadataPool->getMetadata(ProductInterface::class)->getLinkField();
 
+        $storeIds = $this->getAssignedStoreIdsOfProduct($id);
+
         $stores = $this->_storeManager->getStores();
         foreach ($stores as $store) {
             $tableExists = $this->_isFlatTableExists($store->getId());
             if ($tableExists) {
+                if (!in_array($store->getId(), $storeIds)) {
+                    $this->flatItemEraser->deleteProductsFromStore($id, $store->getId());
+                    continue;
+                }
                 $this->flatItemEraser->removeDeletedProducts($ids, $store->getId());
                 $this->flatItemEraser->removeDisabledProducts($ids, $store->getId());
             }
@@ -128,5 +134,24 @@ class Row extends \Magento\Catalog\Model\Indexer\Product\Flat\AbstractAction
         }
 
         return $this;
+    }
+
+    /**
+     * Get list store id where the product is enable
+     *
+     * @param int $productId
+     * @return array
+     */
+    private function getAssignedStoreIdsOfProduct($productId)
+    {
+        $select = $this->_connection->select();
+        $select->from(['e' => $this->_productIndexerHelper->getTable('store')], ['e.store_id'])
+            ->where('c.product_id = ' . $productId)
+            ->joinLeft(
+                ['c' => $this->_productIndexerHelper->getTable('catalog_product_website')],
+                'e.website_id = c.website_id',
+                []
+            );
+        return $this->_connection->fetchCol($select);
     }
 }

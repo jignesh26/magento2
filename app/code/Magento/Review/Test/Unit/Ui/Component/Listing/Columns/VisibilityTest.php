@@ -3,23 +3,23 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Review\Test\Unit\Ui\Component\Listing\Columns;
 
+use Magento\Catalog\Test\Unit\Ui\Component\Listing\Columns\AbstractColumnTestCase;
 use Magento\Review\Ui\Component\Listing\Columns\Visibility;
-use Magento\Catalog\Test\Unit\Ui\Component\Listing\Columns\AbstractColumnTest;
 use Magento\Store\Model\System\Store;
+use PHPUnit\Framework\MockObject\MockObject;
 
-/**
- * Class VisibilityTest
- */
-class VisibilityTest extends AbstractColumnTest
+class VisibilityTest extends AbstractColumnTestCase
 {
     /**
-     * @var Store|\PHPUnit_Framework_MockObject_MockObject
+     * @var Store|MockObject
      */
     protected $storeMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->storeMock = $this->getMockBuilder(Store::class)

@@ -31,17 +31,17 @@ class HostedproTest extends \PHPUnit\Framework\TestCase
     private $model;
 
     /**
-     * @var \Magento\Paypal\Model\Api\Nvp|\PHPUnit_Framework_MockObject_MockObject
+     * @var \Magento\Paypal\Model\Api\Nvp|\PHPUnit\Framework\MockObject\MockObject
      */
     private $api;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = Bootstrap::getObjectManager();
 
         $this->api = $this->getMockBuilder(Nvp::class)
             ->disableOriginalConstructor()
-            ->setMethods(['call'])
+            ->onlyMethods(['call'])
             ->getMock();
 
         $proFactory = $this->getProFactory();
@@ -81,13 +81,13 @@ class HostedproTest extends \PHPUnit\Framework\TestCase
 
     /**
      * Get mock for config
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     protected function getConfig()
     {
         $config = $this->getMockBuilder(Config::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getValue'])
+            ->onlyMethods(['getValue'])
             ->getMock();
         $config->expects(static::any())
             ->method('getValue')
@@ -98,13 +98,14 @@ class HostedproTest extends \PHPUnit\Framework\TestCase
 
     /**
      * Create mock for Pro factory
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     protected function getProFactory()
     {
         $pro = $this->getMockBuilder(Pro::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getApi', 'setMethod', 'getConfig', '__wakeup'])
+            ->addMethods(['__wakeup'])
+            ->onlyMethods(['getApi', 'setMethod', 'getConfig'])
             ->getMock();
 
         $config = $this->getConfig();
@@ -117,7 +118,7 @@ class HostedproTest extends \PHPUnit\Framework\TestCase
 
         $proFactory = $this->getMockBuilder(ProFactory::class)
             ->disableOriginalConstructor()
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->getMock();
         $proFactory->expects(static::once())
             ->method('create')

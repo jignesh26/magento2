@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 declare(strict_types=1);
 
@@ -18,6 +18,25 @@ use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
  */
 class ProductImage implements ResolverInterface
 {
+    /** @var array */
+    private static $catalogImageLabelTypes = [
+        'image' => 'image_label',
+        'small_image' => 'small_image_label',
+        'thumbnail' => 'thumbnail_label'
+    ];
+
+    /** @var array */
+    private $imageTypeLabels;
+
+    /**
+     * @param array $imageTypeLabels
+     */
+    public function __construct(
+        array $imageTypeLabels = []
+    ) {
+        $this->imageTypeLabels =  array_replace(self::$catalogImageLabelTypes, $imageTypeLabels);
+    }
+
     /**
      * @inheritdoc
      */
@@ -25,8 +44,8 @@ class ProductImage implements ResolverInterface
         Field $field,
         $context,
         ResolveInfo $info,
-        array $value = null,
-        array $args = null
+        ?array $value = null,
+        ?array $args = null
     ): array {
         if (!isset($value['model'])) {
             throw new LocalizedException(__('"model" value should be specified'));
@@ -34,11 +53,16 @@ class ProductImage implements ResolverInterface
 
         /** @var Product $product */
         $product = $value['model'];
-        $imageType = $field->getName();
+        $label =  $value['name'] ?? null;
+        if (isset($this->imageTypeLabels[$info->fieldName])
+            && !empty($value[$this->imageTypeLabels[$info->fieldName]])) {
+            $label = $value[$this->imageTypeLabels[$info->fieldName]];
+        }
 
         return [
             'model' => $product,
-            'image_type' => $imageType,
+            'image_type' => $field->getName(),
+            'label' => $label
         ];
     }
 }

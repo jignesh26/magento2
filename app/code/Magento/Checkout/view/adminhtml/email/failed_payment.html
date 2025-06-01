@@ -1,18 +1,18 @@
 <!--
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 -->
 <!--@subject {{trans "Payment Transaction Failed Reminder"}} @-->
 <!--@vars {
-"var billingAddress.format('html')|raw":"Billing Address",
+"var billingAddressHtml|raw":"Billing Address",
 "var checkoutType":"Checkout Type",
 "var customerEmail":"Customer Email",
 "var customer":"Customer Name",
 "var dateAndTime":"Date and Time of Transaction",
 "var paymentMethod":"Payment Method",
-"var shippingAddress.format('html')|raw":"Shipping Address",
+"var shippingAddressHtml|raw":"Shipping Address",
 "var shippingMethod":"Shipping Method",
 "var items|raw":"Shopping Cart Items",
 "var total":"Total",
@@ -23,43 +23,45 @@
 
 <ul>
     <li>
-        <strong>{{trans "Reason"}}</strong><br />
+        <strong>{{trans "Reason"}}</strong><br>
         {{var reason}}
     </li>
     <li>
-        <strong>{{trans "Checkout Type"}}</strong><br />
+        <strong>{{trans "Checkout Type"}}</strong><br>
         {{var checkoutType}}
     </li>
     <li>
-        <strong>{{trans "Customer:"}}</strong><br />
+        <strong>{{trans "Customer:"}}</strong><br>
         <a href="mailto:{{var customerEmail}}">{{var customer}}</a> &lt;{{var customerEmail}}&gt;
     </li>
     <li>
-        <strong>{{trans "Items"}}</strong><br />
+        <strong>{{trans "Items"}}</strong><br>
         {{var items|raw}}
     </li>
     <li>
-        <strong>{{trans "Total:"}}</strong><br />
+        <strong>{{trans "Total:"}}</strong><br>
         {{var total}}
     </li>
     <li>
-        <strong>{{trans "Billing Address:"}}</strong><br />
-        {{var billingAddress.format('html')|raw}}
+        <strong>{{trans "Billing Address:"}}</strong><br>
+        {{var billingAddressHtml|raw}}
+    </li>
+    {{depend shippingMethod}}
+    <li>
+        <strong>{{trans "Shipping Address:"}}</strong><br>
+        {{var shippingAddressHtml|raw}}
     </li>
     <li>
-        <strong>{{trans "Shipping Address:"}}</strong><br />
-        {{var shippingAddress.format('html')|raw}}
-    </li>
-    <li>
-        <strong>{{trans "Shipping Method:"}}</strong><br />
+        <strong>{{trans "Shipping Method:"}}</strong><br>
         {{var shippingMethod}}
     </li>
+    {{/depend}}
     <li>
-        <strong>{{trans "Payment Method:"}}</strong><br />
+        <strong>{{trans "Payment Method:"}}</strong><br>
         {{var paymentMethod}}
     </li>
     <li>
-        <strong>{{trans "Date & Time:"}}</strong><br />
+        <strong>{{trans "Date & Time:"}}</strong><br>
         {{var dateAndTime}}
     </li>
 </ul>

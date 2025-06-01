@@ -29,7 +29,7 @@ class DateTimeTest extends \PHPUnit\Framework\TestCase
      */
     private $dateTimeFilter;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
 
@@ -61,7 +61,7 @@ class DateTimeTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function localeDatetimeFilterProvider()
+    public static function localeDatetimeFilterProvider()
     {
         return [
             ['en_US', '01/02/2010 3:30pm', '2010-01-02 15:30:00'],

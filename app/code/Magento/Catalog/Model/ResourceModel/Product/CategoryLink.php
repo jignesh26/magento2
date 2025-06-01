@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Model\ResourceModel\Product;
 
@@ -118,9 +118,15 @@ class CategoryLink
         $result = ['changed' => [], 'updated' => []];
 
         $oldCategoryPositions = array_values($oldCategoryPositions);
-        $oldCategoryList = array_column($oldCategoryPositions, 'category_id');
         foreach ($newCategoryPositions as $newCategoryPosition) {
-            $key = array_search($newCategoryPosition['category_id'], $oldCategoryList);
+            $key = false;
+
+            foreach ($oldCategoryPositions as $oldKey => $oldCategoryPosition) {
+                if ((int)$oldCategoryPosition['category_id'] === (int)$newCategoryPosition['category_id']) {
+                    $key = $oldKey;
+                    break;
+                }
+            }
 
             if ($key === false) {
                 $result['changed'][] = $newCategoryPosition;
@@ -141,7 +147,7 @@ class CategoryLink
      * @param bool $insert
      * @return array
      */
-    private function updateCategoryLinks(ProductInterface $product, array $insertLinks, $insert = false)
+    public function updateCategoryLinks(ProductInterface $product, array $insertLinks, $insert = false)
     {
         if (empty($insertLinks)) {
             return [];

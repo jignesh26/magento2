@@ -1,18 +1,24 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Catalog\Test\Unit\Helper;
 
-class ProductTest extends \PHPUnit\Framework\TestCase
+use Magento\Catalog\Helper\Product;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\TestCase;
+
+class ProductTest extends TestCase
 {
     /**
-     * @var \Magento\Catalog\Helper\Product
+     * @var Product
      */
     protected $_productHelper;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $arguments = [
             'reindexPriceIndexerData' => [
@@ -21,8 +27,8 @@ class ProductTest extends \PHPUnit\Framework\TestCase
             ],
         ];
 
-        $objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
-        $this->_productHelper = $objectManager->getObject(\Magento\Catalog\Helper\Product::class, $arguments);
+        $objectManager = new ObjectManager($this);
+        $this->_productHelper = $objectManager->getObject(Product::class, $arguments);
     }
 
     /**
@@ -32,45 +38,42 @@ class ProductTest extends \PHPUnit\Framework\TestCase
      */
     public function testIsDataForPriceIndexerWasChanged($data, $result)
     {
+        if (is_callable($data)) {
+            $data = $data($this);
+        }
         $this->assertEquals($this->_productHelper->isDataForPriceIndexerWasChanged($data), $result);
     }
 
+    protected function getMockForCatalogProduct($method)
+    {
+        $product = $this->getMockBuilder(
+            \Magento\Catalog\Model\Product::class
+        )->disableOriginalConstructor()
+            ->getMock();
+        if ($method!=null) {
+            $product->expects(
+                $this->once()
+            )->method(
+                $method
+            )->with(
+                'attribute'
+            )->willReturn(
+                true
+            );
+        }
+        return $product;
+    }
     /**
      * Data provider for testIsDataForPriceIndexerWasChanged
      * @return array
      */
-    public function getData()
+    public static function getData()
     {
-        $product1 = $this->getMockBuilder(
-            \Magento\Catalog\Model\Product::class
-        )->disableOriginalConstructor()->getMock();
+        $product1 = static fn (self $testCase) => $testCase->getMockForCatalogProduct(null);
 
-        $product2 = $this->getMockBuilder(
-            \Magento\Catalog\Model\Product::class
-        )->disableOriginalConstructor()->getMock();
+        $product2 = static fn (self $testCase) => $testCase->getMockForCatalogProduct("getData");
 
-        $product2->expects(
-            $this->once()
-        )->method(
-            'getData'
-        )->with(
-            $this->equalTo('attribute')
-        )->will(
-            $this->returnValue(true)
-        );
-
-        $product3 = $this->getMockBuilder(
-            \Magento\Catalog\Model\Product::class
-        )->disableOriginalConstructor()->getMock();
-        $product3->expects(
-            $this->once()
-        )->method(
-            'dataHasChangedFor'
-        )->with(
-            $this->equalTo('attribute')
-        )->will(
-            $this->returnValue(true)
-        );
+        $product3 = static fn (self $testCase) => $testCase->getMockForCatalogProduct("dataHasChangedFor");
 
         return [
             [$product1, false],

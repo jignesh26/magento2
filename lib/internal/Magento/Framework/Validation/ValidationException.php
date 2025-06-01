@@ -17,6 +17,7 @@ use Magento\Framework\Phrase;
  * to support Multi-Error response.
  *
  * @api
+ * @since 101.0.7
  */
 class ValidationException extends LocalizedException implements AggregateExceptionInterface
 {
@@ -33,9 +34,9 @@ class ValidationException extends LocalizedException implements AggregateExcepti
      */
     public function __construct(
         Phrase $phrase,
-        \Exception $cause = null,
+        ?\Exception $cause = null,
         $code = 0,
-        ValidationResult $validationResult = null
+        ?ValidationResult $validationResult = null
     ) {
         parent::__construct($phrase, $cause, $code);
         $this->validationResult = $validationResult;
@@ -43,6 +44,7 @@ class ValidationException extends LocalizedException implements AggregateExcepti
 
     /**
      * @inheritdoc
+     * @since 101.0.7
      */
     public function getErrors(): array
     {

@@ -1,20 +1,18 @@
 <?php
 /**
- * Test authentication mechanisms in REST.
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Webapi\Authentication;
+
+use Magento\TestFramework\Helper\Bootstrap;
+use Magento\TestFramework\Authentication\Rest\OauthClient;
 
 /**
  * @magentoApiDataFixture consumerFixture
  */
 class RestTest extends \Magento\TestFramework\TestCase\WebapiAbstract
 {
-    /** @var \Magento\TestFramework\Authentication\Rest\OauthClient[] */
-    protected $_oAuthClients = [];
-
     /** @var \Magento\Integration\Model\Oauth\Consumer */
     protected static $_consumer;
 
@@ -30,9 +28,14 @@ class RestTest extends \Magento\TestFramework\TestCase\WebapiAbstract
     /** @var string */
     protected static $_verifier;
 
-    protected function setUp()
+    /** @var \Magento\TestFramework\Authentication\Rest\OauthClient */
+    private $_oauthClient;
+
+    protected function setUp(): void
     {
         $this->_markTestAsRestOnly();
+        $objectManager = Bootstrap::getObjectManager();
+        $this->_oauthClient = $objectManager->create(OauthClient::class);
         parent::setUp();
     }
 
@@ -52,10 +55,10 @@ class RestTest extends \Magento\TestFramework\TestCase\WebapiAbstract
         self::$_token = $consumerCredentials['token'];
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         parent::tearDown();
-        $this->_oAuthClients = [];
+        $this->_oauthClient = null;
         if (isset(self::$_consumer)) {
             self::$_consumer->delete();
             self::$_token->delete();
@@ -64,144 +67,126 @@ class RestTest extends \Magento\TestFramework\TestCase\WebapiAbstract
 
     public function testGetRequestToken()
     {
-        /** @var $oAuthClient \Magento\TestFramework\Authentication\Rest\OauthClient */
-        $oAuthClient = $this->_getOauthClient(self::$_consumerKey, self::$_consumerSecret);
-        $requestToken = $oAuthClient->requestRequestToken();
+        $oauthClient = $this->_oauthClient->create(self::$_consumerKey, self::$_consumerSecret);
+        $requestToken = $oauthClient->getRequestToken();
 
-        $this->assertNotEmpty($requestToken->getRequestToken(), "Request token value is not set");
-        $this->assertNotEmpty($requestToken->getRequestTokenSecret(), "Request token secret is not set");
+        $this->assertNotEmpty($requestToken["oauth_token"], "Request token value is not set");
+        $this->assertNotEmpty($requestToken["oauth_token_secret"], "Request token secret is not set");
 
         $this->assertEquals(
             \Magento\Framework\Oauth\Helper\Oauth::LENGTH_TOKEN,
-            strlen($requestToken->getRequestToken()),
+            strlen($requestToken["oauth_token"]),
             "Request token value length should be " . \Magento\Framework\Oauth\Helper\Oauth::LENGTH_TOKEN
         );
         $this->assertEquals(
             \Magento\Framework\Oauth\Helper\Oauth::LENGTH_TOKEN_SECRET,
-            strlen($requestToken->getRequestTokenSecret()),
+            strlen($requestToken["oauth_token_secret"]),
             "Request token secret length should be " . \Magento\Framework\Oauth\Helper\Oauth::LENGTH_TOKEN_SECRET
         );
     }
 
     /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage 401 Unauthorized
      */
     public function testGetRequestTokenExpiredConsumer()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('401 Unauthorized');
+
         $this::consumerFixture('2012-01-01 00:00:00');
         $this::$_consumer->setUpdatedAt('2012-01-01 00:00:00');
         $this::$_consumer->save();
-        /** @var $oAuthClient \Magento\TestFramework\Authentication\Rest\OauthClient */
-        $oAuthClient = $this->_getOauthClient(self::$_consumerKey, self::$_consumerSecret);
-        $oAuthClient->requestRequestToken();
+
+        $oauthClient = $this->_oauthClient->create(self::$_consumerKey, self::$_consumerSecret);
+        $oauthClient->getRequestToken();
     }
 
     /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage 401 Unauthorized
      */
     public function testGetRequestTokenInvalidConsumerKey()
     {
-        $oAuthClient = $this->_getOauthClient('invalid_key', self::$_consumerSecret);
-        $oAuthClient->requestRequestToken();
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('401 Unauthorized');
+
+        $oauthClient = $this->_oauthClient->create('invalid_key', self::$_consumerSecret);
+        $oauthClient->getRequestToken();
     }
 
     /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage 401 Unauthorized
      */
     public function testGetRequestTokenInvalidConsumerSecret()
     {
-        $oAuthClient = $this->_getOauthClient(self::$_consumerKey, 'invalid_secret');
-        $oAuthClient->requestRequestToken();
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('401 Unauthorized');
+
+        $oauthClient = $this->_oauthClient->create(self::$_consumerKey, 'invalid_secret');
+        $oauthClient->getRequestToken();
     }
 
     public function testGetAccessToken()
     {
-        $oAuthClient = $this->_getOauthClient(self::$_consumerKey, self::$_consumerSecret);
-        $requestToken = $oAuthClient->requestRequestToken();
-        $accessToken = $oAuthClient->requestAccessToken(
-            $requestToken->getRequestToken(),
-            self::$_verifier,
-            $requestToken->getRequestTokenSecret()
-        );
-        $this->assertNotEmpty($accessToken->getAccessToken(), "Access token value is not set.");
-        $this->assertNotEmpty($accessToken->getAccessTokenSecret(), "Access token secret is not set.");
+        $oauthClient = $this->_oauthClient->create(self::$_consumerKey, self::$_consumerSecret);
+        $requestToken = $oauthClient->getRequestToken();
+        $accessToken = $oauthClient->getAccessToken($requestToken, self::$_verifier);
+
+        $this->assertNotEmpty($accessToken["oauth_token"], "Access token value is not set.");
+        $this->assertNotEmpty($accessToken["oauth_token_secret"], "Access token secret is not set.");
 
         $this->assertEquals(
             \Magento\Framework\Oauth\Helper\Oauth::LENGTH_TOKEN,
-            strlen($accessToken->getAccessToken()),
+            strlen($accessToken["oauth_token"]),
             "Access token value length should be " . \Magento\Framework\Oauth\Helper\Oauth::LENGTH_TOKEN
         );
         $this->assertEquals(
             \Magento\Framework\Oauth\Helper\Oauth::LENGTH_TOKEN_SECRET,
-            strlen($accessToken->getAccessTokenSecret()),
+            strlen($accessToken["oauth_token_secret"]),
             "Access token secret length should be " . \Magento\Framework\Oauth\Helper\Oauth::LENGTH_TOKEN_SECRET
         );
     }
 
     /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage 401 Unauthorized
      */
     public function testGetAccessTokenInvalidVerifier()
     {
-        $oAuthClient = $this->_getOauthClient(self::$_consumerKey, self::$_consumerSecret);
-        $requestToken = $oAuthClient->requestRequestToken();
-        $oAuthClient->requestAccessToken(
-            $requestToken->getRequestToken(),
-            'invalid verifier',
-            $requestToken->getRequestTokenSecret()
-        );
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('401 Unauthorized');
+
+        $oauthClient = $this->_oauthClient->create(self::$_consumerKey, self::$_consumerSecret);
+        $requestToken = $oauthClient->getRequestToken();
+        $oauthClient->getAccessToken($requestToken, 'invalid verifier');
     }
 
     /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage 401 Unauthorized
      */
     public function testGetAccessTokenConsumerMismatch()
     {
-        $oAuthClientA = $this->_getOauthClient(self::$_consumerKey, self::$_consumerSecret);
-        $requestTokenA = $oAuthClientA->requestRequestToken();
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('401 Unauthorized');
+
+        $oauthClientA = $this->_oauthClient->create(self::$_consumerKey, self::$_consumerSecret);
+        $requestTokenA = $oauthClientA->getRequestToken();
         $oauthVerifierA = self::$_verifier;
 
         self::consumerFixture();
-        $oAuthClientB = $this->_getOauthClient(self::$_consumerKey, self::$_consumerSecret);
-        $oAuthClientB->requestRequestToken();
-
-        $oAuthClientB->requestAccessToken(
-            $requestTokenA->getRequestToken(),
-            $oauthVerifierA,
-            $requestTokenA->getRequestTokenSecret()
-        );
+        $oauthClientB = $this->_oauthClient->create(self::$_consumerKey, self::$_consumerSecret);
+        $oauthClientB->getRequestToken();
+        $oauthClientB->getAccessToken($requestTokenA, $oauthVerifierA);
     }
 
     /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage 400 Bad Request
      */
     public function testAccessApiInvalidAccessToken()
     {
-        $oAuthClient = $this->_getOauthClient(self::$_consumerKey, self::$_consumerSecret);
-        $requestToken = $oAuthClient->requestRequestToken();
-        $accessToken = $oAuthClient->requestAccessToken(
-            $requestToken->getRequestToken(),
-            self::$_verifier,
-            $requestToken->getRequestTokenSecret()
-        );
-        $accessToken->setAccessToken('invalid');
-        $oAuthClient->validateAccessToken($accessToken);
-    }
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('400 Bad Request');
 
-    protected function _getOauthClient($consumerKey, $consumerSecret)
-    {
-        if (!isset($this->_oAuthClients[$consumerKey])) {
-            $credentials = new \OAuth\Common\Consumer\Credentials($consumerKey, $consumerSecret, TESTS_BASE_URL);
-            $this->_oAuthClients[$consumerKey] = new \Magento\TestFramework\Authentication\Rest\OauthClient(
-                $credentials
-            );
-        }
-        return $this->_oAuthClients[$consumerKey];
+        $oauthClient = $this->_oauthClient->create(self::$_consumerKey, self::$_consumerSecret);
+        $requestToken = $oauthClient->getRequestToken();
+        $accessToken = $oauthClient->getAccessToken(
+            $requestToken,
+            self::$_verifier
+        );
+
+        $accessToken['oauth_token'] = 'invalid';
+        $oauthClient->validateAccessToken($accessToken);
     }
 }

@@ -1,16 +1,21 @@
 <?php
 /**
- * *
- *  * Copyright © Magento, Inc. All rights reserved.
- *  * See COPYING.txt for license details.
- *
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\CatalogSearch\Test\Unit\Model\Attribute;
 
+use Magento\Catalog\Model\ResourceModel\Attribute;
 use Magento\CatalogSearch\Model\Attribute\SearchWeight;
+use Magento\Framework\Model\AbstractModel;
+use Magento\Framework\Search\Request\Config;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class SearchWeightTest extends \PHPUnit\Framework\TestCase
+class SearchWeightTest extends TestCase
 {
     /**
      * @var \Closure
@@ -18,47 +23,46 @@ class SearchWeightTest extends \PHPUnit\Framework\TestCase
     private $closure;
 
     /**
-     * @var \Magento\Framework\Model\AbstractModel|\PHPUnit_Framework_MockObject_MockObject
+     * @var AbstractModel|MockObject
      */
     private $attribute;
 
     /**
-     * @var \Magento\Framework\Search\Request\Config|\PHPUnit_Framework_MockObject_MockObject
+     * @var Config|MockObject
      */
     private $config;
 
     /**
-     * @var \Magento\Catalog\Model\ResourceModel\Attribute|\PHPUnit_Framework_MockObject_MockObject
+     * @var Attribute|MockObject
      */
     private $attributeResourceModel;
 
     /**
-     * @var \Magento\CatalogSearch\Model\Attribute\SearchWeight
+     * @var SearchWeight
      */
     private $searchWeightPlugin;
 
     /**
      * @inheritDoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->config = $this->getMockBuilder(\Magento\Framework\Search\Request\Config::class)
-            ->setMethods(['reset'])
+        $this->config = $this->getMockBuilder(Config::class)
+            ->onlyMethods(['reset'])
             ->disableOriginalConstructor()
             ->getMock();
-        $this->attribute = $this->getMockBuilder(\Magento\Framework\Model\AbstractModel::class)
-            ->setMethods(['isObjectNew', 'dataHasChangedFor'])
+        $this->attribute = $this->getMockBuilder(AbstractModel::class)
+            ->onlyMethods(['isObjectNew', 'dataHasChangedFor'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
-        $this->attributeResourceModel = $this->getMockBuilder(\Magento\Catalog\Model\ResourceModel\Attribute::class)
-            ->setMethods([])
+        $this->attributeResourceModel = $this->getMockBuilder(Attribute::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $this->closure = function (\Magento\Framework\Model\AbstractModel $model) {
+        $this->closure = function (AbstractModel $model) {
             return $model;
         };
 
-        $objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $objectManager = new ObjectManager($this);
         $this->searchWeightPlugin = $objectManager->getObject(
             SearchWeight::class,
             [

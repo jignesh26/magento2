@@ -1,8 +1,9 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\Catalog\Test\Unit\Model\Product\Attribute\Frontend;
 
@@ -36,7 +37,7 @@ class ImageTest extends TestCase
      *
      * @return array
      */
-    public function getUrlDataProvider(): array
+    public static function getUrlDataProvider(): array
     {
         return [
             ['catalog/product/img.jpg', 'img.jpg'],
@@ -44,7 +45,7 @@ class ImageTest extends TestCase
         ];
     }
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $helper = new ObjectManager($this);
         $this->model = $helper->getObject(
@@ -61,13 +62,13 @@ class ImageTest extends TestCase
     private function getMockedProduct(string $productImage): Product
     {
         $mockBuilder = $this->getMockBuilder(Product::class);
-        $mock = $mockBuilder->setMethods(['getData', 'getStore', '__wakeup'])
+        $mock = $mockBuilder->onlyMethods(['getData', 'getStore'])
             ->disableOriginalConstructor()
             ->getMock();
 
         $mock->expects($this->any())
             ->method('getData')
-            ->will($this->returnValue($productImage));
+            ->willReturn($productImage);
 
         $mock->expects($this->any())
             ->method('getStore');
@@ -83,13 +84,13 @@ class ImageTest extends TestCase
         $mockedStore = $this->getMockedStore();
 
         $mockBuilder = $this->getMockBuilder(StoreManagerInterface::class);
-        $mock = $mockBuilder->setMethods(['getStore'])
+        $mock = $mockBuilder->onlyMethods(['getStore'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
 
         $mock->expects($this->any())
             ->method('getStore')
-            ->will($this->returnValue($mockedStore));
+            ->willReturn($mockedStore);
 
         return $mock;
     }
@@ -100,13 +101,13 @@ class ImageTest extends TestCase
     private function getMockedStore(): Store
     {
         $mockBuilder = $this->getMockBuilder(Store::class);
-        $mock = $mockBuilder->setMethods(['getBaseUrl', '__wakeup'])
+        $mock = $mockBuilder->onlyMethods(['getBaseUrl'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
 
         $mock->expects($this->any())
             ->method('getBaseUrl')
-            ->will($this->returnValue(''));
+            ->willReturn('');
 
         return $mock;
     }
@@ -117,7 +118,7 @@ class ImageTest extends TestCase
     private function getMockedAttribute(): AbstractAttribute
     {
         $mockBuilder = $this->getMockBuilder(AbstractAttribute::class);
-        $mockBuilder->setMethods(['getAttributeCode', '__wakeup']);
+        $mockBuilder->onlyMethods(['getAttributeCode']);
         $mockBuilder->disableOriginalConstructor();
         $mock = $mockBuilder->getMockForAbstractClass();
 

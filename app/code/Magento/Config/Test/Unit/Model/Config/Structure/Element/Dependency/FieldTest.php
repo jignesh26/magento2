@@ -3,34 +3,41 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Config\Test\Unit\Model\Config\Structure\Element\Dependency;
 
-class FieldTest extends \PHPUnit\Framework\TestCase
+use Magento\Config\Model\Config\Structure\Element\Dependency\Field;
+use PHPUnit\Framework\TestCase;
+
+class FieldTest extends TestCase
 {
     /**#@+
      * SUT values
      */
-    const SIMPLE_VALUE = 'someValue';
+    private const SIMPLE_VALUE = 'someValue';
 
-    const COMPLEX_VALUE1 = 'value_1';
+    private const EMPTY_VALUE = '';
 
-    const COMPLEX_VALUE2 = 'value_2';
+    private const COMPLEX_VALUE1 = 'value_1';
 
-    const COMPLEX_VALUE3 = 'value_3';
+    private const COMPLEX_VALUE2 = 'value_2';
+
+    private const COMPLEX_VALUE3 = 'value_3';
 
     /**#@-*/
 
     /**
      * Field prefix
      */
-    const PREFIX = 'prefix_';
+    private const PREFIX = 'prefix_';
 
     /**
      * Get simple data for creating SUT
      *
      * @return array
      */
-    protected function _getSimpleData()
+    protected static function _getSimpleData()
     {
         return ['value' => self::SIMPLE_VALUE, 'dependPath' => ['section_2', 'group_3', 'field_4']];
     }
@@ -40,7 +47,7 @@ class FieldTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    protected function _getComplexData()
+    protected static function _getComplexData()
     {
         return [
             'value' => self::COMPLEX_VALUE1 . ',' . self::COMPLEX_VALUE2 . ',' . self::COMPLEX_VALUE3,
@@ -61,7 +68,7 @@ class FieldTest extends \PHPUnit\Framework\TestCase
         if ($isNegative) {
             $data['negative'] = '1';
         }
-        return new \Magento\Config\Model\Config\Structure\Element\Dependency\Field($data, self::PREFIX);
+        return new Field($data, self::PREFIX);
     }
 
     /**
@@ -91,13 +98,13 @@ class FieldTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function dataProvider()
+    public static function dataProvider()
     {
         return [
-            [$this->_getSimpleData(), true],
-            [$this->_getSimpleData(), false],
-            [$this->_getComplexData(), true],
-            [$this->_getComplexData(), false]
+            [self::_getSimpleData(), true],
+            [self::_getSimpleData(), false],
+            [self::_getComplexData(), true],
+            [self::_getComplexData(), false]
         ];
     }
 
@@ -116,17 +123,17 @@ class FieldTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isValueSatisfyDataProvider()
+    public static function isValueSatisfyDataProvider()
     {
         return [
-            [$this->_getSimpleData(), true, self::SIMPLE_VALUE, false],
-            [$this->_getSimpleData(), false, self::SIMPLE_VALUE, true],
-            [$this->_getSimpleData(), true, self::COMPLEX_VALUE1, true],
-            [$this->_getSimpleData(), false, self::COMPLEX_VALUE2, false],
-            [$this->_getComplexData(), true, self::COMPLEX_VALUE1, false],
-            [$this->_getComplexData(), false, self::COMPLEX_VALUE2, true],
-            [$this->_getComplexData(), true, self::SIMPLE_VALUE, true],
-            [$this->_getComplexData(), false, self::SIMPLE_VALUE, false]
+            [self::_getSimpleData(), true, self::SIMPLE_VALUE, false],
+            [self::_getSimpleData(), false, self::SIMPLE_VALUE, true],
+            [self::_getSimpleData(), true, self::COMPLEX_VALUE1, true],
+            [self::_getSimpleData(), false, self::COMPLEX_VALUE2, false],
+            [self::_getComplexData(), true, self::COMPLEX_VALUE1, false],
+            [self::_getComplexData(), false, self::COMPLEX_VALUE2, true],
+            [self::_getComplexData(), true, self::SIMPLE_VALUE, true],
+            [self::_getComplexData(), false, self::SIMPLE_VALUE, false]
         ];
     }
 
@@ -144,14 +151,25 @@ class FieldTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getValuesDataProvider()
+    public static function getValuesDataProvider()
     {
         $complexDataValues = [self::COMPLEX_VALUE1, self::COMPLEX_VALUE2, self::COMPLEX_VALUE3];
         return [
-            [$this->_getSimpleData(), true, [self::SIMPLE_VALUE]],
-            [$this->_getSimpleData(), false, [self::SIMPLE_VALUE]],
-            [$this->_getComplexData(), true, $complexDataValues],
-            [$this->_getComplexData(), false, $complexDataValues]
+            [self::_getSimpleData(), true, [self::SIMPLE_VALUE]],
+            [self::_getSimpleData(), false, [self::SIMPLE_VALUE]],
+            [self::_getSimpleEmptyData(), false, [static::EMPTY_VALUE]],
+            [self::_getComplexData(), true, $complexDataValues],
+            [self::_getComplexData(), false, $complexDataValues]
         ];
+    }
+
+    /**
+     * Providing a field data with no field value
+     *
+     * @return array
+     */
+    protected static function _getSimpleEmptyData(): array
+    {
+        return ['dependPath' => ['section_2', 'group_3', 'field_4']];
     }
 }

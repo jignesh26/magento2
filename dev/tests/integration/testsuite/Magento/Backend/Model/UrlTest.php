@@ -37,7 +37,7 @@ class UrlTest extends \PHPUnit\Framework\TestCase
     /**
      * @inheritdoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = Bootstrap::getObjectManager();
         $this->request = $this->objectManager->get(RequestInterface::class);
@@ -65,7 +65,7 @@ class UrlTest extends \PHPUnit\Framework\TestCase
         $this->request->setParams($requestParams);
         $url = $this->_model->getUrl($routePath, $routeParams);
 
-        $this->assertContains($expectedResult, $url);
+        $this->assertStringContainsString($expectedResult, $url);
     }
 
     /**
@@ -73,7 +73,7 @@ class UrlTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function getUrlDataProvider(): array
+    public static function getUrlDataProvider(): array
     {
         /** @var $escaper Escaper */
         $escaper = Bootstrap::getObjectManager()->get(Escaper::class);
@@ -162,7 +162,7 @@ class UrlTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getSecretKeyDataProvider(): array
+    public static function getSecretKeyDataProvider(): array
     {
         /** @var $encryptor EncryptorInterface */
         $encryptor = Bootstrap::getObjectManager()->get(EncryptorInterface::class);

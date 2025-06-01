@@ -11,11 +11,13 @@ use Magento\Framework\Indexer\ScopeResolver\IndexScopeResolver;
 
 /**
  * Search engine resource model
+ * @deprecated Elasticsearch is no longer supported by Adobe
+ * @see this class will be responsible for ES only
  */
 class Engine implements EngineInterface
 {
     /**
-     * Catalog product visibility
+     * product visibility
      *
      * @var Visibility
      */
@@ -61,7 +63,7 @@ class Engine implements EngineInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function processAttributeValue($attribute, $value)
     {
@@ -70,11 +72,12 @@ class Engine implements EngineInterface
 
     /**
      * Prepare index array as a string glued by separator
+     *
      * Support 2 level array gluing
      *
      * @param array $index
      * @param string $separator
-     * @return string
+     * @return array
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function prepareEntityIndex($index, $separator = ' ')
@@ -83,7 +86,7 @@ class Engine implements EngineInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function isAvailable()
     {

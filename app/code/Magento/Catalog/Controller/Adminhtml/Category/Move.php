@@ -1,13 +1,15 @@
 <?php
 /**
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Controller\Adminhtml\Category;
 
 use Magento\Framework\App\Action\HttpPostActionInterface as HttpPostActionInterface;
 
+/**
+ * Move category admin controller
+ */
 class Move extends \Magento\Catalog\Controller\Adminhtml\Category implements HttpPostActionInterface
 {
     /**
@@ -46,7 +48,7 @@ class Move extends \Magento\Catalog\Controller\Adminhtml\Category implements Htt
     /**
      * Move category action
      *
-     * @return \Magento\Framework\Controller\Result\Raw
+     * @return \Magento\Framework\Controller\Result\Json
      */
     public function execute()
     {

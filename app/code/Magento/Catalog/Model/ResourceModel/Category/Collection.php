@@ -1,26 +1,30 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Model\ResourceModel\Category;
 
+use Magento\Catalog\Model\Category;
+use Magento\Catalog\Model\Product\Visibility;
 use Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGenerator;
 use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Framework\DB\Select;
 use Magento\Store\Model\ScopeInterface;
 
 /**
  * Category resource collection
  *
  * @api
- * @author      Magento Core Team <core@magentocommerce.com>
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  * @since 100.0.2
  */
 class Collection extends \Magento\Catalog\Model\ResourceModel\Collection\AbstractCollection
 {
+    private const BULK_PROCESSING_LIMIT = 400;
+
     /**
-     * Event prefix
+     * Event prefix name
      *
      * @var string
      */
@@ -69,6 +73,11 @@ class Collection extends \Magento\Catalog\Model\ResourceModel\Collection\Abstrac
     private $scopeConfig;
 
     /**
+     * @var Visibility
+     */
+    private $catalogProductVisibility;
+
+    /**
      * Constructor
      * @param \Magento\Framework\Data\Collection\EntityFactory $entityFactory
      * @param \Psr\Log\LoggerInterface $logger
@@ -82,7 +91,7 @@ class Collection extends \Magento\Catalog\Model\ResourceModel\Collection\Abstrac
      * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Framework\DB\Adapter\AdapterInterface $connection
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
-     *
+     * @param Visibility|null $catalogProductVisibility
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
@@ -96,8 +105,9 @@ class Collection extends \Magento\Catalog\Model\ResourceModel\Collection\Abstrac
         \Magento\Eav\Model\ResourceModel\Helper $resourceHelper,
         \Magento\Framework\Validator\UniversalFactory $universalFactory,
         \Magento\Store\Model\StoreManagerInterface $storeManager,
-        \Magento\Framework\DB\Adapter\AdapterInterface $connection = null,
-        \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig = null
+        ?\Magento\Framework\DB\Adapter\AdapterInterface $connection = null,
+        ?\Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig = null,
+        ?Visibility $catalogProductVisibility = null
     ) {
         parent::__construct(
             $entityFactory,
@@ -114,6 +124,8 @@ class Collection extends \Magento\Catalog\Model\ResourceModel\Collection\Abstrac
         );
         $this->scopeConfig = $scopeConfig ?:
             \Magento\Framework\App\ObjectManager::getInstance()->get(ScopeConfigInterface::class);
+        $this->catalogProductVisibility = $catalogProductVisibility ?:
+            \Magento\Framework\App\ObjectManager::getInstance()->get(Visibility::class);
     }
 
     /**
@@ -123,7 +135,19 @@ class Collection extends \Magento\Catalog\Model\ResourceModel\Collection\Abstrac
      */
     protected function _construct()
     {
-        $this->_init(\Magento\Catalog\Model\Category::class, \Magento\Catalog\Model\ResourceModel\Category::class);
+        $this->_init(Category::class, \Magento\Catalog\Model\ResourceModel\Category::class);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function _resetState(): void
+    {
+        parent::_resetState();
+        $this->_productTable = null;
+        $this->_productStoreId = null;
+        $this->_productWebsiteTable = null;
+        $this->_loadWithProductCount = false;
     }
 
     /**
@@ -144,7 +168,7 @@ class Collection extends \Magento\Catalog\Model\ResourceModel\Collection\Abstrac
             $condition = $categoryIds;
         } elseif (is_string($categoryIds)) {
             $ids = explode(',', $categoryIds);
-            if (empty($ids)) {
+            if (count($ids) == 0) {
                 $condition = $categoryIds;
             } else {
                 $condition = ['in' => $ids];
@@ -260,6 +284,8 @@ class Collection extends \Magento\Catalog\Model\ResourceModel\Collection\Abstrac
      * @return $this
      * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      * @SuppressWarnings(PHPMD.UnusedLocalVariable)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     * @throws \Magento\Framework\Exception\NoSuchEntityException
      */
     public function loadProductCount($items, $countRegular = true, $countAnchor = true)
     {
@@ -311,35 +337,112 @@ class Collection extends \Magento\Catalog\Model\ResourceModel\Collection\Abstrac
 
         if ($countAnchor) {
             // Retrieve Anchor categories product counts
+            $categoryIds = array_keys($anchor);
+            $countSelect = $this->getProductsCountQuery($categoryIds, (bool)$websiteId);
+            $categoryProductsCount = $this->_conn->fetchPairs($countSelect);
+            $countFromCategoryTable = [];
+            if (count($categoryIds) > self::BULK_PROCESSING_LIMIT) {
+                $countFromCategoryTable = $this->getCountFromCategoryTableBulk($categoryIds, (int)$websiteId);
+            }
+
             foreach ($anchor as $item) {
-                if ($allChildren = $item->getAllChildren()) {
-                    $bind = ['entity_id' => $item->getId(), 'c_path' => $item->getPath() . '/%'];
-                    $select = $this->_conn->select();
-                    $select->from(
-                        ['main_table' => $this->getProductTable()],
-                        new \Zend_Db_Expr('COUNT(DISTINCT main_table.product_id)')
-                    )->joinInner(
-                        ['e' => $this->getTable('catalog_category_entity')],
-                        'main_table.category_id=e.entity_id',
-                        []
-                    )->where('e.entity_id = :entity_id OR e.path LIKE :c_path');
-                    if ($websiteId) {
-                        $select->join(
-                            ['w' => $this->getProductWebsiteTable()],
-                            'main_table.product_id = w.product_id',
-                            []
-                        )->where(
-                            'w.website_id = ?',
-                            $websiteId
-                        );
+                $productsCount = 0;
+                if (count($categoryIds) > self::BULK_PROCESSING_LIMIT) {
+                    if (isset($categoryProductsCount[$item->getId()])) {
+                        $productsCount = (int)$categoryProductsCount[$item->getId()];
+                    } elseif (isset($countFromCategoryTable[$item->getId()])) {
+                        $productsCount = (int)$countFromCategoryTable[$item->getId()];
                     }
-                    $item->setProductCount((int)$this->_conn->fetchOne($select, $bind));
                 } else {
-                    $item->setProductCount(0);
+                    $productsCount = isset($categoryProductsCount[$item->getId()])
+                        ? (int)$categoryProductsCount[$item->getId()]
+                        : $this->getProductsCountFromCategoryTable($item, $websiteId);
                 }
+                $item->setProductCount($productsCount);
             }
         }
         return $this;
+    }
+
+    /**
+     * Get products number for each category with bulk query
+     *
+     * @param array $categoryIds
+     * @param int $websiteId
+     * @return array
+     */
+    private function getCountFromCategoryTableBulk(
+        array $categoryIds,
+        int $websiteId
+    ) : array {
+        $subSelect = clone $this->_conn->select();
+        $subSelect->from(['ce2' => $this->getTable('catalog_category_entity')], 'ce2.entity_id')
+            ->where("ce2.path LIKE CONCAT(ce.path, '/%') OR ce2.path = ce.path");
+
+        $select = clone $this->_conn->select();
+        $select->from(
+            ['ce' => $this->getTable('catalog_category_entity')],
+            'ce.entity_id'
+        );
+        $joinCondition =  new \Zend_Db_Expr("cp.category_id IN ({$subSelect})");
+        $select->joinLeft(
+            ['cp' => $this->getProductTable()],
+            $joinCondition,
+            'COUNT(DISTINCT cp.product_id) AS product_count'
+        );
+        if ($websiteId) {
+            $select->join(
+                ['w' => $this->getProductWebsiteTable()],
+                'cp.product_id = w.product_id',
+                []
+            )->where(
+                'w.website_id = ?',
+                $websiteId
+            );
+        }
+        $select->where('ce.entity_id IN(?)', $categoryIds);
+        $select->group('ce.entity_id');
+
+        return $this->_conn->fetchPairs($select);
+    }
+
+    /**
+     * Get products count using catalog_category_entity table
+     *
+     * @param Category $item
+     * @param string $websiteId
+     * @return int
+     */
+    private function getProductsCountFromCategoryTable(Category $item, string $websiteId): int
+    {
+        $productCount = 0;
+
+        if ($item->getAllChildren()) {
+            $bind = ['entity_id' => $item->getId(), 'c_path' => $item->getPath() . '/%'];
+            $select = $this->_conn->select();
+            $select->from(
+                ['main_table' => $this->getProductTable()],
+                new \Zend_Db_Expr('COUNT(DISTINCT main_table.product_id)')
+            )->joinInner(
+                ['e' => $this->getTable('catalog_category_entity')],
+                'main_table.category_id=e.entity_id',
+                []
+            )->where(
+                '(e.entity_id = :entity_id OR e.path LIKE :c_path)'
+            );
+            if ($websiteId) {
+                $select->join(
+                    ['w' => $this->getProductWebsiteTable()],
+                    'main_table.product_id = w.product_id',
+                    []
+                )->where(
+                    'w.website_id = ?',
+                    $websiteId
+                );
+            }
+            $productCount = (int)$this->_conn->fetchOne($select, $bind);
+        }
+        return $productCount;
     }
 
     /**
@@ -462,6 +565,7 @@ class Collection extends \Magento\Catalog\Model\ResourceModel\Collection\Abstrac
      * Add navigation max depth filter
      *
      * @return $this
+     * @since 103.0.0
      */
     public function addNavigationMaxDepthFilter()
     {
@@ -511,5 +615,31 @@ class Collection extends \Magento\Catalog\Model\ResourceModel\Collection\Abstrac
             $this->_productTable = $this->getTable('catalog_category_product');
         }
         return $this->_productTable;
+    }
+
+    /**
+     * Get query for retrieve count of products per category
+     *
+     * @param array $categoryIds
+     * @param bool $addVisibilityFilter
+     * @return Select
+     */
+    private function getProductsCountQuery(array $categoryIds, $addVisibilityFilter = true): Select
+    {
+        $categoryTable = $this->_resource->getTableName('catalog_category_product_index');
+        $select = $this->_conn->select()
+            ->from(
+                ['cat_index' => $categoryTable],
+                ['category_id' => 'cat_index.category_id', 'count' => 'count(cat_index.product_id)']
+            )
+            ->where('cat_index.category_id in (?)', \array_map('\intval', $categoryIds));
+        if (true === $addVisibilityFilter) {
+            $select->where('cat_index.visibility in (?)', $this->catalogProductVisibility->getVisibleInSiteIds());
+        }
+        if (count($categoryIds) > 1) {
+            $select->group('cat_index.category_id');
+        }
+
+        return $select;
     }
 }

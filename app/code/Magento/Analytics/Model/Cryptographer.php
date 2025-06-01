@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Analytics\Model;
 
@@ -129,7 +129,12 @@ class Cryptographer
      */
     private function validateCipherMethod($cipherMethod)
     {
-        $methods = openssl_get_cipher_methods();
+        $methods = array_map(
+            'strtolower',
+            openssl_get_cipher_methods()
+        );
+        $cipherMethod = strtolower($cipherMethod);
+
         return (false !== array_search($cipherMethod, $methods));
     }
 }

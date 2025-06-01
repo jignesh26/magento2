@@ -1,17 +1,19 @@
 <?php
 /**
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
+
+declare(strict_types=1);
+
 namespace Magento\Cms\Controller\Adminhtml\Wysiwyg\Images;
 
-use Magento\Framework\App\Filesystem\DirectoryList;
+use Magento\Framework\App\Action\HttpPostActionInterface;
 
 /**
  * Delete image folder.
  */
-class DeleteFolder extends \Magento\Cms\Controller\Adminhtml\Wysiwyg\Images
+class DeleteFolder extends \Magento\Cms\Controller\Adminhtml\Wysiwyg\Images implements HttpPostActionInterface
 {
     /**
      * @var \Magento\Framework\Controller\Result\JsonFactory
@@ -40,7 +42,7 @@ class DeleteFolder extends \Magento\Cms\Controller\Adminhtml\Wysiwyg\Images
         \Magento\Framework\Registry $coreRegistry,
         \Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,
         \Magento\Framework\Controller\Result\RawFactory $resultRawFactory,
-        \Magento\Framework\App\Filesystem\DirectoryResolver $directoryResolver = null
+        ?\Magento\Framework\App\Filesystem\DirectoryResolver $directoryResolver = null
     ) {
         parent::__construct($context, $coreRegistry);
         $this->resultRawFactory = $resultRawFactory;
@@ -57,22 +59,16 @@ class DeleteFolder extends \Magento\Cms\Controller\Adminhtml\Wysiwyg\Images
      */
     public function execute()
     {
+        $result = [];
         try {
             $path = $this->getStorage()->getCmsWysiwygImages()->getCurrentPath();
-            if (!$this->directoryResolver->validatePath($path, DirectoryList::MEDIA)) {
-                throw new \Magento\Framework\Exception\LocalizedException(
-                    __('Directory %1 is not under storage root path.', $path)
-                );
-            }
             $this->getStorage()->deleteDirectory($path);
-            
-            return $this->resultRawFactory->create();
         } catch (\Exception $e) {
             $result = ['error' => true, 'message' => $e->getMessage()];
-            /** @var \Magento\Framework\Controller\Result\Json $resultJson */
-            $resultJson = $this->resultJsonFactory->create();
-
-            return $resultJson->setData($result);
         }
+        /** @var \Magento\Framework\Controller\Result\Json $resultJson */
+        $resultJson = $this->resultJsonFactory->create();
+
+        return $resultJson->setData($result);
     }
 }

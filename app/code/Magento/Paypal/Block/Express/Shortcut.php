@@ -98,7 +98,7 @@ class Shortcut extends \Magento\Framework\View\Element\Template implements Catal
      * @param string $checkoutType
      * @param string $alias
      * @param string $shortcutTemplate
-     * @param \Magento\Checkout\Model\Session $checkoutSession
+     * @param \Magento\Checkout\Model\Session|null $checkoutSession
      * @param array $data
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
@@ -114,7 +114,7 @@ class Shortcut extends \Magento\Framework\View\Element\Template implements Catal
         $checkoutType,
         $alias,
         $shortcutTemplate,
-        \Magento\Checkout\Model\Session $checkoutSession = null,
+        ?\Magento\Checkout\Model\Session $checkoutSession = null,
         array $data = []
     ) {
         $this->_paypalConfigFactory = $paypalConfigFactory;
@@ -137,7 +137,7 @@ class Shortcut extends \Magento\Framework\View\Element\Template implements Catal
     }
 
     /**
-     * @return \Magento\Framework\View\Element\AbstractBlock
+     * @inheritdoc
      */
     protected function _beforeToHtml()
     {
@@ -145,7 +145,9 @@ class Shortcut extends \Magento\Framework\View\Element\Template implements Catal
 
         $isInCatalog = $this->getIsInCatalogProduct();
 
-        if (!$this->_shortcutValidator->validate($this->_paymentMethodCode, $isInCatalog)) {
+        if (!$this->_shortcutValidator->validate($this->_paymentMethodCode, $isInCatalog)
+            || (bool)(int)$this->config->getValue('in_context')
+        ) {
             $this->_shouldRender = false;
             return $result;
         }
@@ -186,6 +188,8 @@ class Shortcut extends \Magento\Framework\View\Element\Template implements Catal
     }
 
     /**
+     * Check if we should render component
+     *
      * @return bool
      */
     protected function shouldRender()

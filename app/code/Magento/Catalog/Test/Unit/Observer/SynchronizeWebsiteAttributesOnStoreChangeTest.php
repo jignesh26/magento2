@@ -1,17 +1,19 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\Catalog\Test\Unit\Observer;
 
-use Magento\Catalog\Model\ResourceModel\Attribute\WebsiteAttributesSynchronizer;
+use Magento\Catalog\Model\Attribute\Backend\WebsiteSpecific\Scheduler;
 use Magento\Catalog\Observer\SynchronizeWebsiteAttributesOnStoreChange;
 use Magento\Framework\Event\Observer;
 use Magento\Store\Model\Store;
+use PHPUnit\Framework\TestCase;
 
-class SynchronizeWebsiteAttributesOnStoreChangeTest extends \PHPUnit\Framework\TestCase
+class SynchronizeWebsiteAttributesOnStoreChangeTest extends TestCase
 {
     /**
      * @param $invalidDataObject
@@ -23,17 +25,11 @@ class SynchronizeWebsiteAttributesOnStoreChangeTest extends \PHPUnit\Framework\T
             'data_object' => $invalidDataObject,
         ]);
 
-        $synchronizerMock = $this->getMockBuilder(WebsiteAttributesSynchronizer::class)
-            ->disableOriginalConstructor()
-            ->setMethods([
-                'scheduleSynchronization',
-            ])
-            ->getMock();
+        $schedulerMock = $this->createMock(Scheduler::class);
+        $schedulerMock->expects(self::never())
+            ->method('execute');
 
-        $synchronizerMock->expects($this->never())
-            ->method('scheduleSynchronization');
-
-        $instance = new SynchronizeWebsiteAttributesOnStoreChange($synchronizerMock);
+        $instance = new SynchronizeWebsiteAttributesOnStoreChange($schedulerMock);
         $result = $instance->execute($eventObserver);
         $this->assertNull($result);
     }
@@ -41,7 +37,7 @@ class SynchronizeWebsiteAttributesOnStoreChangeTest extends \PHPUnit\Framework\T
     /**
      * @return array
      */
-    public function executeInvalidStoreDataProvider()
+    public static function executeInvalidStoreDataProvider()
     {
         return [
             [
@@ -51,38 +47,30 @@ class SynchronizeWebsiteAttributesOnStoreChangeTest extends \PHPUnit\Framework\T
     }
 
     /**
-     * @param Store $store
+     * @param \Closure $store
      * @dataProvider executeStoreHasNoChangesDataProvider
      */
-    public function testExecuteStoreHasNoChanges(Store $store)
+    public function testExecuteStoreHasNoChanges(\Closure $store)
     {
+        $store = $store($this);
         $eventObserver = new Observer([
             'data_object' => $store,
         ]);
 
-        $synchronizerMock = $this->getMockBuilder(WebsiteAttributesSynchronizer::class)
-            ->disableOriginalConstructor()
-            ->setMethods([
-                'scheduleSynchronization',
-            ])
-            ->getMock();
+        $schedulerMock = $this->createMock(Scheduler::class);
+        $schedulerMock->expects(self::never())
+            ->method('execute');
 
-        $synchronizerMock->expects($this->never())
-            ->method('scheduleSynchronization');
-
-        $instance = new SynchronizeWebsiteAttributesOnStoreChange($synchronizerMock);
+        $instance = new SynchronizeWebsiteAttributesOnStoreChange($schedulerMock);
         $result = $instance->execute($eventObserver);
         $this->assertNull($result);
     }
 
-    /**
-     * @return array
-     */
-    public function executeStoreHasNoChangesDataProvider()
+    protected function getMockForStoreClass()
     {
         $store = $this->getMockBuilder(Store::class)
             ->disableOriginalConstructor()
-            ->setMethods([
+            ->onlyMethods([
                 'hasDataChanges',
                 'getOrigData',
             ])
@@ -90,13 +78,22 @@ class SynchronizeWebsiteAttributesOnStoreChangeTest extends \PHPUnit\Framework\T
 
         $store->expects($this->once())
             ->method('hasDataChanges')
-            ->will(
-                $this->returnValue(false)
+            ->willReturn(
+                false
             );
 
         $store->expects($this->never())
             ->method('getOrigData');
 
+        return $store;
+    }
+
+    /**
+     * @return array
+     */
+    public static function executeStoreHasNoChangesDataProvider()
+    {
+        $store = static fn (self $testCase) => $testCase->getMockForStoreClass();
         return [
             [
                 $store,
@@ -105,26 +102,22 @@ class SynchronizeWebsiteAttributesOnStoreChangeTest extends \PHPUnit\Framework\T
     }
 
     /**
-     * @param Store $store
+     * @param \Closure $store
      * @dataProvider executeWebsiteIdIsNoChangedAndNotNewDataProvider
      */
-    public function testExecuteWebsiteIdIsNoChangedAndNotNew(Store $store)
+    public function testExecuteWebsiteIdIsNoChangedAndNotNew(\Closure $store)
     {
+        $store = $store($this);
+
         $eventObserver = new Observer([
             'data_object' => $store,
         ]);
 
-        $synchronizerMock = $this->getMockBuilder(WebsiteAttributesSynchronizer::class)
-            ->disableOriginalConstructor()
-            ->setMethods([
-                'scheduleSynchronization',
-            ])
-            ->getMock();
+        $schedulerMock = $this->createMock(Scheduler::class);
+        $schedulerMock->expects(self::never())
+            ->method('execute');
 
-        $synchronizerMock->expects($this->never())
-            ->method('scheduleSynchronization');
-
-        $instance = new SynchronizeWebsiteAttributesOnStoreChange($synchronizerMock);
+        $instance = new SynchronizeWebsiteAttributesOnStoreChange($schedulerMock);
         $result = $instance->execute($eventObserver);
         $this->assertNull($result);
     }
@@ -132,44 +125,9 @@ class SynchronizeWebsiteAttributesOnStoreChangeTest extends \PHPUnit\Framework\T
     /**
      * @return array
      */
-    public function executeWebsiteIdIsNoChangedAndNotNewDataProvider()
+    public static function executeWebsiteIdIsNoChangedAndNotNewDataProvider()
     {
-        $sameWebsiteId = 1;
-        $store = $this->getMockBuilder(Store::class)
-            ->disableOriginalConstructor()
-            ->setMethods([
-                'hasDataChanges',
-                'getOrigData',
-                'getWebsiteId',
-                'isObjectNew',
-            ])
-            ->getMock();
-
-        $store->expects($this->once())
-            ->method('hasDataChanges')
-            ->will(
-                $this->returnValue(true)
-            );
-
-        $store->expects($this->once())
-            ->method('getOrigData')
-            ->with('website_id')
-            ->will(
-                $this->returnValue($sameWebsiteId)
-            );
-
-        $store->expects($this->once())
-            ->method('getWebsiteId')
-            ->will(
-                $this->returnValue($sameWebsiteId)
-            );
-
-        $store->expects($this->once())
-            ->method('isObjectNew')
-            ->will(
-                $this->returnValue(false)
-            );
-
+        $store = static fn (self $testCase) => $testCase->getMockForStoreNew(false);
         return [
             [
                 $store,
@@ -178,39 +136,31 @@ class SynchronizeWebsiteAttributesOnStoreChangeTest extends \PHPUnit\Framework\T
     }
 
     /**
-     * @param Store $store
+     * @param \Closure $store
      * @dataProvider executeSuccessDataProvider
      */
-    public function testExecuteSuccess(Store $store)
+    public function testExecuteSuccess(\Closure $store)
     {
+        $store = $store($this);
         $eventObserver = new Observer([
             'data_object' => $store,
         ]);
 
-        $synchronizerMock = $this->getMockBuilder(WebsiteAttributesSynchronizer::class)
-            ->disableOriginalConstructor()
-            ->setMethods([
-                'scheduleSynchronization',
-            ])
-            ->getMock();
+        $schedulerMock = $this->createMock(Scheduler::class);
+        $schedulerMock->expects(self::once())
+            ->method('execute');
 
-        $synchronizerMock->expects($this->once())
-            ->method('scheduleSynchronization');
-
-        $instance = new SynchronizeWebsiteAttributesOnStoreChange($synchronizerMock);
+        $instance = new SynchronizeWebsiteAttributesOnStoreChange($schedulerMock);
         $result = $instance->execute($eventObserver);
         $this->assertNull($result);
     }
 
-    /**
-     * @return array
-     */
-    public function executeSuccessDataProvider()
+    protected function getMockForStoreNew($return)
     {
         $sameWebsiteId = 1;
         $storeNew = $this->getMockBuilder(Store::class)
             ->disableOriginalConstructor()
-            ->setMethods([
+            ->onlyMethods([
                 'hasDataChanges',
                 'getOrigData',
                 'getWebsiteId',
@@ -220,34 +170,40 @@ class SynchronizeWebsiteAttributesOnStoreChangeTest extends \PHPUnit\Framework\T
 
         $storeNew->expects($this->once())
             ->method('hasDataChanges')
-            ->will(
-                $this->returnValue(true)
+            ->willReturn(
+                true
             );
 
         $storeNew->expects($this->once())
             ->method('getOrigData')
             ->with('website_id')
-            ->will(
-                $this->returnValue($sameWebsiteId)
+            ->willReturn(
+                $sameWebsiteId
             );
 
         $storeNew->expects($this->once())
             ->method('getWebsiteId')
-            ->will(
-                $this->returnValue($sameWebsiteId)
+            ->willReturn(
+                $sameWebsiteId
             );
 
         $storeNew->expects($this->once())
             ->method('isObjectNew')
-            ->will(
-                $this->returnValue(true)
+            ->willReturn(
+                $return
             );
 
+        return $storeNew;
+    }
+
+    protected function getStoreChangeWebsite()
+    {
         $sameWebsiteId = 1;
         $newWebsiteId = 2;
+
         $storeChangedWebsite = $this->getMockBuilder(Store::class)
             ->disableOriginalConstructor()
-            ->setMethods([
+            ->onlyMethods([
                 'hasDataChanges',
                 'getOrigData',
                 'getWebsiteId',
@@ -257,28 +213,39 @@ class SynchronizeWebsiteAttributesOnStoreChangeTest extends \PHPUnit\Framework\T
 
         $storeChangedWebsite->expects($this->once())
             ->method('hasDataChanges')
-            ->will(
-                $this->returnValue(true)
+            ->willReturn(
+                true
             );
 
         $storeChangedWebsite->expects($this->once())
             ->method('getOrigData')
             ->with('website_id')
-            ->will(
-                $this->returnValue($sameWebsiteId)
+            ->willReturn(
+                $sameWebsiteId
             );
 
         $storeChangedWebsite->expects($this->once())
             ->method('getWebsiteId')
-            ->will(
-                $this->returnValue($newWebsiteId)
+            ->willReturn(
+                $newWebsiteId
             );
 
         $storeChangedWebsite->expects($this->once())
             ->method('isObjectNew')
-            ->will(
-                $this->returnValue(false)
+            ->willReturn(
+                false
             );
+
+        return $storeChangedWebsite;
+    }
+    /**
+     * @return array
+     */
+    public static function executeSuccessDataProvider()
+    {
+        $storeNew = static fn (self $testCase) => $testCase->getMockForStoreNew(true);
+
+        $storeChangedWebsite = static fn (self $testCase) => $testCase->getStoreChangeWebsite();
 
         return [
             [

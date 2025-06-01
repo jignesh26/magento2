@@ -8,13 +8,18 @@ declare(strict_types=1);
 
 use Magento\Framework\Api\SearchCriteriaBuilder;
 use Magento\Framework\Api\SearchCriteria;
+use Magento\Framework\Config\ConfigOptionsListConstants;
+use Magento\Sales\Api\OrderRepositoryInterface;
 use Magento\Sales\Model\ResourceModel\Order\Payment\EncryptionUpdateTest;
 use Magento\Framework\App\DeploymentConfig;
+use Magento\TestFramework\Helper\Bootstrap;
+use Magento\TestFramework\Workaround\Override\Fixture\Resolver;
 
-require 'order.php';
+Resolver::getInstance()->requireDataFixture('Magento/Sales/_files/order.php');
 
-$objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
-
+$objectManager = Bootstrap::getObjectManager();
+/** @var OrderRepositoryInterface $orderRepository */
+$orderRepository = $objectManager->create(OrderRepositoryInterface::class);
 /** @var DeploymentConfig $deployConfig */
 $deployConfig = $objectManager->get(DeploymentConfig::class);
 
@@ -26,7 +31,14 @@ $deployConfig = $objectManager->get(DeploymentConfig::class);
 $handle = @mcrypt_module_open(MCRYPT_RIJNDAEL_256, '', MCRYPT_MODE_CBC, '');
 $initVectorSize = @mcrypt_enc_get_iv_size($handle);
 $initVector = str_repeat("\0", $initVectorSize);
-@mcrypt_generic_init($handle, $deployConfig->get('crypt/key'), $initVector);
+
+// Key is also encrypted to support 256-key
+$key = $deployConfig->get('crypt/key');
+$originalKey = (str_starts_with($key, ConfigOptionsListConstants::STORE_KEY_ENCODED_RANDOM_STRING_PREFIX)) ?
+    base64_decode(substr($key, strlen(ConfigOptionsListConstants::STORE_KEY_ENCODED_RANDOM_STRING_PREFIX))) :
+    $key;
+
+@mcrypt_generic_init($handle, $originalKey, $initVector);
 
 $encCcNumber = @mcrypt_generic($handle, EncryptionUpdateTest::TEST_CC_NUMBER);
 

@@ -1,17 +1,17 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 
 define([
     'jquery',
-    'mage/mage'
+    'mage/mage',
+    'validation'
 ], function ($) {
     'use strict';
 
     return function (config, element) {
-
-        $(element).mage('form').mage('validation', {
+        $(element).mage('form').validation({
             validationUrl: config.validationUrl
         });
     };

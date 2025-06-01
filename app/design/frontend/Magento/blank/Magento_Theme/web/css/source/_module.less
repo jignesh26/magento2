@@ -3,6 +3,8 @@
 //  * See COPYING.txt for license details.
 //  */
 
+@import 'module/_collapsible_navigation.less';
+
 //
 //  Theme variables
 //  _____________________________________________
@@ -89,6 +91,7 @@
 
         img {
             display: block;
+            height: auto;
         }
 
         .page-print & {
@@ -199,7 +202,7 @@
         }
     }
 
-    .page-header,
+    .page-header .panel.wrapper,
     .page-footer {
         .switcher {
             margin-right: 10px;
@@ -282,6 +285,10 @@
             padding: 0;
         }
     }
+
+    .cookie-status-message {
+        display: none;
+    }
 }
 
 //
@@ -295,10 +302,6 @@
         > .widget {
             box-sizing: border-box;
             width: 100%;
-        }
-
-        .ie11 & {
-            height: 100%;
         }
     }
 
@@ -371,7 +374,7 @@
     }
 
     .logo {
-        margin: -8px auto 25px 0;
+        margin: 0 auto 25px 0;
 
         img {
             max-height: inherit;

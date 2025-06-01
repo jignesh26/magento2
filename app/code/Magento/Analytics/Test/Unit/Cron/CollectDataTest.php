@@ -1,24 +1,28 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Analytics\Test\Unit\Cron;
 
 use Magento\Analytics\Cron\CollectData;
 use Magento\Analytics\Model\ExportDataHandlerInterface;
 use Magento\Analytics\Model\SubscriptionStatusProvider;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class CollectDataTest extends \PHPUnit\Framework\TestCase
+class CollectDataTest extends TestCase
 {
     /**
-     * @var ExportDataHandlerInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ExportDataHandlerInterface|MockObject
      */
     private $exportDataHandlerMock;
 
     /**
-     * @var SubscriptionStatusProvider|\PHPUnit_Framework_MockObject_MockObject
+     * @var SubscriptionStatusProvider|MockObject
      */
     private $subscriptionStatusMock;
 
@@ -35,14 +39,12 @@ class CollectDataTest extends \PHPUnit\Framework\TestCase
     /**
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->exportDataHandlerMock = $this->getMockBuilder(ExportDataHandlerInterface::class)
             ->getMockForAbstractClass();
 
-        $this->subscriptionStatusMock = $this->getMockBuilder(SubscriptionStatusProvider::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->subscriptionStatusMock = $this->createMock(SubscriptionStatusProvider::class);
 
         $this->objectManagerHelper = new ObjectManagerHelper($this);
 
@@ -78,7 +80,7 @@ class CollectDataTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function executeDataProvider()
+    public static function executeDataProvider()
     {
         return [
             'Subscription is enabled' => [SubscriptionStatusProvider::ENABLED],

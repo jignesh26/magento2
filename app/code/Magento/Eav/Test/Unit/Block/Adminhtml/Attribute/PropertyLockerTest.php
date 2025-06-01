@@ -3,44 +3,53 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Eav\Test\Unit\Block\Adminhtml\Attribute;
 
 use Magento\Eav\Block\Adminhtml\Attribute\PropertyLocker;
+use Magento\Eav\Model\Entity\Attribute\AbstractAttribute;
+use Magento\Eav\Model\Entity\Attribute\Config;
+use Magento\Framework\Data\Form;
+use Magento\Framework\Data\Form\Element\AbstractElement;
+use Magento\Framework\Registry;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class PropertyLockerTest extends \PHPUnit\Framework\TestCase
+class PropertyLockerTest extends TestCase
 {
     /** @var PropertyLocker */
     protected $object;
 
-    /** @var \Magento\Eav\Model\Entity\Attribute\AbstractAttribute|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var AbstractAttribute|MockObject */
     protected $attributeMock;
 
-    /** @var \Magento\Framework\Data\Form|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Form|MockObject */
     protected $formMock;
 
-    /** @var \Magento\Eav\Model\Entity\Attribute\Config|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Config|MockObject */
     protected $attributeConfigMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->attributeMock = $this->getMockBuilder(\Magento\Eav\Model\Entity\Attribute\AbstractAttribute::class)
-            ->setMethods(['getId'])
+        $this->attributeMock = $this->getMockBuilder(AbstractAttribute::class)
+            ->onlyMethods(['getId'])
             ->disableOriginalConstructor()
             ->getMock();
 
-        $registryMock = $this->getMockBuilder(\Magento\Framework\Registry::class)
-            ->setMethods(['registry'])
+        $registryMock = $this->getMockBuilder(Registry::class)
+            ->onlyMethods(['registry'])
             ->disableOriginalConstructor()
             ->getMock();
         $registryMock->expects($this->atLeastOnce())->method('registry')->willReturn($this->attributeMock);
 
-        $this->attributeConfigMock = $this->getMockBuilder(\Magento\Eav\Model\Entity\Attribute\Config::class)
-            ->setMethods(['getLockedFields'])
+        $this->attributeConfigMock = $this->getMockBuilder(Config::class)
+            ->onlyMethods(['getLockedFields'])
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->formMock = $this->getMockBuilder(\Magento\Framework\Data\Form::class)
-            ->setMethods(['getElement'])
+        $this->formMock = $this->getMockBuilder(Form::class)
+            ->onlyMethods(['getElement'])
             ->disableOriginalConstructor()
             ->getMock();
 
@@ -59,8 +68,9 @@ class PropertyLockerTest extends \PHPUnit\Framework\TestCase
         $this->attributeMock->expects($this->once())->method('getId')->willReturn(1);
         $this->attributeConfigMock->expects($this->once())->method('getLockedFields')->willReturn($lockedFields);
 
-        $elementMock = $this->getMockBuilder(\Magento\Framework\Data\Form\Element\AbstractElement::class)
-            ->setMethods(['setDisabled', 'setReadonly'])
+        $elementMock = $this->getMockBuilder(AbstractElement::class)
+            ->addMethods(['setDisabled'])
+            ->onlyMethods(['setReadonly'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
         $elementMock->expects($this->exactly(2))->method('setDisabled');

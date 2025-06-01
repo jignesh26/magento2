@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 
 /**
@@ -10,11 +10,14 @@
  */
 define([
     'jquery',
-    'Magento_Customer/js/customer-data'
-], function ($, storage) {
+    'Magento_Customer/js/customer-data',
+    'mageUtils',
+    'jquery/jquery-storageapi'
+], function ($, storage, utils) {
     'use strict';
 
     var cacheKey = 'checkout-data',
+        storeCode = window.checkoutConfig.storeCode,
 
         /**
          * @param {Object} data
@@ -26,24 +29,49 @@ define([
         /**
          * @return {*}
          */
+        initData = function () {
+            return {
+                'selectedShippingAddress': null, //Selected shipping address pulled from persistence storage
+                'shippingAddressFromData': null, //Shipping address pulled from persistence storage
+                'newCustomerShippingAddress': null, //Shipping address pulled from persistence storage for customer
+                'selectedShippingRate': null, //Shipping rate pulled from persistence storage
+                'selectedPaymentMethod': null, //Payment method pulled from persistence storage
+                'selectedBillingAddress': null, //Selected billing address pulled from persistence storage
+                'billingAddressFromData': null, //Billing address pulled from persistence storage
+                'newCustomerBillingAddress': null //Billing address pulled from persistence storage for new customer
+            };
+        },
+
+        /**
+         * @return {*}
+         */
         getData = function () {
             var data = storage.get(cacheKey)();
 
             if ($.isEmptyObject(data)) {
-                data = {
-                    'selectedShippingAddress': null, //Selected shipping address pulled from persistence storage
-                    'shippingAddressFromData': null, //Shipping address pulled from persistence storage
-                    'newCustomerShippingAddress': null, //Shipping address pulled from persistence storage for customer
-                    'selectedShippingRate': null, //Shipping rate pulled from persistence storage
-                    'selectedPaymentMethod': null, //Payment method pulled from persistence storage
-                    'selectedBillingAddress': null, //Selected billing address pulled from persistence storage
-                    'billingAddressFromData': null, //Billing address pulled from persistence storage
-                    'newCustomerBillingAddress': null //Billing address pulled from persistence storage for new customer
-                };
-                saveData(data);
+                data = $.initNamespaceStorage('mage-cache-storage').localStorage.get(cacheKey);
+
+                if ($.isEmptyObject(data)) {
+                    data = initData();
+                    saveData(data);
+                }
             }
 
             return data;
+        },
+        getShippingAddressByStore = function (shippingAddressObj) {
+            if (!shippingAddressObj) {
+                return null;
+            }
+
+            return shippingAddressObj[storeCode];
+        },
+        setShippingAddressByStore = function (shippingAddressObj, data) {
+            if (!shippingAddressObj) {
+                shippingAddressObj = {};
+            }
+            shippingAddressObj[storeCode] = utils.filterFormData(data);
+            return shippingAddressObj;
         };
 
     return {
@@ -74,9 +102,9 @@ define([
          * @param {Object} data
          */
         setShippingAddressFromData: function (data) {
-            var obj = getData();
+            let obj = getData();
 
-            obj.shippingAddressFromData = data;
+            obj.shippingAddressFromData = setShippingAddressByStore(obj.shippingAddressFromData, data);
             saveData(obj);
         },
 
@@ -86,7 +114,7 @@ define([
          * @return {*}
          */
         getShippingAddressFromData: function () {
-            return getData().shippingAddressFromData;
+            return getShippingAddressByStore(getData().shippingAddressFromData);
         },
 
         /**
@@ -97,7 +125,7 @@ define([
         setNewCustomerShippingAddress: function (data) {
             var obj = getData();
 
-            obj.newCustomerShippingAddress = data;
+            obj.newCustomerShippingAddress = setShippingAddressByStore(obj.newCustomerShippingAddress, data);
             saveData(obj);
         },
 
@@ -107,7 +135,7 @@ define([
          * @return {*}
          */
         getNewCustomerShippingAddress: function () {
-            return getData().newCustomerShippingAddress;
+            return getShippingAddressByStore(getData().newCustomerShippingAddress);
         },
 
         /**
@@ -181,7 +209,7 @@ define([
         setBillingAddressFromData: function (data) {
             var obj = getData();
 
-            obj.billingAddressFromData = data;
+            obj.billingAddressFromData = utils.filterFormData(data);
             saveData(obj);
         },
 

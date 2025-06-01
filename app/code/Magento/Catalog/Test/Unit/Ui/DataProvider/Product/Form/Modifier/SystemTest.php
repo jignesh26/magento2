@@ -1,31 +1,32 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Catalog\Test\Unit\Ui\DataProvider\Product\Form\Modifier;
 
 use Magento\Catalog\Model\Product\Type;
 use Magento\Catalog\Ui\DataProvider\Product\Form\Modifier\System;
 use Magento\Framework\UrlInterface;
+use PHPUnit\Framework\MockObject\MockObject;
 
 /**
- * Class SystemTest
- *
  * @method System getModel
  */
-class SystemTest extends AbstractModifierTest
+class SystemTest extends AbstractModifierTestCase
 {
     /**
-     * @var UrlInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var UrlInterface|MockObject
      */
     protected $urlBuilderMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->urlBuilderMock = $this->getMockBuilder(UrlInterface::class)
-            ->setMethods(['getUrl'])
+            ->onlyMethods(['getUrl'])
             ->getMockForAbstractClass();
     }
 

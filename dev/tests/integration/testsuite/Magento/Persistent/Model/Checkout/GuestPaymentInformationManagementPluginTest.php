@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2024 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Persistent\Model\Checkout;
@@ -81,7 +81,7 @@ class GuestPaymentInformationManagementPluginTest extends \PHPUnit\Framework\Tes
      */
     protected $objectManager;
 
-    public function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
         $this->customerSession = $this->objectManager->get(\Magento\Customer\Model\Session::class);
@@ -132,7 +132,7 @@ class GuestPaymentInformationManagementPluginTest extends \PHPUnit\Framework\Tes
      */
     public function testBeforeSavePaymentInformationAndPlaceOrder()
     {
-        $guestEmail = 'guest@example.com';
+        $guestEmail = 'customer@example.com';
 
         //Retrieve customer from repository
         /** @var \Magento\Customer\Api\CustomerRepositoryInterface $customerRepository */

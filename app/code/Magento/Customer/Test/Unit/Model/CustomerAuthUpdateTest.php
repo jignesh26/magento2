@@ -1,16 +1,25 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Customer\Test\Unit\Model;
 
+use Magento\Customer\Model\Customer as CustomerModel;
+use Magento\Customer\Model\CustomerFactory;
 use Magento\Customer\Model\CustomerAuthUpdate;
+use Magento\Customer\Model\CustomerRegistry;
+use Magento\Customer\Model\Data\CustomerSecure;
+use Magento\Customer\Model\ResourceModel\Customer as CustomerResourceModel;
+use Magento\Framework\DB\Adapter\AdapterInterface;
+use Magento\Framework\Exception\NoSuchEntityException;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-/**
- * Class CustomerAuthUpdateTest
- */
-class CustomerAuthUpdateTest extends \PHPUnit\Framework\TestCase
+class CustomerAuthUpdateTest extends TestCase
 {
     /**
      * @var CustomerAuthUpdate
@@ -18,51 +27,60 @@ class CustomerAuthUpdateTest extends \PHPUnit\Framework\TestCase
     protected $model;
 
     /**
-     * @var \Magento\Customer\Model\CustomerRegistry|\PHPUnit_Framework_MockObject_MockObject
+     * @var CustomerRegistry|MockObject
      */
     protected $customerRegistry;
 
     /**
-     * @var \Magento\Customer\Model\ResourceModel\Customer|\PHPUnit_Framework_MockObject_MockObject
+     * @var CustomerResourceModel|MockObject
      */
     protected $customerResourceModel;
 
     /**
-     * @var \Magento\Framework\TestFramework\Unit\Helper\ObjectManager
+     * @var CustomerFactory|MockObject
+     */
+    protected $customerFactory;
+
+    /**
+     * @var ObjectManager
      */
     protected $objectManager;
 
     /**
      * Setup the test
      */
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $this->objectManager = new ObjectManager($this);
 
         $this->customerRegistry =
-            $this->createMock(\Magento\Customer\Model\CustomerRegistry::class);
+            $this->createMock(CustomerRegistry::class);
         $this->customerResourceModel =
-            $this->createMock(\Magento\Customer\Model\ResourceModel\Customer::class);
+            $this->createMock(CustomerResourceModel::class);
+        $this->customerFactory =
+            $this->createMock(CustomerFactory::class);
 
         $this->model = $this->objectManager->getObject(
-            \Magento\Customer\Model\CustomerAuthUpdate::class,
+            CustomerAuthUpdate::class,
             [
                 'customerRegistry' => $this->customerRegistry,
                 'customerResourceModel' => $this->customerResourceModel,
+                'customerFactory' => $this->customerFactory
             ]
         );
     }
 
     /**
      * test SaveAuth
+     * @throws NoSuchEntityException
      */
     public function testSaveAuth()
     {
         $customerId = 1;
 
-        $customerSecureMock = $this->createMock(\Magento\Customer\Model\Data\CustomerSecure::class);
+        $customerSecureMock = $this->createMock(CustomerSecure::class);
 
-        $dbAdapter = $this->createMock(\Magento\Framework\DB\Adapter\AdapterInterface::class);
+        $dbAdapter = $this->getMockForAbstractClass(AdapterInterface::class);
 
         $this->customerRegistry->expects($this->once())
             ->method('retrieveSecureData')
@@ -97,6 +115,14 @@ class CustomerAuthUpdateTest extends \PHPUnit\Framework\TestCase
                 'entity_id = ?',
                 $customerId
             );
+
+        $customerModel = $this->createMock(CustomerModel::class);
+        $customerModel->expects($this->once())
+            ->method('reindex');
+
+        $this->customerFactory->expects($this->once())
+            ->method('create')
+            ->willReturn($customerModel);
 
         $this->model->saveAuth($customerId);
     }

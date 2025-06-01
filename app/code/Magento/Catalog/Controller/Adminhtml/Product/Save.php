@@ -1,8 +1,7 @@
 <?php
 /**
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Catalog\Controller\Adminhtml\Product;
@@ -11,11 +10,13 @@ use Magento\Framework\App\Action\HttpPostActionInterface as HttpPostActionInterf
 use Magento\Backend\App\Action;
 use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\Catalog\Controller\Adminhtml\Product;
+use Magento\Framework\App\ObjectManager;
 use Magento\Store\Model\StoreManagerInterface;
 use Magento\Framework\App\Request\DataPersistorInterface;
 
 /**
- * Class Save
+ * Product save controller
+ *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class Save extends \Magento\Catalog\Controller\Adminhtml\Product implements HttpPostActionInterface
@@ -56,12 +57,12 @@ class Save extends \Magento\Catalog\Controller\Adminhtml\Product implements Http
     private $storeManager;
 
     /**
-     * @var \Magento\Framework\Escaper|null
+     * @var \Magento\Framework\Escaper
      */
     private $escaper;
 
     /**
-     * @var null|\Psr\Log\LoggerInterface
+     * @var \Psr\Log\LoggerInterface
      */
     private $logger;
 
@@ -74,8 +75,11 @@ class Save extends \Magento\Catalog\Controller\Adminhtml\Product implements Http
      * @param \Magento\Catalog\Model\Product\Copier $productCopier
      * @param \Magento\Catalog\Model\Product\TypeTransitionManager $productTypeManager
      * @param \Magento\Catalog\Api\ProductRepositoryInterface $productRepository
-     * @param \Magento\Framework\Escaper|null $escaper
-     * @param \Psr\Log\LoggerInterface|null $logger
+     * @param \Magento\Framework\Escaper $escaper
+     * @param \Psr\Log\LoggerInterface $logger
+     * @param \Magento\Catalog\Api\CategoryLinkManagementInterface $categoryLinkManagement
+     * @param StoreManagerInterface $storeManager
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Backend\App\Action\Context $context,
@@ -84,16 +88,24 @@ class Save extends \Magento\Catalog\Controller\Adminhtml\Product implements Http
         \Magento\Catalog\Model\Product\Copier $productCopier,
         \Magento\Catalog\Model\Product\TypeTransitionManager $productTypeManager,
         \Magento\Catalog\Api\ProductRepositoryInterface $productRepository,
-        \Magento\Framework\Escaper $escaper = null,
-        \Psr\Log\LoggerInterface $logger = null
+        ?\Magento\Framework\Escaper $escaper = null,
+        ?\Psr\Log\LoggerInterface $logger = null,
+        ?\Magento\Catalog\Api\CategoryLinkManagementInterface $categoryLinkManagement = null,
+        ?\Magento\Store\Model\StoreManagerInterface $storeManager = null
     ) {
+        parent::__construct($context, $productBuilder);
         $this->initializationHelper = $initializationHelper;
         $this->productCopier = $productCopier;
         $this->productTypeManager = $productTypeManager;
         $this->productRepository = $productRepository;
-        parent::__construct($context, $productBuilder);
-        $this->escaper = $escaper ?? $this->_objectManager->get(\Magento\Framework\Escaper::class);
-        $this->logger = $logger ?? $this->_objectManager->get(\Psr\Log\LoggerInterface::class);
+        $this->escaper = $escaper ?: ObjectManager::getInstance()
+            ->get(\Magento\Framework\Escaper::class);
+        $this->logger = $logger ?: ObjectManager::getInstance()
+            ->get(\Psr\Log\LoggerInterface::class);
+        $this->categoryLinkManagement = $categoryLinkManagement ?: ObjectManager::getInstance()
+            ->get(\Magento\Catalog\Api\CategoryLinkManagementInterface::class);
+        $this->storeManager = $storeManager ?: ObjectManager::getInstance()
+            ->get(\Magento\Store\Model\StoreManagerInterface::class);
     }
 
     /**
@@ -106,8 +118,8 @@ class Save extends \Magento\Catalog\Controller\Adminhtml\Product implements Http
     public function execute()
     {
         $storeId = $this->getRequest()->getParam('store', 0);
-        $store = $this->getStoreManager()->getStore($storeId);
-        $this->getStoreManager()->setCurrentStore($store->getCode());
+        $store = $this->storeManager->getStore($storeId);
+        $this->storeManager->setCurrentStore($store->getCode());
         $redirectBack = $this->getRequest()->getParam('back', false);
         $productId = $this->getRequest()->getParam('id');
         $resultRedirect = $this->resultRedirectFactory->create();
@@ -130,10 +142,6 @@ class Save extends \Magento\Catalog\Controller\Adminhtml\Product implements Http
                 $canSaveCustomOptions = $product->getCanSaveCustomOptions();
                 $product->save();
                 $this->handleImageRemoveError($data, $product->getId());
-                $this->getCategoryLinkManagement()->assignProductToCategories(
-                    $product->getSku(),
-                    $product->getCategoryIds()
-                );
                 $productId = $product->getEntityId();
                 $productAttributeSetId = $product->getAttributeSetId();
                 $productTypeId = $product->getTypeId();
@@ -159,6 +167,7 @@ class Save extends \Magento\Catalog\Controller\Adminhtml\Product implements Http
                 if ($redirectBack === 'duplicate') {
                     $product->unsetData('quantity_and_stock_status');
                     $newProduct = $this->productCopier->copy($product);
+                    $this->checkUniqueAttributes($product);
                     $this->messageManager->addSuccessMessage(__('You duplicated the product.'));
                 }
             } catch (\Magento\Framework\Exception\LocalizedException $e) {
@@ -221,7 +230,7 @@ class Save extends \Magento\Catalog\Controller\Adminhtml\Product implements Http
             }
             if ($removedImagesAmount) {
                 $expectedImagesAmount = count($postData['product']['media_gallery']['images']) - $removedImagesAmount;
-                $product = $this->productRepository->getById($productId);
+                $product = $this->productRepository->getById($productId, false, null, true);
                 $images = $product->getMediaGallery('images');
                 if (is_array($images) && $expectedImagesAmount != count($images)) {
                     $this->messageManager->addNoticeMessage(
@@ -235,11 +244,9 @@ class Save extends \Magento\Catalog\Controller\Adminhtml\Product implements Http
     /**
      * Do copying data to stores
      *
-     * If the 'copy_from' field is not specified in the input data,
-     * the store fallback mechanism will automatically take the admin store's default value.
-     *
      * @param array $data
      * @param int $productId
+     *
      * @return void
      */
     protected function copyToStores($data, $productId)
@@ -249,19 +256,7 @@ class Save extends \Magento\Catalog\Controller\Adminhtml\Product implements Http
                 if (isset($data['product']['website_ids'][$websiteId])
                     && (bool)$data['product']['website_ids'][$websiteId]) {
                     foreach ($group as $store) {
-                        if (isset($store['copy_from'])) {
-                            $copyFrom = $store['copy_from'];
-                            $copyTo = (isset($store['copy_to'])) ? $store['copy_to'] : 0;
-                            if ($copyTo) {
-                                $this->_objectManager->create(\Magento\Catalog\Model\Product::class)
-                                    ->setStoreId($copyFrom)
-                                    ->load($productId)
-                                    ->setStoreId($copyTo)
-                                    ->setCanSaveCustomOptions($data['can_save_custom_options'])
-                                    ->setCopyFromView(true)
-                                    ->save();
-                            }
-                        }
+                        $this->copyToStore($data, $productId, $store);
                     }
                 }
             }
@@ -269,32 +264,30 @@ class Save extends \Magento\Catalog\Controller\Adminhtml\Product implements Http
     }
 
     /**
-     * Get categoryLinkManagement in a backward compatible way.
+     * Do copying data to stores
      *
-     * @return \Magento\Catalog\Api\CategoryLinkManagementInterface
-     */
-    private function getCategoryLinkManagement()
-    {
-        if (null === $this->categoryLinkManagement) {
-            $this->categoryLinkManagement = \Magento\Framework\App\ObjectManager::getInstance()
-                ->get(\Magento\Catalog\Api\CategoryLinkManagementInterface::class);
-        }
-        return $this->categoryLinkManagement;
-    }
-
-    /**
-     * Get storeManager in a backward compatible way.
+     * If the 'copy_from' field is not specified in the input data,
+     * the store fallback mechanism will automatically take the admin store's default value.
      *
-     * @return StoreManagerInterface
-     * @deprecated 101.0.0
+     * @param array $data
+     * @param int $productId
+     * @param array $store
      */
-    private function getStoreManager()
+    private function copyToStore($data, $productId, $store)
     {
-        if (null === $this->storeManager) {
-            $this->storeManager = \Magento\Framework\App\ObjectManager::getInstance()
-                ->get(\Magento\Store\Model\StoreManagerInterface::class);
+        if (isset($store['copy_from'])) {
+            $copyFrom = $store['copy_from'];
+            $copyTo = (isset($store['copy_to'])) ? $store['copy_to'] : 0;
+            if ($copyTo) {
+                $this->_objectManager->create(\Magento\Catalog\Model\Product::class)
+                    ->setStoreId($copyFrom)
+                    ->load($productId)
+                    ->setStoreId($copyTo)
+                    ->setCanSaveCustomOptions($data['can_save_custom_options'])
+                    ->setCopyFromView(true)
+                    ->save();
+            }
         }
-        return $this->storeManager;
     }
 
     /**
@@ -302,6 +295,7 @@ class Save extends \Magento\Catalog\Controller\Adminhtml\Product implements Http
      *
      * @return DataPersistorInterface|mixed
      * @deprecated 101.0.0
+     * @see we don't recommend this approach anymore
      */
     protected function getDataPersistor()
     {
@@ -342,5 +336,26 @@ class Save extends \Magento\Catalog\Controller\Adminhtml\Product implements Http
         }
 
         return $data;
+    }
+
+    /**
+     * Check unique attributes and add error to message manager
+     *
+     * @param \Magento\Catalog\Model\Product $product
+     */
+    private function checkUniqueAttributes(\Magento\Catalog\Model\Product $product)
+    {
+        $uniqueLabels = [];
+        foreach ($product->getAttributes() as $attribute) {
+            if ($attribute->getIsUnique() && $attribute->getIsUserDefined()
+                && $product->getData($attribute->getAttributeCode()) !== null
+            ) {
+                $uniqueLabels[] = $attribute->getDefaultFrontendLabel();
+            }
+        }
+        if ($uniqueLabels) {
+            $uniqueLabels = implode('", "', $uniqueLabels);
+            $this->messageManager->addErrorMessage(__('The value of attribute(s) "%1" must be unique', $uniqueLabels));
+        }
     }
 }

@@ -1,20 +1,24 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\CatalogImportExport\Test\Unit\Model\Import\Product\Validator;
 
 use Magento\CatalogImportExport\Model\Import\Product\SkuProcessor;
+use Magento\CatalogImportExport\Model\Import\Product\SkuStorage;
 use Magento\CatalogImportExport\Model\Import\Product\Validator\SuperProductsSku;
-use PHPUnit_Framework_MockObject_MockObject as Mock;
+use PHPUnit\Framework\MockObject\MockObject as Mock;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Test for SuperProductsSku
  *
  * @see SuperProductsSku
  */
-class SuperProductsSkuTest extends \PHPUnit\Framework\TestCase
+class SuperProductsSkuTest extends TestCase
 {
     /**
      * @var SkuProcessor|Mock
@@ -26,13 +30,19 @@ class SuperProductsSkuTest extends \PHPUnit\Framework\TestCase
      */
     private $model;
 
-    protected function setUp()
+    /**
+     * @var SkuStorage|Mock
+     */
+    private SkuStorage $skuStorageMock;
+
+    protected function setUp(): void
     {
         $this->skuProcessorMock = $this->getMockBuilder(SkuProcessor::class)
             ->disableOriginalConstructor()
             ->getMock();
+        $this->skuStorageMock = $this->createMock(SkuStorage::class);
 
-        $this->model = new SuperProductsSku($this->skuProcessorMock);
+        $this->model = new SuperProductsSku($this->skuProcessorMock, $this->skuStorageMock);
     }
 
     /**
@@ -44,9 +54,16 @@ class SuperProductsSkuTest extends \PHPUnit\Framework\TestCase
      */
     public function testIsValid(array $value, array $oldSkus, $hasNewSku = false, $expectedResult = true)
     {
-        $this->skuProcessorMock->expects($this->once())
+        $this->skuProcessorMock->expects($this->never())
             ->method('getOldSkus')
             ->willReturn($oldSkus);
+
+        $this->skuStorageMock
+            ->expects(!empty($value['_super_products_sku']) ? $this->once() : $this->never())
+            ->method('has')
+            ->willReturnCallback(function ($sku) use ($oldSkus) {
+                return isset($oldSkus[strtolower($sku)]);
+            });
 
         if ($hasNewSku) {
             $this->skuProcessorMock->expects($this->once())
@@ -60,7 +77,7 @@ class SuperProductsSkuTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isValidDataProvider()
+    public static function isValidDataProvider()
     {
         return [
             [

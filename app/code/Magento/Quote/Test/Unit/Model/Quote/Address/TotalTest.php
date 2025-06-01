@@ -3,20 +3,26 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Quote\Test\Unit\Model\Quote\Address;
 
-class TotalTest extends \PHPUnit\Framework\TestCase
+use Magento\Framework\Serialize\Serializer\Json;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Quote\Model\Quote\Address\Total;
+use PHPUnit\Framework\TestCase;
+
+class TotalTest extends TestCase
 {
     /**
-     * @var \Magento\Quote\Model\Quote\Address\Total
+     * @var Total
      */
     protected $model;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $serializer = $this->getMockBuilder(\Magento\Framework\Serialize\Serializer\Json::class)
-            ->setMethods(['unserialize'])
+        $serializer = $this->getMockBuilder(Json::class)
+            ->onlyMethods(['unserialize'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
         $serializer->expects($this->any())
@@ -25,9 +31,9 @@ class TotalTest extends \PHPUnit\Framework\TestCase
                 return json_decode($value, true);
             });
 
-        $objectManagerHelper = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $objectManagerHelper = new ObjectManager($this);
         $this->model = $objectManagerHelper->getObject(
-            \Magento\Quote\Model\Quote\Address\Total::class,
+            Total::class,
             [
                 'serializer' => $serializer
             ]
@@ -52,18 +58,18 @@ class TotalTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function setTotalAmountDataProvider()
+    public static function setTotalAmountDataProvider()
     {
         return [
             'Subtotal' => [
                 'code' => 'subtotal',
                 'amount' => 42.42,
-                'stored_code' => 'subtotal'
+                'storedCode' => 'subtotal'
             ],
             'Other total' => [
                 'code' => 'other',
                 'amount' => 42.17,
-                'stored_code' => 'other_amount'
+                'storedCode' => 'other_amount'
             ]
         ];
     }
@@ -86,18 +92,18 @@ class TotalTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function setBaseTotalAmountDataProvider()
+    public static function setBaseTotalAmountDataProvider()
     {
         return [
             'Subtotal' => [
                 'code' => 'subtotal',
                 'amount' => 17.42,
-                'stored_code' => 'base_subtotal'
+                'storedCode' => 'base_subtotal'
             ],
             'Other total' => [
                 'code' => 'other',
                 'amount' => 42.17,
-                'stored_code' => 'base_other_amount'
+                'storedCode' => 'base_other_amount'
             ]
         ];
     }
@@ -120,7 +126,7 @@ class TotalTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function addTotalAmountDataProvider()
+    public static function addTotalAmountDataProvider()
     {
         return [
             'Zero' => [
@@ -154,7 +160,7 @@ class TotalTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function addBaseTotalAmountDataProvider()
+    public static function addBaseTotalAmountDataProvider()
     {
         return [
             'Zero' => [
@@ -213,7 +219,7 @@ class TotalTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getFullInfoDataProvider()
+    public static function getFullInfoDataProvider()
     {
         $myArray = ['team' => 'kiwis'];
         $serializedInput = json_encode($myArray);

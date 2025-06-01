@@ -58,8 +58,32 @@ define([
                 expect(rules['validate-number'].handler(value)).toBe(true);
             });
 
+            it('Check on float without leading zero', function () {
+                var value = '.50';
+
+                expect(rules['validate-number'].handler(value)).toBe(true);
+            });
+
             it('Check on formatted float', function () {
                 var value = '1,000,000.50';
+
+                expect(rules['validate-number'].handler(value)).toBe(true);
+            });
+
+            it('Check on space', function () {
+                var value = '10 000';
+
+                expect(rules['validate-number'].handler(value)).toBe(true);
+            });
+
+            it('Check on formatted float (For International price)', function () {
+                var value = '10.000,00';
+
+                expect(rules['validate-number'].handler(value)).toBe(true);
+            });
+
+            it('Check on formatted float (For International price)', function () {
+                var value = '10\'000.00';
 
                 expect(rules['validate-number'].handler(value)).toBe(true);
             });
@@ -68,6 +92,31 @@ define([
                 var value = 'string';
 
                 expect(rules['validate-number'].handler(value)).toBe(false);
+            });
+        });
+        describe('"validate-nonempty-number-greater-than-zero" method', function () {
+            it('Check on empty value', function () {
+                var value = '';
+
+                expect(rules['validate-nonempty-number-greater-than-zero'].handler(value)).toBe(false);
+            });
+
+            it('Check on integer', function () {
+                var value = '125';
+
+                expect(rules['validate-nonempty-number-greater-than-zero'].handler(value)).toBe(true);
+            });
+
+            it('Check on zero', function () {
+                var value = '0';
+
+                expect(rules['validate-nonempty-number-greater-than-zero'].handler(value)).toBe(false);
+            });
+
+            it('Check on not a number', function () {
+                var value = 'string';
+
+                expect(rules['validate-nonempty-number-greater-than-zero'].handler(value)).toBe(false);
             });
         });
     });

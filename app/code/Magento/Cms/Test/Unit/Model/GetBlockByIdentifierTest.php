@@ -1,17 +1,23 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Cms\Test\Unit\Model;
 
+use Magento\Cms\Model\Block;
+use Magento\Cms\Model\BlockFactory;
 use Magento\Cms\Model\GetBlockByIdentifier;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Test for Magento\Cms\Model\GetBlockByIdentifier
  */
 
-class GetBlockByIdentifierTest extends \PHPUnit\Framework\TestCase
+class GetBlockByIdentifierTest extends TestCase
 {
     /**
      * @var GetBlockByIdentifier
@@ -19,34 +25,35 @@ class GetBlockByIdentifierTest extends \PHPUnit\Framework\TestCase
     private $getBlockByIdentifierCommand;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|\Magento\Cms\Model\Block
+     * @var MockObject|Block
      */
     private $block;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|\Magento\Cms\Model\BlockFactory
+     * @var MockObject|BlockFactory
      */
     private $blockFactory;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|\Magento\Cms\Model\ResourceModel\Block
+     * @var MockObject|\Magento\Cms\Model\ResourceModel\Block
      */
     private $blockResource;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->blockFactory = $this->getMockBuilder(\Magento\Cms\Model\BlockFactory::class)
+        $this->blockFactory = $this->getMockBuilder(BlockFactory::class)
             ->disableOriginalConstructor()
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->getMock();
 
         $this->blockResource = $this->getMockBuilder(\Magento\Cms\Model\ResourceModel\Block::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->block = $this->getMockBuilder(\Magento\Cms\Model\Block::class)
+        $this->block = $this->getMockBuilder(Block::class)
             ->disableOriginalConstructor()
-            ->setMethods(['setStoreId', 'getId'])
+            ->addMethods(['setStoreId'])
+            ->onlyMethods(['getId'])
             ->getMock();
 
         $this->getBlockByIdentifierCommand = new GetBlockByIdentifier($this->blockFactory, $this->blockResource);

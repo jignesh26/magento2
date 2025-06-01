@@ -49,8 +49,8 @@ class MetadataConfigTypeProcessor implements PostProcessorInterface
     public function __construct(
         ProcessorFactory $processorFactory,
         Initial $initialConfig,
-        ConfigSourceInterface $configSource = null,
-        ConfigPathResolver $configPathResolver = null
+        ?ConfigSourceInterface $configSource = null,
+        ?ConfigPathResolver $configPathResolver = null
     ) {
         $this->_processorFactory = $processorFactory;
         $this->_metadata = $initialConfig->getMetadata();
@@ -126,10 +126,13 @@ class MetadataConfigTypeProcessor implements PostProcessorInterface
                 //Failed to load scopes or config source, perhaps config data received is outdated.
                 return $data;
             }
-            /** @var \Magento\Framework\App\Config\Data\ProcessorInterface $processor */
-            $processor = $this->_processorFactory->get($metadata['backendModel']);
-            $value = $processor->processValue($this->_getValue($data, $path));
-            $this->_setValue($data, $path, $value);
+
+            if (isset($metadata['backendModel'])) {
+                /** @var \Magento\Framework\App\Config\Data\ProcessorInterface $processor */
+                $processor = $this->_processorFactory->get($metadata['backendModel']);
+                $value = $processor->processValue($this->_getValue($data, $path));
+                $this->_setValue($data, $path, $value);
+            }
         }
 
         return $data;

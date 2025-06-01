@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 
 define([
@@ -16,7 +16,8 @@ define([
     var defaultRendererTemplate = {
         parent: '${ $.$data.parentName }',
         name: '${ $.$data.name }',
-        component: 'Magento_Checkout/js/view/shipping-information/address-renderer/default'
+        component: 'Magento_Checkout/js/view/shipping-information/address-renderer/default',
+        provider: 'checkoutProvider'
     };
 
     return Component.extend({

@@ -1,14 +1,14 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Quote\Model\Quote\Item;
 
-use Magento\Quote\Model\Quote\Item;
-use Magento\Framework\Serialize\Serializer\Json;
 use Magento\Framework\App\ObjectManager;
 use Magento\Framework\Serialize\JsonValidator;
+use Magento\Framework\Serialize\Serializer\Json;
+use Magento\Quote\Model\Quote\Item;
 
 /**
  * Compare quote items
@@ -32,8 +32,8 @@ class Compare
      * @param JsonValidator|null $jsonValidator
      */
     public function __construct(
-        Json $serializer = null,
-        JsonValidator $jsonValidator = null
+        ?Json $serializer = null,
+        ?JsonValidator $jsonValidator = null
     ) {
         $this->serializer = $serializer ?: ObjectManager::getInstance()->get(Json::class);
         $this->jsonValidator = $jsonValidator ?: ObjectManager::getInstance()->get(JsonValidator::class);
@@ -50,7 +50,7 @@ class Compare
         if (is_string($value) && $this->jsonValidator->isValid($value)) {
             $value = $this->serializer->unserialize($value);
             if (is_array($value)) {
-                unset($value['qty'], $value['uenc']);
+                unset($value['qty'], $value['uenc'], $value['related_product'], $value['item']);
                 $value = array_filter($value, function ($optionValue) {
                     return !empty($optionValue);
                 });
@@ -71,17 +71,13 @@ class Compare
         if ($target->getProductId() != $compared->getProductId()) {
             return false;
         }
-        $targetOptions = $this->getOptions($target);
-        $comparedOptions = $this->getOptions($compared);
-
-        if (array_diff_key($targetOptions, $comparedOptions) != array_diff_key($comparedOptions, $targetOptions)
-        ) {
+        $targetOptionByCode = $target->getOptionsByCode();
+        $comparedOptionsByCode = $compared->getOptionsByCode();
+        if (!$target->compareOptions($targetOptionByCode, $comparedOptionsByCode)) {
             return false;
         }
-        foreach ($targetOptions as $name => $value) {
-            if ($comparedOptions[$name] != $value) {
-                return false;
-            }
+        if (!$target->compareOptions($comparedOptionsByCode, $targetOptionByCode)) {
+            return false;
         }
         return true;
     }

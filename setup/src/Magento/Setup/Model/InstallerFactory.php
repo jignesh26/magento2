@@ -6,18 +6,20 @@
 
 namespace Magento\Setup\Model;
 
-use Zend\ServiceManager\ServiceLocatorInterface;
-use Magento\Setup\Module\ResourceFactory;
+use Laminas\ServiceManager\ServiceLocatorInterface;
 use Magento\Framework\App\ErrorHandler;
-use Magento\Framework\Setup\LoggerInterface;
+use Magento\Framework\Setup\ConsoleLoggerInterface;
+use Magento\Setup\Module\ResourceFactory;
 
 /**
+ * Factory for \Magento\Setup\Model\Installer
+ *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class InstallerFactory
 {
     /**
-     * Zend Framework's service locator
+     * Laminas Framework's service locator
      *
      * @var ServiceLocatorInterface
      */
@@ -29,8 +31,6 @@ class InstallerFactory
     private $resourceFactory;
 
     /**
-     * Constructor
-     *
      * @param ServiceLocatorInterface $serviceLocator
      * @param ResourceFactory $resourceFactory
      */
@@ -48,10 +48,11 @@ class InstallerFactory
     /**
      * Factory method for installer object
      *
-     * @param LoggerInterface $log
+     * @param ConsoleLoggerInterface $log
      * @return Installer
+     * @throws \Magento\Setup\Exception
      */
-    public function create(LoggerInterface $log)
+    public function create(ConsoleLoggerInterface $log)
     {
         return new Installer(
             $this->serviceLocator->get(\Magento\Framework\Setup\FilePermissions::class),
@@ -83,7 +84,7 @@ class InstallerFactory
     }
 
     /**
-     * creates Resource Factory
+     * Create Resource Factory
      *
      * @return Resource
      */

@@ -88,6 +88,9 @@ class CacheManager
      */
     public function saveCompiled(string $key, array $data)
     {
+        // sort configuration to have it in the same order on every build
+        ksort($data);
+
         $this->configWriter->write($key, $data);
     }
 
@@ -98,7 +101,7 @@ class CacheManager
      */
     public function clean(string $key)
     {
-        $this->cache->clean(\Zend_Cache::CLEANING_MODE_MATCHING_TAG, [$key]);
+        $this->cache->remove($key);
     }
 
     /**

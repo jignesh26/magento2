@@ -7,19 +7,15 @@
 
 namespace Magento\Quote\Model;
 
+use Magento\Framework\Exception\LocalizedException;
 use \Magento\Quote\Api\CouponManagementInterface;
 use Magento\Framework\Exception\CouldNotDeleteException;
 use Magento\Framework\Exception\CouldNotSaveException;
 use Magento\Framework\Exception\NoSuchEntityException;
 
-/**
- * Coupon management object.
- */
 class CouponManagement implements CouponManagementInterface
 {
     /**
-     * Quote repository.
-     *
      * @var \Magento\Quote\Api\CartRepositoryInterface
      */
     protected $quoteRepository;
@@ -36,7 +32,7 @@ class CouponManagement implements CouponManagementInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function get($cartId)
     {
@@ -46,10 +42,11 @@ class CouponManagement implements CouponManagementInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function set($cartId, $couponCode)
     {
+        $couponCode = trim($couponCode);
         /** @var  \Magento\Quote\Model\Quote $quote */
         $quote = $this->quoteRepository->getActive($cartId);
         if (!$quote->getItemsCount()) {
@@ -63,9 +60,12 @@ class CouponManagement implements CouponManagementInterface
         try {
             $quote->setCouponCode($couponCode);
             $this->quoteRepository->save($quote->collectTotals());
+        } catch (LocalizedException $e) {
+            throw new CouldNotSaveException(__('The coupon code couldn\'t be applied: ' .$e->getMessage()), $e);
         } catch (\Exception $e) {
             throw new CouldNotSaveException(
-                __("The coupon code couldn't be applied. Verify the coupon code and try again.")
+                __("The coupon code couldn't be applied. Verify the coupon code and try again."),
+                $e
             );
         }
         if ($quote->getCouponCode() != $couponCode) {
@@ -75,7 +75,7 @@ class CouponManagement implements CouponManagementInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function remove($cartId)
     {

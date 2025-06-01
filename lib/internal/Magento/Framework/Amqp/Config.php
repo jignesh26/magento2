@@ -5,38 +5,39 @@
  */
 namespace Magento\Framework\Amqp;
 
+use Magento\Framework\Amqp\Connection\Factory as ConnectionFactory;
 use Magento\Framework\Amqp\Connection\FactoryOptions;
 use Magento\Framework\App\DeploymentConfig;
 use Magento\Framework\App\ObjectManager;
-use PhpAmqpLib\Connection\AbstractConnection;
+use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
 use PhpAmqpLib\Channel\AMQPChannel;
-use Magento\Framework\Amqp\Connection\Factory as ConnectionFactory;
+use PhpAmqpLib\Connection\AbstractConnection;
 
 /**
  * Reads the Amqp config in the deployed environment configuration
  *
  * @api
- * @since 100.0.0
+ * @since 103.0.0
  */
-class Config
+class Config implements ResetAfterRequestInterface
 {
     /**
      * Queue config key
      */
-    const QUEUE_CONFIG = 'queue';
+    public const QUEUE_CONFIG = 'queue';
 
     /**
      * Amqp config key
      */
-    const AMQP_CONFIG = 'amqp';
+    public const AMQP_CONFIG = 'amqp';
 
-    const HOST = 'host';
-    const PORT = 'port';
-    const USERNAME = 'user';
-    const PASSWORD = 'password';
-    const VIRTUALHOST = 'virtualhost';
-    const SSL = 'ssl';
-    const SSL_OPTIONS = 'ssl_options';
+    public const HOST = 'host';
+    public const PORT = 'port';
+    public const USERNAME = 'user';
+    public const PASSWORD = 'password';
+    public const VIRTUALHOST = 'virtualhost';
+    public const SSL = 'ssl';
+    public const SSL_OPTIONS = 'ssl_options';
 
     /**
      * Deployment configuration
@@ -96,12 +97,11 @@ class Config
      * @param DeploymentConfig $config
      * @param string $connectionName
      * @param ConnectionFactory|null $connectionFactory
-     * @since 100.0.0
      */
     public function __construct(
         DeploymentConfig $config,
         $connectionName = 'amqp',
-        ConnectionFactory $connectionFactory = null
+        ?ConnectionFactory $connectionFactory = null
     ) {
         $this->deploymentConfig = $config;
         $this->connectionName = $connectionName;
@@ -113,9 +113,21 @@ class Config
      * Destructor
      *
      * @return void
-     * @since 100.0.0
+     * @since 103.0.0
      */
     public function __destruct()
+    {
+        try {
+            $this->closeConnection();
+        } catch (\Throwable $e) {
+            error_log($e->getMessage());
+        }
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function _resetState(): void
     {
         $this->closeConnection();
     }
@@ -126,7 +138,7 @@ class Config
      * @param string $key
      * @return string
      * @throws \LogicException
-     * @since 100.0.0
+     * @since 103.0.0
      */
     public function getValue($key)
     {
@@ -141,7 +153,7 @@ class Config
      */
     private function createConnection(): AbstractConnection
     {
-        $sslEnabled = trim($this->getValue(self::SSL)) === 'true';
+        $sslEnabled = trim($this->getValue(self::SSL) ?? '') === 'true';
         $options = new FactoryOptions();
         $options->setHost($this->getValue(self::HOST));
         $options->setPort($this->getValue(self::PORT));
@@ -162,15 +174,23 @@ class Config
      *
      * @return AMQPChannel
      * @throws \LogicException
-     * @since 100.0.0
+     * @since 103.0.0
      */
     public function getChannel()
     {
-        if (!isset($this->connection) || !isset($this->channel)) {
+        if (!isset($this->connection)) {
             $this->connection = $this->createConnection();
-
+        }
+        if (!isset($this->channel)
+            || !$this->channel->getConnection()
+            || !$this->channel->getConnection()->isConnected()
+        ) {
+            if (!$this->connection->isConnected()) {
+                $this->connection->reconnect();
+            }
             $this->channel = $this->connection->channel();
         }
+
         return $this->channel;
     }
 

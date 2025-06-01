@@ -1,18 +1,19 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Controller\Product\Frontend\Action;
 
 use Magento\Catalog\Model\Product\ProductFrontendAction\Synchronizer;
 use Magento\Framework\App\Action\Context;
+use Magento\Framework\App\Action\HttpPostActionInterface;
 use Magento\Framework\Controller\Result\JsonFactory;
 
 /**
  * Synchronizes Product Frontend Actions with database
  */
-class Synchronize extends \Magento\Framework\App\Action\Action
+class Synchronize extends \Magento\Framework\App\Action\Action implements HttpPostActionInterface
 {
     /**
      * @var Context
@@ -46,6 +47,8 @@ class Synchronize extends \Magento\Framework\App\Action\Action
     }
 
     /**
+     * @inheritDoc
+     *
      * This is handle for synchronizing between frontend and backend product actions:
      *  - visit product page (recently_viewed)
      *  - compare products (recently_compared)
@@ -57,9 +60,6 @@ class Synchronize extends \Magento\Framework\App\Action\Action
      *      'added_at' => "JS_TIMESTAMP"
      *  ]
      * ]
-     *
-     *
-     * @inheritdoc
      */
     public function execute()
     {
@@ -71,8 +71,8 @@ class Synchronize extends \Magento\Framework\App\Action\Action
             $this->synchronizer->syncActions($productsData, $typeId);
         } catch (\Exception $e) {
             $resultJson->setStatusHeader(
-                \Zend\Http\Response::STATUS_CODE_400,
-                \Zend\Http\AbstractMessage::VERSION_11,
+                \Laminas\Http\Response::STATUS_CODE_400,
+                \Laminas\Http\AbstractMessage::VERSION_11,
                 'Bad Request'
             );
         }

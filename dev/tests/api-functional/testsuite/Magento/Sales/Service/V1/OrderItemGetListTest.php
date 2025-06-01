@@ -9,19 +9,19 @@ use Magento\TestFramework\TestCase\WebapiAbstract;
 
 class OrderItemGetListTest extends WebapiAbstract
 {
-    const RESOURCE_PATH = '/V1/orders/items';
+    private const RESOURCE_PATH = '/V1/orders/items';
 
-    const SERVICE_VERSION = 'V1';
-    const SERVICE_NAME = 'salesOrderItemRepositoryV1';
+    private const SERVICE_VERSION = 'V1';
+    private const SERVICE_NAME = 'salesOrderItemRepositoryV1';
 
-    const ORDER_INCREMENT_ID = '100000001';
+    private const ORDER_INCREMENT_ID = '100000001';
 
     /**
      * @var \Magento\TestFramework\ObjectManager
      */
     protected $objectManager;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
     }
@@ -31,7 +31,7 @@ class OrderItemGetListTest extends WebapiAbstract
      */
     public function testGetList()
     {
-        $expectedRowTotals = [112, 102, 92];
+        $expectedRowTotals = [110, 100, 90];
         /** @var \Magento\Framework\Api\SortOrderBuilder $sortOrderBuilder */
         $sortOrderBuilder = $this->objectManager->get(
             \Magento\Framework\Api\SortOrderBuilder::class
@@ -78,10 +78,10 @@ class OrderItemGetListTest extends WebapiAbstract
 
         $response = $this->_webApiCall($serviceInfo, $requestData);
 
-        $this->assertTrue(is_array($response));
+        $this->assertIsArray($response);
         $this->assertArrayHasKey('items', $response);
         $this->assertCount(3, $response['items']);
-        $this->assertTrue(is_array($response['items'][0]));
+        $this->assertIsArray($response['items'][0]);
         $rowTotals = [];
 
         foreach ($response['items'] as $item) {

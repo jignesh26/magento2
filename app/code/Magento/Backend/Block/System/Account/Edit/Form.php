@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Backend\Block\System\Account\Edit;
 
@@ -11,11 +11,10 @@ use Magento\Framework\Locale\OptionInterface;
 /**
  * Adminhtml edit admin user account form
  *
- * @author      Magento Core Team <core@magentocommerce.com>
  */
 class Form extends \Magento\Backend\Block\Widget\Form\Generic
 {
-    const IDENTITY_VERIFICATION_PASSWORD_FIELD = 'current_password';
+    public const IDENTITY_VERIFICATION_PASSWORD_FIELD = 'current_password';
 
     /**
      * @var \Magento\Backend\Model\Auth\Session
@@ -57,7 +56,7 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
         \Magento\Backend\Model\Auth\Session $authSession,
         \Magento\Framework\Locale\ListsInterface $localeLists,
         array $data = [],
-        OptionInterface $deployedLocales = null
+        ?OptionInterface $deployedLocales = null
     ) {
         $this->_userFactory = $userFactory;
         $this->_authSession = $authSession;
@@ -68,7 +67,7 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     protected function _prepareForm()
     {
@@ -114,7 +113,7 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
                 'name' => 'password',
                 'label' => __('New Password'),
                 'title' => __('New Password'),
-                'class' => 'validate-admin-password admin__control-text'
+                'class' => 'validate-admin-password'
             ]
         );
 
@@ -124,7 +123,7 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
             [
                 'name' => 'password_confirmation',
                 'label' => __('Password Confirmation'),
-                'class' => 'validate-cpassword admin__control-text'
+                'class' => 'validate-cpassword'
             ]
         );
 
@@ -152,7 +151,7 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
                 'label' => __('Your Password'),
                 'id' => self::IDENTITY_VERIFICATION_PASSWORD_FIELD,
                 'title' => __('Your Password'),
-                'class' => 'validate-current-password required-entry admin__control-text',
+                'class' => 'validate-current-password required-entry',
                 'required' => true
             ]
         );

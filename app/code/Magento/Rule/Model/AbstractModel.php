@@ -12,6 +12,7 @@ use Magento\Framework\Api\ExtensionAttributesFactory;
  * Abstract Rule entity data model
  *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * phpcs:disable Magento2.Classes.AbstractApi
  * @api
  * @since 100.0.2
  */
@@ -106,12 +107,12 @@ abstract class AbstractModel extends \Magento\Framework\Model\AbstractExtensible
         \Magento\Framework\Registry $registry,
         \Magento\Framework\Data\FormFactory $formFactory,
         \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate,
-        \Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
-        \Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
+        ?\Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
+        ?\Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
         array $data = [],
-        ExtensionAttributesFactory $extensionFactory = null,
-        AttributeValueFactory $customAttributeFactory = null,
-        \Magento\Framework\Serialize\Serializer\Json $serializer = null
+        ?ExtensionAttributesFactory $extensionFactory = null,
+        ?AttributeValueFactory $customAttributeFactory = null,
+        ?\Magento\Framework\Serialize\Serializer\Json $serializer = null
     ) {
         $this->_formFactory = $formFactory;
         $this->_localeDate = $localeDate;
@@ -342,7 +343,7 @@ abstract class AbstractModel extends \Magento\Framework\Model\AbstractExtensible
                 foreach ($value as $id => $data) {
                     $path = explode('--', $id);
                     $node = & $arr;
-                    for ($i = 0, $l = sizeof($path); $i < $l; $i++) {
+                    for ($i = 0, $l = count($path); $i < $l; $i++) {
                         if (!isset($node[$key][$path[$i]])) {
                             $node[$key][$path[$i]] = [];
                         }
@@ -483,6 +484,8 @@ abstract class AbstractModel extends \Magento\Framework\Model\AbstractExtensible
     }
 
     /**
+     * Get extension factory
+     *
      * @return \Magento\Framework\Api\ExtensionAttributesFactory
      * @deprecated 100.1.0
      */
@@ -493,6 +496,8 @@ abstract class AbstractModel extends \Magento\Framework\Model\AbstractExtensible
     }
 
     /**
+     * Get custom attribute factory
+     *
      * @return \Magento\Framework\Api\AttributeValueFactory
      * @deprecated 100.1.0
      */

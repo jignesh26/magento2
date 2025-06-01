@@ -1,12 +1,11 @@
 <?php
 /**
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Cms\Controller\Adminhtml\Block;
 
-use Magento\Framework\App\Action\HttpPostActionInterface as HttpPostActionInterface;
+use Magento\Framework\App\Action\HttpPostActionInterface;
 use Magento\Backend\App\Action\Context;
 use Magento\Cms\Api\BlockRepositoryInterface;
 use Magento\Cms\Model\Block;
@@ -15,6 +14,9 @@ use Magento\Framework\App\Request\DataPersistorInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Registry;
 
+/**
+ * Save CMS block action.
+ */
 class Save extends \Magento\Cms\Controller\Adminhtml\Block implements HttpPostActionInterface
 {
     /**
@@ -43,8 +45,8 @@ class Save extends \Magento\Cms\Controller\Adminhtml\Block implements HttpPostAc
         Context $context,
         Registry $coreRegistry,
         DataPersistorInterface $dataPersistor,
-        BlockFactory $blockFactory = null,
-        BlockRepositoryInterface $blockRepository = null
+        ?BlockFactory $blockFactory = null,
+        ?BlockRepositoryInterface $blockRepository = null
     ) {
         $this->dataPersistor = $dataPersistor;
         $this->blockFactory = $blockFactory
@@ -119,9 +121,9 @@ class Save extends \Magento\Cms\Controller\Adminhtml\Block implements HttpPostAc
 
         if ($redirect ==='continue') {
             $resultRedirect->setPath('*/*/edit', ['block_id' => $model->getId()]);
-        } else if ($redirect === 'close') {
+        } elseif ($redirect === 'close') {
             $resultRedirect->setPath('*/*/');
-        } else if ($redirect === 'duplicate') {
+        } elseif ($redirect === 'duplicate') {
             $duplicateModel = $this->blockFactory->create(['data' => $data]);
             $duplicateModel->setId(null);
             $duplicateModel->setIdentifier($data['identifier'] . '-' . uniqid());

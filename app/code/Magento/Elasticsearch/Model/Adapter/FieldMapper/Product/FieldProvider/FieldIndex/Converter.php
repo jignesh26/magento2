@@ -9,6 +9,8 @@ namespace Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\
 
 /**
  * Field type converter from internal index type to elastic service.
+ * @deprecated Elasticsearch is no longer supported by Adobe
+ * @see this class will be responsible for ES only
  */
 class Converter implements ConverterInterface
 {
@@ -18,12 +20,18 @@ class Converter implements ConverterInterface
     private const ES_NO_INDEX = 'no';
 
     /**
+     * Text flags for Elasticsearch no analyze index value
+     */
+    private const ES_NO_ANALYZE = 'not_analyzed';
+
+    /**
      * Mapping between internal data types and elastic service.
      *
      * @var array
      */
     private $mapping = [
-        'no_index' => self::ES_NO_INDEX,
+        ConverterInterface::INTERNAL_NO_INDEX_VALUE => self::ES_NO_INDEX,
+        ConverterInterface::INTERNAL_NO_ANALYZE_VALUE => self::ES_NO_ANALYZE,
     ];
 
     /**

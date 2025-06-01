@@ -1,28 +1,33 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 declare(strict_types=1);
 
 namespace Magento\Catalog\Test\Unit\Model\Product\Attribute\Frontend\InputType;
 
-class PresentationTest extends \PHPUnit\Framework\TestCase
+use Magento\Catalog\Model\Product\Attribute\Frontend\Inputtype\Presentation;
+use Magento\Catalog\Model\ResourceModel\Eav\Attribute;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+
+class PresentationTest extends TestCase
 {
     /**
-     * @var \Magento\Catalog\Model\Product\Attribute\Frontend\Inputtype\Presentation
+     * @var Presentation
      */
     private $presentation;
 
     /**
-     * @var \Magento\Catalog\Model\ResourceModel\Eav\Attribute| \PHPUnit_Framework_MockObject_MockObject
+     * @var Attribute|MockObject
      */
     private $attributeMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->presentation = new \Magento\Catalog\Model\Product\Attribute\Frontend\Inputtype\Presentation();
-        $this->attributeMock = $this->getMockBuilder(\Magento\Catalog\Model\ResourceModel\Eav\Attribute::class)
+        $this->presentation = new Presentation();
+        $this->attributeMock = $this->getMockBuilder(Attribute::class)
             ->disableOriginalConstructor()
             ->getMock();
     }
@@ -43,7 +48,7 @@ class PresentationTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getPresentationInputTypeDataProvider()
+    public static function getPresentationInputTypeDataProvider()
     {
         return [
             'attribute_is_textarea_and_wysiwyg_enabled' => ['textarea', true, 'texteditor'],
@@ -65,7 +70,7 @@ class PresentationTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function convertPresentationDataToInputTypeDataProvider()
+    public static function convertPresentationDataToInputTypeDataProvider()
     {
         return [
             [['key' => 'value'], ['key' => 'value']],

@@ -1,25 +1,28 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 declare(strict_types=1);
 
 namespace Magento\CatalogUrlRewrite\Test\Unit\Model\Category\Plugin\Category;
 
 use Magento\Catalog\Model\Category;
+use Magento\Catalog\Model\ResourceModel\Category as CategoryResource;
+use Magento\CatalogUrlRewrite\Model\Category\Plugin\Category\UpdateUrlPath;
 use Magento\CatalogUrlRewrite\Model\CategoryUrlPathGenerator;
 use Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGenerator;
 use Magento\CatalogUrlRewrite\Service\V1\StoreViewService;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
 use Magento\UrlRewrite\Model\UrlPersistInterface;
-use PHPUnit_Framework_MockObject_MockObject as MockObject;
-use Magento\Catalog\Model\ResourceModel\Category as CategoryResource;
+use Magento\UrlRewrite\Service\V1\Data\UrlRewrite;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Unit test for Magento\CatalogUrlRewrite\Model\Category\Plugin\Category\UpdateUrlPath class.
  */
-class UpdateUrlPathTest extends \PHPUnit\Framework\TestCase
+class UpdateUrlPathTest extends TestCase
 {
     /**
      * @var ObjectManager
@@ -57,54 +60,53 @@ class UpdateUrlPathTest extends \PHPUnit\Framework\TestCase
     private $category;
 
     /**
-     * @var \Magento\CatalogUrlRewrite\Model\Category\Plugin\Category\UpdateUrlPath
+     * @var UpdateUrlPath
      */
     private $updateUrlPathPlugin;
 
     /**
      * @inheritdoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = new ObjectManager($this);
         $this->categoryUrlPathGenerator = $this->getMockBuilder(CategoryUrlPathGenerator::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getUrlPath'])
+            ->onlyMethods(['getUrlPath'])
             ->getMock();
         $this->categoryUrlRewriteGenerator = $this->getMockBuilder(CategoryUrlRewriteGenerator::class)
             ->disableOriginalConstructor()
-            ->setMethods(['generate'])
+            ->onlyMethods(['generate'])
             ->getMock();
         $this->categoryResource = $this->getMockBuilder(CategoryResource::class)
             ->disableOriginalConstructor()
-            ->setMethods(['saveAttribute'])
+            ->onlyMethods(['saveAttribute'])
             ->getMock();
         $this->category = $this->getMockBuilder(Category::class)
             ->disableOriginalConstructor()
-            ->setMethods(
+            ->addMethods(['unsUrlPath', 'setUrlPath'])
+            ->onlyMethods(
                 [
                     'getStoreId',
                     'getParentId',
                     'isObjectNew',
                     'isInRootCategoryList',
                     'getStoreIds',
-                    'setStoreId',
-                    'unsUrlPath',
-                    'setUrlPath',
+                    'setStoreId'
                 ]
             )
             ->getMock();
         $this->storeViewService = $this->getMockBuilder(StoreViewService::class)
             ->disableOriginalConstructor()
-            ->setMethods(['doesEntityHaveOverriddenUrlPathForStore'])
+            ->onlyMethods(['doesEntityHaveOverriddenUrlPathForStore'])
             ->getMock();
         $this->urlPersist = $this->getMockBuilder(UrlPersistInterface::class)
             ->disableOriginalConstructor()
-            ->setMethods(['replace'])
+            ->onlyMethods(['replace'])
             ->getMockForAbstractClass();
 
         $this->updateUrlPathPlugin = $this->objectManager->getObject(
-            \Magento\CatalogUrlRewrite\Model\Category\Plugin\Category\UpdateUrlPath::class,
+            UpdateUrlPath::class,
             [
                 'categoryUrlPathGenerator' => $this->categoryUrlPathGenerator,
                 'categoryUrlRewriteGenerator' => $this->categoryUrlRewriteGenerator,
@@ -157,7 +159,7 @@ class UpdateUrlPathTest extends \PHPUnit\Framework\TestCase
             ->method('saveAttribute')
             ->with($this->category, 'url_path')
             ->willReturnSelf();
-        $generatedUrlRewrite = $this->getMockBuilder(\Magento\UrlRewrite\Service\V1\Data\UrlRewrite::class)
+        $generatedUrlRewrite = $this->getMockBuilder(UrlRewrite::class)
             ->disableOriginalConstructor()
             ->getMock();
         $this->categoryUrlRewriteGenerator->expects($this->once())->method('generate')->with($this->category)

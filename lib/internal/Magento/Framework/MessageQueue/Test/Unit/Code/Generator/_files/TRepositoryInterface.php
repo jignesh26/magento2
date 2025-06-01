@@ -3,6 +3,8 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\MessageQueue\Code\Generator;
 
 /**
@@ -26,7 +28,7 @@ interface TRepositoryInterface
      * @param int|null $typeId
      * @return TInterface
      */
-    public function get(string $attribute, int $typeId = null)
+    public function get(string $attribute, ?int $typeId = null)
         : \Magento\Framework\MessageQueue\Code\Generator\TInterface;
 
     /**

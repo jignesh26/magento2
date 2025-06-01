@@ -1,20 +1,44 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Checkout\Test\Unit\Block\Cart;
 
-class LinkTest extends \PHPUnit\Framework\TestCase
+use Magento\Checkout\Block\Cart\Link;
+use Magento\Checkout\Helper\Cart;
+use Magento\Framework\Math\Random;
+use Magento\Framework\Module\Manager;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Framework\UrlInterface;
+use Magento\Framework\View\Element\Template\Context;
+use Magento\Framework\View\Helper\SecureHtmlRenderer;
+use PHPUnit\Framework\TestCase;
+
+class LinkTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\TestFramework\Unit\Helper\ObjectManager
+     * @var ObjectManager
      */
     protected $_objectManagerHelper;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->_objectManagerHelper = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $this->_objectManagerHelper = new ObjectManager($this);
+
+        $objects = [
+            [
+                SecureHtmlRenderer::class,
+                $this->createMock(SecureHtmlRenderer::class)
+            ],
+            [
+                Random::class,
+                $this->createMock(Random::class)
+            ]
+        ];
+        $this->_objectManagerHelper->prepareObjectManager($objects);
     }
 
     public function testGetUrl()
@@ -22,15 +46,15 @@ class LinkTest extends \PHPUnit\Framework\TestCase
         $path = 'checkout/cart';
         $url = 'http://example.com/';
 
-        $urlBuilder = $this->getMockForAbstractClass(\Magento\Framework\UrlInterface::class);
-        $urlBuilder->expects($this->once())->method('getUrl')->with($path)->will($this->returnValue($url . $path));
+        $urlBuilder = $this->getMockForAbstractClass(UrlInterface::class);
+        $urlBuilder->expects($this->once())->method('getUrl')->with($path)->willReturn($url . $path);
 
         $context = $this->_objectManagerHelper->getObject(
-            \Magento\Framework\View\Element\Template\Context::class,
+            Context::class,
             ['urlBuilder' => $urlBuilder]
         );
         $link = $this->_objectManagerHelper->getObject(
-            \Magento\Checkout\Block\Cart\Link::class,
+            Link::class,
             ['context' => $context]
         );
         $this->assertSame($url . $path, $link->getHref());
@@ -39,15 +63,18 @@ class LinkTest extends \PHPUnit\Framework\TestCase
     public function testToHtml()
     {
         $moduleManager = $this->getMockBuilder(
-            \Magento\Framework\Module\Manager::class
-        )->disableOriginalConstructor()->setMethods(
-            ['isOutputEnabled']
-        )->getMock();
-        $helper = $this->getMockBuilder(\Magento\Checkout\Helper\Cart::class)->disableOriginalConstructor()->getMock();
+            Manager::class
+        )->disableOriginalConstructor()
+            ->onlyMethods(
+                ['isOutputEnabled']
+            )->getMock();
+        $helper = $this->getMockBuilder(Cart::class)
+            ->disableOriginalConstructor()
+            ->getMock();
 
-        /** @var \Magento\Checkout\Block\Cart\Link $block */
+        /** @var Link $block */
         $block = $this->_objectManagerHelper->getObject(
-            \Magento\Checkout\Block\Cart\Link::class,
+            Link::class,
             ['cartHelper' => $helper, 'moduleManager' => $moduleManager]
         );
         $moduleManager->expects(
@@ -56,8 +83,8 @@ class LinkTest extends \PHPUnit\Framework\TestCase
             'isOutputEnabled'
         )->with(
             'Magento_Checkout'
-        )->will(
-            $this->returnValue(false)
+        )->willReturn(
+            false
         );
         $this->assertSame('', $block->toHtml());
     }
@@ -68,24 +95,25 @@ class LinkTest extends \PHPUnit\Framework\TestCase
     public function testGetLabel($productCount, $label)
     {
         $helper = $this->getMockBuilder(
-            \Magento\Checkout\Helper\Cart::class
-        )->disableOriginalConstructor()->setMethods(
-            ['getSummaryCount']
-        )->getMock();
+            Cart::class
+        )->disableOriginalConstructor()
+            ->onlyMethods(
+                ['getSummaryCount']
+            )->getMock();
 
-        /** @var \Magento\Checkout\Block\Cart\Link $block */
+        /** @var Link $block */
         $block = $this->_objectManagerHelper->getObject(
-            \Magento\Checkout\Block\Cart\Link::class,
+            Link::class,
             ['cartHelper' => $helper]
         );
-        $helper->expects($this->any())->method('getSummaryCount')->will($this->returnValue($productCount));
+        $helper->expects($this->any())->method('getSummaryCount')->willReturn($productCount);
         $this->assertSame($label, (string)$block->getLabel());
     }
 
     /**
      * @return array
      */
-    public function getLabelDataProvider()
+    public static function getLabelDataProvider()
     {
         return [[1, 'My Cart (1 item)'], [2, 'My Cart (2 items)'], [0, 'My Cart']];
     }

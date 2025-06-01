@@ -38,7 +38,7 @@ class RenderingBasedOnIsProductListFlagTest extends \PHPUnit\Framework\TestCase
      */
     private $finalPriceBox;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $productRepository = Bootstrap::getObjectManager()->get(ProductRepositoryInterface::class);
         $this->product = $productRepository->get('simple');
@@ -73,7 +73,7 @@ class RenderingBasedOnIsProductListFlagTest extends \PHPUnit\Framework\TestCase
     public function testRenderingByDefault()
     {
         $html = $this->finalPriceBox->toHtml();
-        self::assertContains('5.99', $html);
+        self::assertStringContainsString('5.99', $html);
         $this->assertGreaterThanOrEqual(
             1,
             \Magento\TestFramework\Helper\Xpath::getElementsCountForXpath(
@@ -102,8 +102,9 @@ class RenderingBasedOnIsProductListFlagTest extends \PHPUnit\Framework\TestCase
     public function testRenderingAccordingToIsProductListFlag($flag)
     {
         $this->finalPriceBox->setData('is_product_list', $flag);
+        $this->finalPriceBox->setData('special_price_map', [$this->product->getId() => true]);
         $html = $this->finalPriceBox->toHtml();
-        self::assertContains('5.99', $html);
+        self::assertStringContainsString('5.99', $html);
         $this->assertGreaterThanOrEqual(
             1,
             \Magento\TestFramework\Helper\Xpath::getElementsCountForXpath(
@@ -123,7 +124,7 @@ class RenderingBasedOnIsProductListFlagTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isProductListDataProvider()
+    public static function isProductListDataProvider()
     {
         return [
             'is_not_product_list' => [false],

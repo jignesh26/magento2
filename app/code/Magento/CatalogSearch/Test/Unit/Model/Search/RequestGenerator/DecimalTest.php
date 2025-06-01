@@ -1,8 +1,9 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\CatalogSearch\Test\Unit\Model\Search\RequestGenerator;
 
@@ -10,22 +11,28 @@ use Magento\Catalog\Model\ResourceModel\Eav\Attribute;
 use Magento\CatalogSearch\Model\Search\RequestGenerator\Decimal;
 use Magento\Framework\Search\Request\BucketInterface;
 use Magento\Framework\Search\Request\FilterInterface;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class DecimalTest extends \PHPUnit\Framework\TestCase
+/**
+ * Test catalog search range request generator.
+ */
+class DecimalTest extends TestCase
 {
     /** @var  Decimal */
     private $decimal;
 
-    /** @var  Attribute|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var  Attribute|MockObject */
     private $attribute;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->attribute = $this->getMockBuilder(Attribute::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getAttributeCode'])
+            ->onlyMethods(['getAttributeCode'])
             ->getMockForAbstractClass();
-        $objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $objectManager = new ObjectManager($this);
         $this->decimal = $objectManager->getObject(Decimal::class);
     }
 

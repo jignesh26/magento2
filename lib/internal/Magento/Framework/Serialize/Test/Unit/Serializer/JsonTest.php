@@ -3,21 +3,25 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Serialize\Test\Unit\Serializer;
 
 use Magento\Framework\DataObject;
 use Magento\Framework\Serialize\Serializer\Json;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\TestCase;
 
-class JsonTest extends \PHPUnit\Framework\TestCase
+class JsonTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\Serialize\Serializer\Json
+     * @var Json
      */
     private $json;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $objectManager = new ObjectManager($this);
         $this->json = $objectManager->getObject(Json::class);
     }
 
@@ -37,7 +41,7 @@ class JsonTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function serializeDataProvider()
+    public static function serializeDataProvider()
     {
         $dataObject = new DataObject(['something']);
         return [
@@ -68,7 +72,7 @@ class JsonTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function unserializeDataProvider()
+    public static function unserializeDataProvider()
     {
         return [
             ['""', ''],
@@ -82,35 +86,38 @@ class JsonTest extends \PHPUnit\Framework\TestCase
         ];
     }
 
-    /**
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Unable to serialize value.
-     */
     public function testSerializeException()
     {
+        $this->expectException('InvalidArgumentException');
+        $this->expectExceptionMessage('Unable to serialize value.');
         $this->json->serialize(STDOUT);
     }
 
     /**
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Unable to unserialize value.
+     * Method to test unserialize exception.
+     *
+     * @param string|bool|null $value
+     * @param string $errorMessage
+     *
      * @dataProvider unserializeExceptionDataProvider
      */
-    public function testUnserializeException($value)
+    public function testUnserializeException($value, $errorMessage)
     {
+        $this->expectException('InvalidArgumentException');
+        $this->expectExceptionMessage($errorMessage);
         $this->json->unserialize($value);
     }
 
     /**
      * @return array
      */
-    public function unserializeExceptionDataProvider()
+    public static function unserializeExceptionDataProvider()
     {
         return [
-            [''],
-            [false],
-            [null],
-            ['{']
+            ['', 'Unable to unserialize value.'],
+            [false, 'Unable to unserialize value.'],
+            [null, 'Unable to unserialize value. Error: Parameter must be a string type, null given.'],
+            ['{', 'Unable to unserialize value.']
         ];
     }
 }

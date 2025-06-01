@@ -1,12 +1,13 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2011 Adobe
+ * All Rights Reserved.
  */
-
 namespace Magento\Eav\Model\Entity\Attribute\Backend;
 
 /**
+ * Prepare date for save in DB
+ *
  * @api
  * @since 100.0.2
  */
@@ -55,14 +56,22 @@ class Datetime extends \Magento\Eav\Model\Entity\Attribute\Backend\AbstractBacke
             $object->setData($attributeName . '_is_formated', true);
         }
 
+        $defaultValue = $this->getDefaultValue();
+        if ($object->getData($attributeName) === null
+            && $defaultValue !== null
+            && !$object->hasData($attributeName)) {
+            $object->setData($attributeName, $defaultValue);
+            $object->setData($attributeName . '_is_formated', true);
+        }
+
         return $this;
     }
 
     /**
      * Prepare date for save in DB
      *
-     * string format used from input fields (all date input fields need apply locale settings)
-     * int value can be declared in code (this meen whot we use valid date)
+     * String format is used in input fields (all date input fields need apply locale settings)
+     * int (Unix) format can be used in other parts of the code
      *
      * @param string|int|\DateTimeInterface $date
      * @return string
@@ -72,7 +81,7 @@ class Datetime extends \Magento\Eav\Model\Entity\Attribute\Backend\AbstractBacke
         if (empty($date)) {
             return null;
         }
-        // unix timestamp given - simply instantiate date object
+        // Unix timestamp given - simply instantiate date object
         if (is_scalar($date) && preg_match('/^[0-9]+$/', $date)) {
             $date = (new \DateTime())->setTimestamp($date);
         } elseif (!($date instanceof \DateTimeInterface)) {

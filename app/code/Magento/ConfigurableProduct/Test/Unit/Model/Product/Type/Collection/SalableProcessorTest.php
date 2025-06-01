@@ -3,38 +3,45 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\ConfigurableProduct\Test\Unit\Model\Product\Type\Collection;
 
-use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
 use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\Catalog\Model\Product\Attribute\Source\Status;
+use Magento\Catalog\Model\ResourceModel\Product\Collection;
+use Magento\CatalogInventory\Model\ResourceModel\Stock\StatusFactory;
+use Magento\ConfigurableProduct\Model\Product\Type\Collection\SalableProcessor;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class SalableProcessorTest extends \PHPUnit\Framework\TestCase
+class SalableProcessorTest extends TestCase
 {
-    const STOCK_FLAG = 'has_stock_status_filter';
+    private const STOCK_FLAG = 'has_stock_status_filter';
 
     /** @var ObjectManager */
     private $objectManager;
 
-    /** @var \Magento\ConfigurableProduct\Model\Product\Type\Collection\SalableProcessor */
+    /** @var SalableProcessor */
     protected $model;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var MockObject */
     protected $stockStatusFactory;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = new ObjectManager($this);
 
         $this->stockStatusFactory = $this->getMockBuilder(
-            \Magento\CatalogInventory\Model\ResourceModel\Stock\StatusFactory::class
+            StatusFactory::class
         )
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->disableOriginalConstructor()
             ->getMock();
 
         $this->model = $this->objectManager->getObject(
-            \Magento\ConfigurableProduct\Model\Product\Type\Collection\SalableProcessor::class,
+            SalableProcessor::class,
             [
                 'stockStatusFactory' => $this->stockStatusFactory,
             ]
@@ -43,29 +50,27 @@ class SalableProcessorTest extends \PHPUnit\Framework\TestCase
 
     public function testProcess()
     {
-        $productCollection = $this->getMockBuilder(\Magento\Catalog\Model\ResourceModel\Product\Collection::class)
-            ->setMethods(['addAttributeToFilter'])
+        $productCollection = $this->getMockBuilder(Collection::class)
+            ->onlyMethods(['addAttributeToFilter'])
             ->disableOriginalConstructor()
             ->getMock();
 
         $productCollection->expects($this->once())
             ->method('addAttributeToFilter')
-            ->with(ProductInterface::STATUS, Status::STATUS_ENABLED)
-            ->will($this->returnSelf());
+            ->with(ProductInterface::STATUS, Status::STATUS_ENABLED)->willReturnSelf();
 
         $stockStatusResource = $this->getMockBuilder(\Magento\CatalogInventory\Model\ResourceModel\Stock\Status::class)
-            ->setMethods(['addStockDataToCollection'])
+            ->onlyMethods(['addStockDataToCollection'])
             ->disableOriginalConstructor()
             ->getMock();
         $stockStatusResource->expects($this->once())
             ->method('addStockDataToCollection')
-            ->with($productCollection, true)
-            ->will($this->returnSelf());
+            ->with($productCollection, true)->willReturnSelf();
 
         $this->stockStatusFactory
             ->expects($this->once())
             ->method('create')
-            ->will($this->returnValue($stockStatusResource));
+            ->willReturn($stockStatusResource);
 
         $this->model->process($productCollection);
 

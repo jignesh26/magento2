@@ -1,16 +1,18 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
+
+namespace Magento\Backend\Block\Dashboard\Tab;
 
 /**
  * Adminhtml dashboard orders diagram
+ * @deprecated dashboard graphs were migrated to dynamic chart.js solution
+ * @see dashboard.chart.orders in adminhtml_dashboard_index.xml
  *
  * @author     Magento Core Team <core@magentocommerce.com>
  */
-namespace Magento\Backend\Block\Dashboard\Tab;
-
 class Orders extends \Magento\Backend\Block\Dashboard\Graph
 {
     /**

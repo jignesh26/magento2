@@ -7,17 +7,19 @@ declare(strict_types=1);
 
 namespace Magento\Elasticsearch\Test\Unit\Model\Adapter\FieldMapper\Product\FieldProvider\FieldIndex;
 
-use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldIndex\ConverterInterface;
 use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\AttributeAdapter;
+use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldIndex\ConverterInterface;
+use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldIndex\IndexResolver;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @SuppressWarnings(PHPMD)
  */
-class IndexResolverTest extends \PHPUnit\Framework\TestCase
+class IndexResolverTest extends TestCase
 {
     /**
-     * @var \Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldIndex\IndexResolver
+     * @var IndexResolver
      */
     private $resolver;
 
@@ -31,16 +33,16 @@ class IndexResolverTest extends \PHPUnit\Framework\TestCase
      *
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->converter = $this->getMockBuilder(ConverterInterface::class)
             ->disableOriginalConstructor()
-            ->setMethods(['convert'])
+            ->onlyMethods(['convert'])
             ->getMockForAbstractClass();
         $objectManager = new ObjectManagerHelper($this);
 
         $this->resolver = $objectManager->getObject(
-            \Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldIndex\IndexResolver::class,
+            IndexResolver::class,
             [
                 'converter' => $this->converter
             ]
@@ -66,7 +68,7 @@ class IndexResolverTest extends \PHPUnit\Framework\TestCase
             ->willReturn('something');
         $attributeMock = $this->getMockBuilder(AttributeAdapter::class)
             ->disableOriginalConstructor()
-            ->setMethods([
+            ->onlyMethods([
                 'isSearchable',
                 'isAlwaysIndexable',
             ])
@@ -87,7 +89,7 @@ class IndexResolverTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getFieldIndexProvider()
+    public static function getFieldIndexProvider()
     {
         return [
             [true, true, 'string', null],

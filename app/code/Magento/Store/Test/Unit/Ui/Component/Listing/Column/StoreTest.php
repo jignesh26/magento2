@@ -3,10 +3,21 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Store\Test\Unit\Ui\Component\Listing\Column;
 
-class StoreTest extends \PHPUnit\Framework\TestCase
+use Magento\Framework\Escaper;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Framework\View\Element\UiComponent\ContextInterface;
+use Magento\Framework\View\Element\UiComponent\Processor;
+use Magento\Framework\View\Element\UiComponentFactory;
+use Magento\Store\Model\StoreManagerInterface;
+use Magento\Store\Model\System\Store;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+
+class StoreTest extends TestCase
 {
     /**
      * @var \Magento\Store\Ui\Component\Listing\Column\Store
@@ -14,63 +25,58 @@ class StoreTest extends \PHPUnit\Framework\TestCase
     protected $model;
 
     /**
-     * @var \Magento\Framework\View\Element\UiComponent\Processor|\PHPUnit_Framework_MockObject_MockObject
+     * @var Processor|MockObject
      */
     protected $processorMock;
 
     /**
-     * @var \Magento\Framework\View\Element\UiComponent\ContextInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ContextInterface|MockObject
      */
     protected $contextMock;
 
     /**
-     * @var \Magento\Framework\View\Element\UiComponentFactory|\PHPUnit_Framework_MockObject_MockObject
+     * @var UiComponentFactory|MockObject
      */
     protected $uiComponentFactoryMock;
 
     /**
-     * @var \Magento\Store\Model\System\Store|\PHPUnit_Framework_MockObject_MockObject
+     * @var \Magento\Store\Model\System\Store|MockObject
      */
     protected $systemStoreMock;
 
     /**
-     * @var \Magento\Framework\Escaper|\PHPUnit_Framework_MockObject_MockObject
+     * @var Escaper|MockObject
      */
     protected $escaperMock;
 
     /**
-     * @var \Magento\Store\Model\StoreManagerInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var StoreManagerInterface|MockObject
      */
     protected $storeManagerMock;
 
     /**
      * @var string
      */
-    protected $name = 'anyname';
+    protected static $name = 'anyname';
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
-        $this->contextMock = $this->getMockBuilder(\Magento\Framework\View\Element\UiComponent\ContextInterface::class)
+        $objectManager = new ObjectManager($this);
+        $this->contextMock = $this->getMockBuilder(ContextInterface::class)
             ->disableOriginalConstructor()
-            ->setMethods([])
-            ->getMock();
-        $this->uiComponentFactoryMock = $this->getMockBuilder(\Magento\Framework\View\Element\UiComponentFactory::class)
+            ->getMockForAbstractClass();
+        $this->uiComponentFactoryMock = $this->getMockBuilder(UiComponentFactory::class)
             ->disableOriginalConstructor()
-            ->setMethods([])
             ->getMock();
-        $this->systemStoreMock = $this->getMockBuilder(\Magento\Store\Model\System\Store::class)
+        $this->systemStoreMock = $this->getMockBuilder(Store::class)
             ->disableOriginalConstructor()
-            ->setMethods([])
             ->getMock();
-        $this->escaperMock = $this->getMockBuilder(\Magento\Framework\Escaper::class)
+        $this->escaperMock = $this->getMockBuilder(Escaper::class)
             ->disableOriginalConstructor()
-            ->setMethods([])
             ->getMock();
-        $this->storeManagerMock = $this->getMockBuilder(\Magento\Store\Model\StoreManagerInterface::class)
+        $this->storeManagerMock = $this->getMockBuilder(StoreManagerInterface::class)
             ->disableOriginalConstructor()
-            ->setMethods([])
-            ->getMock();
+            ->getMockForAbstractClass();
         $this->model = $objectManager->getObject(
             \Magento\Store\Ui\Component\Listing\Column\Store::class,
             [
@@ -79,7 +85,7 @@ class StoreTest extends \PHPUnit\Framework\TestCase
                 'systemStore' =>  $this->systemStoreMock,
                 'escaper' => $this->escaperMock,
                 'components' => [],
-                'data' => ['name' => $this->name]
+                'data' => ['name' => self::$name]
             ]
         );
 
@@ -89,7 +95,7 @@ class StoreTest extends \PHPUnit\Framework\TestCase
     /**
      * Inject mocked object dependency
      *
-     * @param \PHPUnit_Framework_MockObject_MockObject $mockObject
+     * @param MockObject $mockObject
      * @param string $propertyName
      * @return void
      *
@@ -105,9 +111,8 @@ class StoreTest extends \PHPUnit\Framework\TestCase
 
     public function testPrepare()
     {
-        $this->processorMock = $this->getMockBuilder(\Magento\Framework\View\Element\UiComponent\Processor::class)
+        $this->processorMock = $this->getMockBuilder(Processor::class)
             ->disableOriginalConstructor()
-            ->setMethods([])
             ->getMock();
         $this->contextMock->expects($this->atLeastOnce())->method('getProcessor')->willReturn($this->processorMock);
         $this->processorMock->expects($this->atLeastOnce())->method('register');
@@ -119,9 +124,8 @@ class StoreTest extends \PHPUnit\Framework\TestCase
 
     public function testPrepareWithSingleStore()
     {
-        $this->processorMock = $this->getMockBuilder(\Magento\Framework\View\Element\UiComponent\Processor::class)
+        $this->processorMock = $this->getMockBuilder(Processor::class)
             ->disableOriginalConstructor()
-            ->setMethods([])
             ->getMock();
         $this->contextMock->expects($this->atLeastOnce())->method('getProcessor')->willReturn($this->processorMock);
         $this->processorMock->expects($this->atLeastOnce())->method('register');
@@ -168,21 +172,21 @@ class StoreTest extends \PHPUnit\Framework\TestCase
     /**
      * @deprecated
      */
-    public function prepareDataSourceDataProvider()
+    public static function prepareDataSourceDataProvider()
     {
         $content = "website<br/>&nbsp;&nbsp;&nbsp;group<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;store<br/>";
         return [
             'withoutStore' => [
                 'dataSource' => ['data' => ['items' => [['store_id' => null]]]],
-                'expectedResult' => ['data' => ['items' => [['store_id' => null, $this->name => '']]]]
+                'expectedResult' => ['data' => ['items' => [['store_id' => null, self::$name => '']]]]
             ],
             'allStores' => [
                 'dataSource' => ['data' => ['items' => [['store_id' => [0]]]]],
-                'expectedResult' => ['data' => ['items' => [['store_id' => [0], $this->name => __('All Store Views')]]]]
+                'expectedResult' => ['data' => ['items' => [['store_id' => [0], self::$name => __('All Store Views')]]]]
             ],
             'Stores' => [
                 'dataSource' => ['data' => ['items' => [['store_id' => [1]]]]],
-                'expectedResult' => ['data' => ['items' => [['store_id' => [1], $this->name => $content]]]]
+                'expectedResult' => ['data' => ['items' => [['store_id' => [1], self::$name => $content]]]]
             ],
 
         ];

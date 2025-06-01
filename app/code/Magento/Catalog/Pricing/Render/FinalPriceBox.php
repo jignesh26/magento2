@@ -1,21 +1,22 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Catalog\Pricing\Render;
 
-use Magento\Catalog\Pricing\Price;
-use Magento\Framework\Pricing\Render\PriceBox as BasePriceBox;
-use Magento\Msrp\Pricing\Price\MsrpPrice;
 use Magento\Catalog\Model\Product\Pricing\Renderer\SalableResolverInterface;
-use Magento\Framework\View\Element\Template\Context;
-use Magento\Framework\Pricing\SaleableInterface;
-use Magento\Framework\Pricing\Price\PriceInterface;
-use Magento\Framework\Pricing\Render\RendererPool;
-use Magento\Framework\App\ObjectManager;
+use Magento\Catalog\Pricing\Price;
 use Magento\Catalog\Pricing\Price\MinimalPriceCalculatorInterface;
+use Magento\Framework\App\ObjectManager;
+use Magento\Framework\Pricing\Adjustment\CalculatorInterface;
+use Magento\Framework\Pricing\Price\PriceInterface;
+use Magento\Framework\Pricing\Render\PriceBox as BasePriceBox;
+use Magento\Framework\Pricing\Render\RendererPool;
+use Magento\Framework\Pricing\SaleableInterface;
+use Magento\Framework\View\Element\Template\Context;
+use Magento\Msrp\Pricing\Price\MsrpPrice;
 
 /**
  * Class for final_price rendering
@@ -50,8 +51,8 @@ class FinalPriceBox extends BasePriceBox
         PriceInterface $price,
         RendererPool $rendererPool,
         array $data = [],
-        SalableResolverInterface $salableResolver = null,
-        MinimalPriceCalculatorInterface $minimalPriceCalculator = null
+        ?SalableResolverInterface $salableResolver = null,
+        ?MinimalPriceCalculatorInterface $minimalPriceCalculator = null
     ) {
         parent::__construct($context, $saleableItem, $price, $rendererPool, $data);
         $this->salableResolver = $salableResolver ?: ObjectManager::getInstance()->get(SalableResolverInterface::class);
@@ -60,7 +61,7 @@ class FinalPriceBox extends BasePriceBox
     }
 
     /**
-     * @return string
+     * @inheritdoc
      */
     protected function _toHtml()
     {
@@ -140,7 +141,7 @@ class FinalPriceBox extends BasePriceBox
                 'display_label'     => __('As low as'),
                 'price_id'          => $id,
                 'include_container' => false,
-                'skip_adjustments' => true
+                'skip_adjustments' => false
             ]
         );
     }
@@ -152,9 +153,18 @@ class FinalPriceBox extends BasePriceBox
      */
     public function hasSpecialPrice()
     {
-        $displayRegularPrice = $this->getPriceType(Price\RegularPrice::PRICE_CODE)->getAmount()->getValue();
-        $displayFinalPrice = $this->getPriceType(Price\FinalPrice::PRICE_CODE)->getAmount()->getValue();
-        return $displayFinalPrice < $displayRegularPrice;
+        if ($this->isProductList()) {
+            if (!$this->getData('special_price_map')) {
+                return false;
+            }
+
+            return (bool)$this->getData('special_price_map')[$this->saleableItem->getId()];
+        } else {
+            $displayRegularPrice = $this->getPriceType(Price\RegularPrice::PRICE_CODE)->getAmount()->getValue();
+            $displayFinalPrice = $this->getPriceType(Price\FinalPrice::PRICE_CODE)->getAmount()->getValue();
+
+            return $displayFinalPrice < $displayRegularPrice;
+        }
     }
 
     /**
@@ -182,25 +192,28 @@ class FinalPriceBox extends BasePriceBox
      */
     public function getCacheKey()
     {
-        return parent::getCacheKey() . ($this->getData('list_category_page') ? '-list-category-page': '');
+        return parent::getCacheKey()
+            . ($this->getData('list_category_page') ? '-list-category-page' : '')
+            . ($this->getSaleableItem()->getCustomerGroupId() ?? '');
     }
 
     /**
-     * {@inheritdoc}
-     *
-     * @return array
+     * @inheritdoc
      */
     public function getCacheKeyInfo()
     {
         $cacheKeys = parent::getCacheKeyInfo();
         $cacheKeys['display_minimal_price'] = $this->getDisplayMinimalPrice();
         $cacheKeys['is_product_list'] = $this->isProductList();
+        $cacheKeys['customer_group_id'] = $this->getSaleableItem()->getCustomerGroupId();
+        $cacheKeys['zone'] = $this->getZone();
         return $cacheKeys;
     }
 
     /**
-     * Get flag that price rendering should be done for the list of products
-     * By default (if flag is not set) is false
+     * Get flag that price rendering should be done for the list of products.
+     *
+     * By default (if flag is not set) is false.
      *
      * @return bool
      */

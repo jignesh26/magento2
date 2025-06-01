@@ -3,28 +3,30 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Framework\DB\Test\Unit\Platform;
 
+use Magento\Framework\DB\Platform\Quote;
 use Magento\Framework\DB\Select;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-/**
- * Class QuoteTest
- */
-class QuoteTest extends \PHPUnit\Framework\TestCase
+class QuoteTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\DB\Platform\Quote
+     * @var Quote
      */
     protected $model;
 
     /**
-     * @var \Zend_Db_Expr|\PHPUnit_Framework_MockObject_MockObject
+     * @var \Zend_Db_Expr|MockObject
      */
     protected $zendDbExprMock;
 
     /**
-     * @var \Magento\Framework\DB\Select|\PHPUnit_Framework_MockObject_MockObject
+     * @var Select|MockObject
      */
     protected $selectMock;
 
@@ -33,12 +35,12 @@ class QuoteTest extends \PHPUnit\Framework\TestCase
      *
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
-        $objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
-        $this->model = $objectManager->getObject(\Magento\Framework\DB\Platform\Quote::class);
+        $objectManager = new ObjectManager($this);
+        $this->model = $objectManager->getObject(Quote::class);
         $this->zendDbExprMock = $this->createPartialMock(\Zend_Db_Expr::class, ['__toString']);
-        $this->selectMock = $this->createPartialMock(\Magento\Framework\DB\Select::class, ['assemble']);
+        $this->selectMock = $this->createPartialMock(Select::class, ['assemble']);
     }
 
     public function testQuoteIdentifierWithZendDbExpr()
@@ -160,7 +162,7 @@ class QuoteTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getExpressionToQuoteDataProvider()
+    public static function getExpressionToQuoteDataProvider()
     {
         return [
             ['string', null, 'string'],
@@ -173,7 +175,7 @@ class QuoteTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getSelectToQuoteDataProvider()
+    public static function getSelectToQuoteDataProvider()
     {
         return [
             ['string', null, '(string)'],
@@ -186,7 +188,7 @@ class QuoteTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getStringArrayToQuoteDataProvider()
+    public static function getStringArrayToQuoteDataProvider()
     {
         return [
             ['some string', null, '`some string`'],
@@ -200,9 +202,9 @@ class QuoteTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getStringArrayToQuoteWithAliasDataProvider()
+    public static function getStringArrayToQuoteWithAliasDataProvider()
     {
-        $variations = $this->getStringArrayToQuoteDataProvider();
+        $variations = self::getStringArrayToQuoteDataProvider();
         return array_merge($variations, [
             ['string', 'alias', '`string` ' . Select::SQL_AS . ' `alias`'],
             ['alias.string', 'alias', '`alias`.`string` ' . Select::SQL_AS . ' `alias`'],

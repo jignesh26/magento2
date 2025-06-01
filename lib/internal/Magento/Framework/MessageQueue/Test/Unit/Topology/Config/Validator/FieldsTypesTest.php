@@ -3,18 +3,21 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\MessageQueue\Test\Unit\Topology\Config\Validator;
 
 use Magento\Framework\MessageQueue\Topology\Config\Validator\FieldsTypes;
+use PHPUnit\Framework\TestCase;
 
-class FieldsTypesTest extends \PHPUnit\Framework\TestCase
+class FieldsTypesTest extends TestCase
 {
     /**
      * @var FieldsTypes
      */
     private $model;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->model = new FieldsTypes();
     }
@@ -61,7 +64,7 @@ class FieldsTypesTest extends \PHPUnit\Framework\TestCase
      * @return array
      * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
-    public function invalidConfigDataProvider()
+    public static function invalidConfigDataProvider()
     {
         return [
             'type name' => [

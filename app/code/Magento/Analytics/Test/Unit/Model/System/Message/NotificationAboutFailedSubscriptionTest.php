@@ -1,24 +1,28 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Analytics\Test\Unit\Model\System\Message;
 
 use Magento\Analytics\Model\SubscriptionStatusProvider;
 use Magento\Analytics\Model\System\Message\NotificationAboutFailedSubscription;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
 use Magento\Framework\UrlInterface;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class NotificationAboutFailedSubscriptionTest extends \PHPUnit\Framework\TestCase
+class NotificationAboutFailedSubscriptionTest extends TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|SubscriptionStatusProvider
+     * @var MockObject|SubscriptionStatusProvider
      */
     private $subscriptionStatusMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|UrlInterface
+     * @var MockObject|UrlInterface
      */
     private $urlBuilderMock;
 
@@ -35,11 +39,9 @@ class NotificationAboutFailedSubscriptionTest extends \PHPUnit\Framework\TestCas
     /**
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->subscriptionStatusMock = $this->getMockBuilder(SubscriptionStatusProvider::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->subscriptionStatusMock = $this->createMock(SubscriptionStatusProvider::class);
         $this->urlBuilderMock = $this->getMockBuilder(UrlInterface::class)
             ->getMockForAbstractClass();
         $this->objectManagerHelper = new ObjectManagerHelper($this);
@@ -92,7 +94,7 @@ class NotificationAboutFailedSubscriptionTest extends \PHPUnit\Framework\TestCas
      *
      * @return array
      */
-    public function notDisplayedNotificationStatuses()
+    public static function notDisplayedNotificationStatuses()
     {
         return [
             [SubscriptionStatusProvider::PENDING],

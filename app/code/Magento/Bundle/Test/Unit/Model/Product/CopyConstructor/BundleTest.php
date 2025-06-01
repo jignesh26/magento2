@@ -1,25 +1,30 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Bundle\Test\Unit\Model\Product\CopyConstructor;
 
 use Magento\Bundle\Api\Data\BundleOptionInterface;
+use Magento\Bundle\Model\Link;
 use Magento\Bundle\Model\Product\CopyConstructor\Bundle;
 use Magento\Catalog\Api\Data\ProductExtensionInterface;
 use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\Product\Type;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class BundleTest extends \PHPUnit\Framework\TestCase
+class BundleTest extends TestCase
 {
     /**
      * @var Bundle
      */
     protected $model;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $objectManager = new ObjectManager($this);
         $this->model = $objectManager->getObject(Bundle::class);
@@ -45,11 +50,12 @@ class BundleTest extends \PHPUnit\Framework\TestCase
      */
     public function testBuildPositive()
     {
+        /** @var Product|MockObject $product */
         $product = $this->getMockBuilder(Product::class)
             ->disableOriginalConstructor()
             ->getMock();
         $extensionAttributesProduct = $this->getMockBuilder(ProductExtensionInterface::class)
-            ->setMethods(['getBundleProductOptions'])
+            ->addMethods(['getBundleProductOptions'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
 
@@ -60,23 +66,47 @@ class BundleTest extends \PHPUnit\Framework\TestCase
             ->method('getExtensionAttributes')
             ->willReturn($extensionAttributesProduct);
 
+        $productLink = $this->getMockBuilder(Link::class)
+            ->addMethods(['setSelectionId'])
+            ->disableOriginalConstructor()
+            ->getMock();
+        $productLink->expects($this->exactly(2))
+            ->method('setSelectionId')
+            ->with($this->identicalTo(null));
+        $firstOption = $this->getMockBuilder(BundleOptionInterface::class)
+            ->addMethods(['getProductLinks'])
+            ->disableOriginalConstructor()
+            ->getMockForAbstractClass();
+        $firstOption->expects($this->once())
+            ->method('getProductLinks')
+            ->willReturn([$productLink]);
+        $firstOption->expects($this->once())
+            ->method('setOptionId')
+            ->with($this->identicalTo(null));
+        $secondOption = $this->getMockBuilder(BundleOptionInterface::class)
+            ->addMethods(['getProductLinks'])
+            ->disableOriginalConstructor()
+            ->getMockForAbstractClass();
+        $secondOption->expects($this->once())
+            ->method('getProductLinks')
+            ->willReturn([$productLink]);
+        $secondOption->expects($this->once())
+            ->method('setOptionId')
+            ->with($this->identicalTo(null));
         $bundleOptions = [
-            $this->getMockBuilder(BundleOptionInterface::class)
-                ->disableOriginalConstructor()
-                ->getMockForAbstractClass(),
-            $this->getMockBuilder(BundleOptionInterface::class)
-                ->disableOriginalConstructor()
-                ->getMockForAbstractClass()
+            $firstOption,
+            $secondOption
         ];
         $extensionAttributesProduct->expects($this->once())
             ->method('getBundleProductOptions')
             ->willReturn($bundleOptions);
 
+        /** @var Product|MockObject $duplicate */
         $duplicate = $this->getMockBuilder(Product::class)
             ->disableOriginalConstructor()
             ->getMock();
         $extensionAttributesDuplicate = $this->getMockBuilder(ProductExtensionInterface::class)
-            ->setMethods(['setBundleProductOptions'])
+            ->addMethods(['setBundleProductOptions'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
 
@@ -85,7 +115,11 @@ class BundleTest extends \PHPUnit\Framework\TestCase
             ->willReturn($extensionAttributesDuplicate);
         $extensionAttributesDuplicate->expects($this->once())
             ->method('setBundleProductOptions')
-            ->withConsecutive([$bundleOptions]);
+            ->willReturnCallback(function ($bundleOptions) {
+                if ($bundleOptions) {
+                    return null;
+                }
+            });
 
         $this->model->build($product, $duplicate);
     }
@@ -99,7 +133,7 @@ class BundleTest extends \PHPUnit\Framework\TestCase
             ->disableOriginalConstructor()
             ->getMock();
         $extensionAttributesProduct = $this->getMockBuilder(ProductExtensionInterface::class)
-            ->setMethods(['getBundleProductOptions'])
+            ->addMethods(['getBundleProductOptions'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
 
@@ -118,7 +152,7 @@ class BundleTest extends \PHPUnit\Framework\TestCase
             ->disableOriginalConstructor()
             ->getMock();
         $extensionAttributesDuplicate = $this->getMockBuilder(ProductExtensionInterface::class)
-            ->setMethods(['setBundleProductOptions'])
+            ->addMethods(['setBundleProductOptions'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
 

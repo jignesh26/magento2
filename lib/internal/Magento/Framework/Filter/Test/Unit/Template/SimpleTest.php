@@ -3,18 +3,23 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Filter\Test\Unit\Template;
 
-class SimpleTest extends \PHPUnit\Framework\TestCase
+use Magento\Framework\Filter\Template\Simple;
+use PHPUnit\Framework\TestCase;
+
+class SimpleTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\Filter\Template\Simple
+     * @var Simple
      */
     protected $_filter;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->_filter = new \Magento\Framework\Filter\Template\Simple();
+        $this->_filter = new Simple();
     }
 
     public function testFilter()
@@ -45,7 +50,7 @@ class SimpleTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function setTagsDataProvider()
+    public static function setTagsDataProvider()
     {
         return ['(brackets)' => ['(', ')'], '#hash#' => ['#', '#']];
     }

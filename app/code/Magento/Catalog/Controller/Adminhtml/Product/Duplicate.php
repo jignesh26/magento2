@@ -1,15 +1,16 @@
 <?php
 /**
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Controller\Adminhtml\Product;
 
 use Magento\Backend\App\Action;
 use Magento\Catalog\Controller\Adminhtml\Product;
+use Magento\Framework\App\ObjectManager;
 
-class Duplicate extends \Magento\Catalog\Controller\Adminhtml\Product
+class Duplicate extends \Magento\Catalog\Controller\Adminhtml\Product implements
+    \Magento\Framework\App\Action\HttpGetActionInterface
 {
     /**
      * @var \Magento\Catalog\Model\Product\Copier
@@ -17,16 +18,25 @@ class Duplicate extends \Magento\Catalog\Controller\Adminhtml\Product
     protected $productCopier;
 
     /**
+     * @var \Psr\Log\LoggerInterface
+     */
+    private $logger;
+
+    /**
      * @param Action\Context $context
      * @param Builder $productBuilder
      * @param \Magento\Catalog\Model\Product\Copier $productCopier
+     * @param \Psr\Log\LoggerInterface $logger
      */
     public function __construct(
         \Magento\Backend\App\Action\Context $context,
         Product\Builder $productBuilder,
-        \Magento\Catalog\Model\Product\Copier $productCopier
+        \Magento\Catalog\Model\Product\Copier $productCopier,
+        ?\Psr\Log\LoggerInterface $logger = null
     ) {
         $this->productCopier = $productCopier;
+        $this->logger = $logger ?: ObjectManager::getInstance()
+            ->get(\Psr\Log\LoggerInterface::class);
         parent::__construct($context, $productBuilder);
     }
 
@@ -46,7 +56,7 @@ class Duplicate extends \Magento\Catalog\Controller\Adminhtml\Product
             $this->messageManager->addSuccessMessage(__('You duplicated the product.'));
             $resultRedirect->setPath('catalog/*/edit', ['_current' => true, 'id' => $newProduct->getId()]);
         } catch (\Exception $e) {
-            $this->_objectManager->get(\Psr\Log\LoggerInterface::class)->critical($e);
+            $this->logger->critical($e);
             $this->messageManager->addErrorMessage($e->getMessage());
             $resultRedirect->setPath('catalog/*/edit', ['_current' => true]);
         }

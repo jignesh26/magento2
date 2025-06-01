@@ -4,11 +4,15 @@
  * See COPYING.txt for license details.
  */
 
-// @codingStandardsIgnoreFile
-
+// phpcs:disable PHPCompatibility.Miscellaneous.RemovedAlternativePHPTags.MaybeASPOpenTagFound
+/**
+ * @var $block Magento\Shipping\Block\Adminhtml\Order\Tracking
+ * @var \Magento\Framework\View\Helper\SecureHtmlRenderer $secureRenderer
+ * @var $escaper \Magento\Framework\Escaper
+ */
 ?>
-<?php /** @var $block Magento\Shipping\Block\Adminhtml\Order\Tracking */?>
-<script>
+<?php $scriptString = <<<script
+
 require(['prototype'], function(){
 
     //<![CDATA[
@@ -26,7 +30,7 @@ require(['prototype'], function(){
             $('trackingC' + this.index).disabled = false;
             $('trackingT' + this.index).disabled = false;
             $('trackingN' + this.index).disabled = false;
-            this.bindCurrierOnchange();
+            this.bindCarrierOnchange();
         },
         deleteRow : function(event) {
             var row = Event.findElement(event, 'tr');
@@ -34,17 +38,17 @@ require(['prototype'], function(){
                 row.parentNode.removeChild(row)
             }
         },
-        bindCurrierOnchange : function() {
+        bindCarrierOnchange : function() {
             var elems = $('tracking_numbers_table').select('.select');
             elems.each(function (elem) {
                 if (!elem.onchangeBound) {
                     elem.onchangeBound = true;
                     elem.valueInput = $(elem.parentNode.parentNode).select('.number-title')[0];
-                    elem.observe('change', this.currierOnchange);
+                    elem.observe('change', this.carrierOnchange);
                 }
             }.bind(this));
         },
-        currierOnchange : function(event) {
+        carrierOnchange : function(event) {
             var elem = Event.element(event);
             var option = elem.options[elem.selectedIndex];
             if (option.value && option.value != 'custom') {
@@ -60,7 +64,11 @@ require(['prototype'], function(){
     //]]>
 
 });
-</script>
+
+script;
+?>
+<?= /* @noEscape */ $secureRenderer->renderTag('script', [], $scriptString, false) ?>
+
 <script id="track_row_template" type="text/x-magento-template">
     <tr>
         <td class="col-carrier">
@@ -69,7 +77,7 @@ require(['prototype'], function(){
                     class="select admin__control-select carrier"
                     disabled="disabled">
                 <?php foreach ($block->getCarriers() as $_code => $_name): ?>
-                    <option value="<?= /* @escapeNotVerified */ $_code ?>"><?= $block->escapeHtml($_name) ?></option>
+                    <option value="<?= $escaper->escapeHtmlAttr($_code) ?>"><?= $escaper->escapeHtml($_name) ?></option>
                 <?php endforeach; ?>
             </select>
         </td>
@@ -94,7 +102,7 @@ require(['prototype'], function(){
                 type="button"
                 class="action-default action-delete"
                 onclick="trackingControl.deleteRow(event);return false">
-                <span><?= /* @escapeNotVerified */ __('Delete') ?></span>
+                <span><?= $escaper->escapeHtml(__('Delete')) ?></span>
             </button>
         </td>
     </tr>
@@ -104,10 +112,10 @@ require(['prototype'], function(){
     <table class="data-table admin__control-table" id="tracking_numbers_table">
         <thead>
         <tr class="headings">
-            <th class="col-carrier"><?= /* @escapeNotVerified */ __('Carrier') ?></th>
-            <th class="col-title"><?= /* @escapeNotVerified */ __('Title') ?></th>
-            <th class="col-number"><?= /* @escapeNotVerified */ __('Number') ?></th>
-            <th class="col-delete"><?= /* @escapeNotVerified */ __('Action') ?></th>
+            <th class="col-carrier"><?= $escaper->escapeHtml(__('Carrier')) ?></th>
+            <th class="col-title"><?= $escaper->escapeHtml(__('Title')) ?></th>
+            <th class="col-number"><?= $escaper->escapeHtml(__('Number')) ?></th>
+            <th class="col-delete"><?= $escaper->escapeHtml(__('Action')) ?></th>
         </tr>
         </thead>
         <tfoot>
@@ -119,7 +127,8 @@ require(['prototype'], function(){
         </tbody>
     </table>
 </div>
-<script>
+<?php $scriptString = <<<script
+
 require([
     'mage/template',
     'prototype'
@@ -130,4 +139,7 @@ require([
     //]]>
 
 });
-</script>
+
+script;
+?>
+<?= /* @noEscape */ $secureRenderer->renderTag('script', [], $scriptString, false) ?>

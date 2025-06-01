@@ -62,7 +62,7 @@ class ByStockItemTest extends \PHPUnit\Framework\TestCase
         StockItemInterface::IS_IN_STOCK => false,
     ];
 
-    public function setUp()
+    protected function setUp(): void
     {
         $objectManager = Bootstrap::getObjectManager();
         $this->productFactory = $objectManager->get(ProductInterfaceFactory::class);
@@ -108,5 +108,30 @@ class ByStockItemTest extends \PHPUnit\Framework\TestCase
         $product->save();
 
         $this->stockItemDataChecker->checkStockItemData('simpleByStockItemTest', $this->stockItemData);
+    }
+
+    public function testAutomaticIsInStockUpdate(): void
+    {
+        $stockItemData = [
+            StockItemInterface::QTY => 0,
+            StockItemInterface::IS_IN_STOCK => true,
+            StockItemInterface::MANAGE_STOCK => 1,
+        ];
+        $expected = [
+            StockItemInterface::QTY => 0,
+            StockItemInterface::IS_IN_STOCK => false,
+            StockItemInterface::STOCK_STATUS_CHANGED_AUTO => true,
+        ];
+        /** @var StockItemInterface $stockItem */
+        $stockItem = $this->stockItemFactory->create();
+        $this->dataObjectHelper->populateWithArray($stockItem, $stockItemData, StockItemInterface::class);
+
+        /** @var Product $product */
+        $product = $this->productFactory->create();
+        $this->dataObjectHelper->populateWithArray($product, $this->productData, ProductInterface::class);
+        $product->getExtensionAttributes()->setStockItem($stockItem);
+        $product->save();
+
+        $this->stockItemDataChecker->checkStockItemData('simpleByStockItemTest', $expected);
     }
 }

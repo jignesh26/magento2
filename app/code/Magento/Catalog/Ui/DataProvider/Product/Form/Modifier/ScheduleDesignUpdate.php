@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Ui\DataProvider\Product\Form\Modifier;
 
@@ -37,7 +37,8 @@ class ScheduleDesignUpdate extends AbstractModifier
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
+     *
      * @since 101.0.0
      */
     public function modifyMeta(array $meta)
@@ -47,7 +48,8 @@ class ScheduleDesignUpdate extends AbstractModifier
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
+     *
      * @since 101.0.0
      */
     public function modifyData(array $data)
@@ -96,7 +98,8 @@ class ScheduleDesignUpdate extends AbstractModifier
             $fromContainerPath . self::META_CONFIG_PATH,
             $meta,
             [
-                'label' => __('Schedule Update From'),
+                'label' => false,
+                'required' => false,
                 'additionalClasses' => 'admin__control-grouped-date',
                 'breakLine' => false,
                 'component' => 'Magento_Ui/js/form/components/group',

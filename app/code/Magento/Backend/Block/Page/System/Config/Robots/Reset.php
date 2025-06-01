@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Backend\Block\Page\System\Config\Robots;
@@ -11,7 +11,7 @@ use Magento\Framework\App\Config\ScopeConfigInterface;
 /**
  * "Reset to Defaults" button renderer
  *
- * @deprecated 100.2.0
+ * @deprecated 100.1.6
  * @author     Magento Core Team <core@magentocommerce.com>
  */
 class Reset extends \Magento\Config\Block\System\Config\Form\Field

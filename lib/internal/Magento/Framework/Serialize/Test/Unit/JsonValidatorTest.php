@@ -3,18 +3,21 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Serialize\Test\Unit;
 
 use Magento\Framework\Serialize\JsonValidator;
+use PHPUnit\Framework\TestCase;
 
-class JsonValidatorTest extends \PHPUnit\Framework\TestCase
+class JsonValidatorTest extends TestCase
 {
     /**
      * @var JsonValidator
      */
     private $jsonValidator;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->jsonValidator = new JsonValidator();
     }
@@ -35,7 +38,7 @@ class JsonValidatorTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isValidDataProvider()
+    public static function isValidDataProvider()
     {
         return [
             ['""', true],

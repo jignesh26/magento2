@@ -5,13 +5,15 @@
  */
 namespace Magento\SalesRule\Api\Data;
 
+use Magento\Framework\Api\ExtensibleDataInterface;
+
 /**
  * Interface RuleInterface
  *
  * @api
  * @since 100.0.2
  */
-interface RuleInterface extends \Magento\Framework\Api\ExtensibleDataInterface
+interface RuleInterface extends ExtensibleDataInterface
 {
     const FREE_SHIPPING_NONE = 'NONE';
     const FREE_SHIPPING_MATCHING_ITEMS_ONLY = 'MATCHING_ITEMS_ONLY';
@@ -69,7 +71,7 @@ interface RuleInterface extends \Magento\Framework\Api\ExtensibleDataInterface
      * @param \Magento\SalesRule\Api\Data\RuleLabelInterface[]|null $storeLabels
      * @return $this
      */
-    public function setStoreLabels(array $storeLabels = null);
+    public function setStoreLabels(?array $storeLabels = null);
 
     /**
      * Get description
@@ -173,7 +175,7 @@ interface RuleInterface extends \Magento\Framework\Api\ExtensibleDataInterface
      * Set whether the coupon is active
      *
      * @param bool $isActive
-     * @return bool
+     * @return $this
      */
     public function setIsActive($isActive);
 
@@ -190,7 +192,7 @@ interface RuleInterface extends \Magento\Framework\Api\ExtensibleDataInterface
      * @param \Magento\SalesRule\Api\Data\ConditionInterface|null $condition
      * @return $this
      */
-    public function setCondition(ConditionInterface $condition = null);
+    public function setCondition(?ConditionInterface $condition = null);
 
     /**
      * Get action condition
@@ -205,7 +207,7 @@ interface RuleInterface extends \Magento\Framework\Api\ExtensibleDataInterface
      * @param \Magento\SalesRule\Api\Data\ConditionInterface|null $actionCondition
      * @return $this
      */
-    public function setActionCondition(ConditionInterface $actionCondition = null);
+    public function setActionCondition(?ConditionInterface $actionCondition = null);
 
     /**
      * Whether to stop rule processing
@@ -232,6 +234,8 @@ interface RuleInterface extends \Magento\Framework\Api\ExtensibleDataInterface
     public function getIsAdvanced();
 
     /**
+     * Set if rule is advanced
+     *
      * @param bool $isAdvanced
      * @return $this
      */
@@ -250,7 +254,7 @@ interface RuleInterface extends \Magento\Framework\Api\ExtensibleDataInterface
      * @param int[]|null $productIds
      * @return $this
      */
-    public function setProductIds(array $productIds = null);
+    public function setProductIds(?array $productIds = null);
 
     /**
      * Get sort order
@@ -260,6 +264,8 @@ interface RuleInterface extends \Magento\Framework\Api\ExtensibleDataInterface
     public function getSortOrder();
 
     /**
+     * Set sort order
+     *
      * @param int $sortOrder
      * @return $this
      */
@@ -446,5 +452,5 @@ interface RuleInterface extends \Magento\Framework\Api\ExtensibleDataInterface
      * @param \Magento\SalesRule\Api\Data\RuleExtensionInterface $extensionAttributes
      * @return $this
      */
-    public function setExtensionAttributes(\Magento\SalesRule\Api\Data\RuleExtensionInterface $extensionAttributes);
+    public function setExtensionAttributes(RuleExtensionInterface $extensionAttributes);
 }

@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Backend\Block\Page;
 
@@ -60,6 +60,7 @@ class Footer extends \Magento\Backend\Block\Template
 
     /**
      * @inheritdoc
+     * @since 101.0.0
      */
     protected function getCacheLifetime()
     {

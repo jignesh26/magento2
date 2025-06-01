@@ -16,7 +16,8 @@ define([
     'Magento_Variable/js/custom-directive-generator',
     'Magento_Ui/js/lib/spinner',
     'jquery/ui',
-    'prototype'
+    'prototype',
+    'mage/adminhtml/tools'
 ], function (jQuery, notification, $t, wysiwyg, registry, mageApply, utils, configGenerator, customGenerator, loader) {
     'use strict';
 
@@ -174,7 +175,7 @@ define([
                          * @param {String} message
                          */
                         insertMethod: function (message) {
-                            $wrapper = jQuery('<div/>').html(message);
+                            $wrapper = jQuery('<div></div>').html(message);
 
                             jQuery('.modal-header .page-main-actions').after($wrapper);
                         }
@@ -300,7 +301,7 @@ define([
                 updateElementAtCursor(textareaElm, value);
                 textareaElm.focus();
                 textareaElm.scrollTop = scrollPos;
-                jQuery(textareaElm).change();
+                jQuery(textareaElm).trigger('change');
                 textareaElm = null;
             }
 

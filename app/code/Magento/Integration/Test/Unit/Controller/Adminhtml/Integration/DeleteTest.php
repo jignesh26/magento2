@@ -3,27 +3,46 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Integration\Test\Unit\Controller\Adminhtml\Integration;
 
-use Magento\Integration\Block\Adminhtml\Integration\Edit\Tab\Info;
-use Magento\Integration\Model\Integration as IntegrationModel;
+use Magento\Backend\Model\Menu\Item\Factory;
+use Magento\Backend\Model\View\Result\Redirect;
+use Magento\Framework\Controller\ResultFactory;
 use Magento\Framework\Exception\IntegrationException;
+use Magento\Framework\Serialize\SerializerInterface;
+use Magento\Integration\Block\Adminhtml\Integration\Edit\Tab\Info;
+use Magento\Integration\Controller\Adminhtml\Integration\Delete;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Integration\Model\Integration as IntegrationModel;
+use Magento\Integration\Test\Unit\Controller\Adminhtml\IntegrationTestCase;
 
-class DeleteTest extends \Magento\Integration\Test\Unit\Controller\Adminhtml\IntegrationTest
+class DeleteTest extends IntegrationTestCase
 {
     /**
-     * @var \Magento\Integration\Controller\Adminhtml\Integration\Delete
+     * @var Delete
      */
     protected $integrationController;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
-
+        $objectManager = new ObjectManager($this);
+        $objects = [
+            [
+                Factory::class,
+                $this->createMock(Factory::class)
+            ],
+            [
+                SerializerInterface::class,
+                $this->createMock(SerializerInterface::class)
+            ]
+        ];
+        $objectManager->prepareObjectManager($objects);
         $this->integrationController = $this->_createIntegrationController('Delete');
 
-        $resultRedirect = $this->getMockBuilder(\Magento\Backend\Model\View\Result\Redirect::class)
+        $resultRedirect = $this->getMockBuilder(Redirect::class)
             ->disableOriginalConstructor()
             ->getMock();
         $resultRedirect->expects($this->any())
@@ -33,7 +52,7 @@ class DeleteTest extends \Magento\Integration\Test\Unit\Controller\Adminhtml\Int
 
         $this->resultFactory->expects($this->any())
             ->method('create')
-            ->with(\Magento\Framework\Controller\ResultFactory::TYPE_REDIRECT)
+            ->with(ResultFactory::TYPE_REDIRECT)
             ->willReturn($resultRedirect);
     }
 
@@ -115,7 +134,7 @@ class DeleteTest extends \Magento\Integration\Test\Unit\Controller\Adminhtml\Int
             ->willReturn(true);
         // verify error message
         $this->_messageManager->expects($this->once())
-            ->method('addError')
+            ->method('addErrorMessage')
             ->with(__('Uninstall the extension to remove integration \'%1\'.', $intData[Info::DATA_NAME]));
         $this->_integrationSvcMock->expects($this->never())->method('delete');
         // Use real translate model
@@ -138,7 +157,7 @@ class DeleteTest extends \Magento\Integration\Test\Unit\Controller\Adminhtml\Int
         $this->_translateModelMock = null;
         // verify error message
         $this->_messageManager->expects($this->once())
-            ->method('addError')
+            ->method('addErrorMessage')
             ->with(__('Integration ID is not specified or is invalid.'));
 
         $this->integrationController->execute();
@@ -161,7 +180,7 @@ class DeleteTest extends \Magento\Integration\Test\Unit\Controller\Adminhtml\Int
         $this->_integrationSvcMock->expects($this->once())
             ->method('delete')
             ->willThrowException($invalidIdException);
-        $this->_messageManager->expects($this->once())->method('addError');
+        $this->_messageManager->expects($this->once())->method('addErrorMessage');
 
         $this->integrationController->execute();
     }
@@ -179,11 +198,11 @@ class DeleteTest extends \Magento\Integration\Test\Unit\Controller\Adminhtml\Int
         // Use real translate model
         $this->_translateModelMock = null;
         $exceptionMessage = __('The integration with ID "%1" doesn\'t exist.', $intData[Info::DATA_ID]);
-        $invalidIdException = new \Exception($exceptionMessage);
+        $invalidIdException = new \Exception($exceptionMessage->getText());
         $this->_integrationSvcMock->expects($this->once())
             ->method('delete')
             ->willThrowException($invalidIdException);
-        $this->_messageManager->expects($this->never())->method('addError');
+        $this->_messageManager->expects($this->never())->method('addErrorMessage');
 
         $this->integrationController->execute();
     }

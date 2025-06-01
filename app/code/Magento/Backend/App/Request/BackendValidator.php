@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 
 declare(strict_types=1);
@@ -146,8 +146,9 @@ class BackendValidator implements ValidatorInterface
                 $exception = new InvalidRequestException($response);
             } else {
                 //For regular requests.
+                $startPageUrl = $this->backendUrl->getStartupPageUrl();
                 $response = $this->redirectFactory->create()
-                    ->setUrl($this->backendUrl->getStartupPageUrl());
+                    ->setUrl($this->backendUrl->getUrl($startPageUrl));
                 $exception = new InvalidRequestException(
                     $response,
                     [

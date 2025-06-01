@@ -1,9 +1,7 @@
 <?php
 /**
- * Origin filesystem driver
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Framework\Filesystem\Driver;
@@ -11,7 +9,7 @@ namespace Magento\Framework\Filesystem\Driver;
 use Magento\Framework\Exception\FileSystemException;
 
 /**
- * Class Http
+ * Origin filesystem driver. Allows interacting with http endpoint like with FileSystem
  */
 class Http extends File
 {
@@ -27,26 +25,18 @@ class Http extends File
      *
      * @param string $path
      * @return bool
-     * @throws FileSystemException
      */
     public function isExists($path)
     {
         $headers = array_change_key_case(get_headers($this->getScheme() . $path, 1), CASE_LOWER);
+        $status = $headers[0] ?? '';
 
-        $status = $headers[0];
-
-        /* Handling 302 redirection */
-        if (strpos($status, '302 Found') !== false && isset($headers[1])) {
+        /* Handling 301 or 302 redirection */
+        if (isset($headers[1]) && preg_match('/30[12]/', $status)) {
             $status = $headers[1];
         }
 
-        if (strpos($status, '200 OK') === false) {
-            $result = false;
-        } else {
-            $result = true;
-        }
-
-        return $result;
+        return !(strpos($status, '200') === false);
     }
 
     /**
@@ -91,8 +81,9 @@ class Http extends File
      */
     public function fileGetContents($path, $flags = null, $context = null)
     {
-        clearstatcache();
-        $result = @file_get_contents($this->getScheme() . $path, $flags, $context);
+        $fullPath = $this->getScheme() . $path;
+        clearstatcache(false, $fullPath);
+        $result = @file_get_contents($fullPath, $flags ?? false, $context);
         if (false === $result) {
             throw new FileSystemException(
                 new \Magento\Framework\Phrase(
@@ -117,7 +108,7 @@ class Http extends File
     public function filePutContents($path, $content, $mode = null, $context = null)
     {
         $result = @file_put_contents($this->getScheme() . $path, $content, $mode, $context);
-        if (!$result) {
+        if ($result === false) {
             throw new FileSystemException(
                 new \Magento\Framework\Phrase(
                     'The specified "%1" file couldn\'t be written. %2',
@@ -204,8 +195,13 @@ class Http extends File
      */
     public function fileReadLine($resource, $length, $ending = null)
     {
-        $result = @stream_get_line($resource, $length, $ending);
-
+        try {
+            $result = @stream_get_line($resource, $length, $ending);
+        } catch (\Exception $e) {
+            throw new FileSystemException(
+                new \Magento\Framework\Phrase('Stream get line failed %1', [$e->getMessage()])
+            );
+        }
         return $result;
     }
 
@@ -223,7 +219,7 @@ class Http extends File
         // check if the path given is already an absolute path containing the
         // basepath. so if the basepath starts at position 0 in the path, we
         // must not concatinate them again because path is already absolute.
-        if (0 === strpos($path, $basePath)) {
+        if (0 === strpos((string)$path, (string)$basePath)) {
             return $this->getScheme() . $path;
         }
 
@@ -248,7 +244,7 @@ class Http extends File
      * @param string $hostname
      * @param int $port
      * @throws \Magento\Framework\Exception\FileSystemException
-     * @return array
+     * @return resource|bool
      */
     protected function open($hostname, $port)
     {

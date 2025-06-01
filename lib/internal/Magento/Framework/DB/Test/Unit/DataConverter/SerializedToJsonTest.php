@@ -3,20 +3,23 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\DB\Test\Unit\DataConverter;
 
-use Magento\Framework\Serialize\Serializer\Serialize;
-use Magento\Framework\Serialize\Serializer\Json;
 use Magento\Framework\DB\DataConverter\SerializedToJson;
+use Magento\Framework\Serialize\Serializer\Json;
+use Magento\Framework\Serialize\Serializer\Serialize;
+use PHPUnit\Framework\TestCase;
 
-class SerializedToJsonTest extends \PHPUnit\Framework\TestCase
+class SerializedToJsonTest extends TestCase
 {
     /**
      * @var SerializedToJson
      */
     private $serializedToJson;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->serializedToJson =  new SerializedToJson(
             new Serialize(),
@@ -41,7 +44,7 @@ class SerializedToJsonTest extends \PHPUnit\Framework\TestCase
      * @case #2 - Serialized 2.203 with serialize_precision = 17 (default for PHP version < 7.1.0 )
      * @return array
      */
-    public function convertDataProvider()
+    public static function convertDataProvider()
     {
         return [
             1 => ['serializedData' => 'a:1:{i:0;d:0.12345678901234568;}', 'expectedJson' => '[0.12345678901234568]'],

@@ -3,13 +3,17 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Ui\Test\Unit\Config\Converter;
 
-use Magento\Ui\Config\ConverterInterface;
 use Magento\Ui\Config\Converter\Item;
+use Magento\Ui\Config\ConverterInterface;
 use Magento\Ui\Config\ConverterUtils;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class ItemTest extends \PHPUnit\Framework\TestCase
+class ItemTest extends TestCase
 {
     /**
      * @var Item
@@ -22,16 +26,17 @@ class ItemTest extends \PHPUnit\Framework\TestCase
     private $domXpath;
 
     /**
-     * @var ConverterInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConverterInterface|MockObject
      */
     private $urlConverter;
 
-    public function setUp()
+    protected function setUp(): void
     {
         $dom = new \DOMDocument('1.0', 'UTF-8');
         $dom->load(dirname(__FILE__) . DIRECTORY_SEPARATOR . '_files/test.xml');
         $this->domXpath = new \DOMXPath($dom);
-        $this->urlConverter = $this->getMockBuilder(ConverterInterface::class)->getMockForAbstractClass();
+        $this->urlConverter = $this->getMockBuilder(ConverterInterface::class)
+            ->getMockForAbstractClass();
         $this->converter = new Item($this->urlConverter, new ConverterUtils());
     }
 
@@ -40,7 +45,7 @@ class ItemTest extends \PHPUnit\Framework\TestCase
      * @param string $xpath
      * @dataProvider convertDataProvider
      */
-    public function testConvert(array $expectedResult, $xpath)
+    public function testConvert(array $expectedResult, string $xpath)
     {
         $node = $this->domXpath->query($xpath)->item(0);
         if ($xpath == '//listing/columns/settings/editorConfig') {
@@ -76,17 +81,17 @@ class ItemTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function convertDataProvider()
+    public static function convertDataProvider()
     {
         return [
-            $this->getSetOne() + $this->getSetTwo() + $this->getSetThree()
+            self::getSetOne() + self::getSetTwo() + self::getSetThree()
         ];
     }
 
     /**
      * @return array
      */
-    private function getSetOne()
+    private static function getSetOne()
     {
         return [
             [
@@ -124,10 +129,10 @@ class ItemTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    private function getSetTwo()
+    private static function getSetTwo()
     {
         return [
-            'editorConfig' => [
+            'expectedResult' => [
                 'name' => 'editorConfig',
                 'xsi:type' => 'array',
                 'item' => [
@@ -166,10 +171,10 @@ class ItemTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    private function getSetThree()
+    private static function getSetThree()
     {
         return [
-            'templates' => [
+            'xpath' => [
                 'name' => 'templates',
                 'xsi:type' => 'array',
                 'item' => [

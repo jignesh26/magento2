@@ -3,15 +3,27 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Widget\Test\Unit\Model\Template;
 
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
+use Magento\Framework\Translate\Inline\StateInterface;
+use Magento\Framework\UrlInterface;
+use Magento\Framework\View\LayoutInterface;
+use Magento\Store\Model\Information as StoreInformation;
+use Magento\Store\Model\Store;
 use Magento\Store\Model\StoreManagerInterface;
+use Magento\Widget\Block\BlockInterface;
+use Magento\Widget\Model\ResourceModel\Widget;
+use Magento\Widget\Model\Template\Filter;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class FilterTest extends \PHPUnit\Framework\TestCase
+class FilterTest extends TestCase
 {
     /**
-     * @var \Magento\Widget\Model\Template\Filter
+     * @var Filter
      */
     protected $filter;
 
@@ -21,44 +33,56 @@ class FilterTest extends \PHPUnit\Framework\TestCase
     protected $objectManagerHelper;
 
     /**
-     * @var \Magento\Store\Model\Store|\PHPUnit_Framework_MockObject_MockObject
+     * @var Store|MockObject
      */
     protected $storeMock;
 
     /**
-     * @var StoreManagerInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var StoreManagerInterface|MockObject
      */
     protected $storeManagerMock;
 
     /**
-     * @var \Magento\Widget\Model\ResourceModel\Widget|\PHPUnit_Framework_MockObject_MockObject
+     * @var Widget|MockObject
      */
     protected $widgetResourceMock;
 
     /**
-     * @var \Magento\Widget\Model\Widget|\PHPUnit_Framework_MockObject_MockObject
+     * @var \Magento\Widget\Model\Widget|MockObject
      */
     protected $widgetMock;
 
     /**
-     * @var \Magento\Framework\View\LayoutInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var LayoutInterface|MockObject
      */
     protected $layoutMock;
 
     /**
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManagerHelper = new ObjectManagerHelper($this);
-        $this->storeMock = $this->createMock(\Magento\Store\Model\Store::class);
-        $this->storeManagerMock = $this->createMock(\Magento\Store\Model\StoreManagerInterface::class);
-        $this->widgetResourceMock = $this->createMock(\Magento\Widget\Model\ResourceModel\Widget::class);
+        $this->storeMock = $this->createMock(Store::class);
+        $this->storeManagerMock = $this->getMockForAbstractClass(StoreManagerInterface::class);
+        $this->widgetResourceMock = $this->createMock(Widget::class);
         $this->widgetMock = $this->createMock(\Magento\Widget\Model\Widget::class);
-        $this->layoutMock = $this->createMock(\Magento\Framework\View\LayoutInterface::class);
+        $this->layoutMock = $this->getMockForAbstractClass(LayoutInterface::class);
+
+        $objects = [
+            [
+                StoreInformation::class,
+                $this->createMock(StoreInformation::class)
+            ],
+            [
+                StateInterface::class,
+                $this->createMock(StateInterface::class)
+            ]
+        ];
+        $this->objectManagerHelper->prepareObjectManager($objects);
 
         $this->filter = $this->objectManagerHelper->getObject(
-            \Magento\Widget\Model\Template\Filter::class,
+            Filter::class,
             [
                 'storeManager' => $this->storeManagerMock,
                 'widgetResource' => $this->widgetResourceMock,
@@ -76,7 +100,7 @@ class FilterTest extends \PHPUnit\Framework\TestCase
      * @param array $params
      * @param array $preconfigure
      * @param string $widgetXml
-     * @param \Magento\Widget\Block\BlockInterface|null $widgetBlock
+     * @param \Closure|null $widgetBlock
      * @param string $expectedResult
      * @return void
      * @dataProvider generateWidgetDataProvider
@@ -92,6 +116,9 @@ class FilterTest extends \PHPUnit\Framework\TestCase
         $widgetBlock,
         $expectedResult
     ) {
+        if ($widgetBlock!=null) {
+            $widgetBlock = $widgetBlock($this);
+        }
         $this->generalForGenerateWidget($name, $type, $preConfigId, $params, $preconfigure, $widgetXml, $widgetBlock);
         $this->assertSame($expectedResult, $this->filter->generateWidget($construction));
     }
@@ -104,7 +131,7 @@ class FilterTest extends \PHPUnit\Framework\TestCase
      * @param array $params
      * @param array $preconfigure
      * @param string $widgetXml
-     * @param \Magento\Widget\Block\BlockInterface|null $widgetBlock
+     * @param \Closure|null $widgetBlock
      * @param string $expectedResult
      * @return void
      * @dataProvider generateWidgetDataProvider
@@ -120,6 +147,9 @@ class FilterTest extends \PHPUnit\Framework\TestCase
         $widgetBlock,
         $expectedResult
     ) {
+        if ($widgetBlock!=null) {
+            $widgetBlock = $widgetBlock($this);
+        }
         $this->generalForGenerateWidget($name, $type, $preConfigId, $params, $preconfigure, $widgetXml, $widgetBlock);
         $this->assertSame($expectedResult, $this->filter->widgetDirective($construction));
     }
@@ -127,7 +157,7 @@ class FilterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function generateWidgetDataProvider()
+    public static function generateWidgetDataProvider()
     {
         return [
             [
@@ -172,7 +202,7 @@ class FilterTest extends \PHPUnit\Framework\TestCase
                 'params' => ['id' => '1'],
                 'preconfigure' => ['widget_type' => "Widget\\Link", 'parameters' => ['id' => '1']],
                 'widgetXml' => 'some xml',
-                'widgetBlock' => $this->getBlockMock('widget text'),
+                'widgetBlock' => static fn (self $testCase) => $testCase->getBlockMock('widget text'),
                 'expectedResult' => 'widget text'
             ],
             [
@@ -193,7 +223,7 @@ class FilterTest extends \PHPUnit\Framework\TestCase
                 ],
                 'preconfigure' => [],
                 'widgetXml' => 'some xml',
-                'widgetBlock' => $this->getBlockMock('widget text'),
+                'widgetBlock' => static fn (self $testCase) => $testCase->getBlockMock('widget text'),
                 'expectedResult' => 'widget text'
             ],
         ];
@@ -206,7 +236,7 @@ class FilterTest extends \PHPUnit\Framework\TestCase
      * @param array $params
      * @param array $preconfigure
      * @param string $widgetXml
-     * @param \Magento\Widget\Block\BlockInterface|null $widgetBlock
+     * @param BlockInterface|null $widgetBlock
      * @return void
      * @dataProvider generateWidgetDataProvider
      */
@@ -235,13 +265,13 @@ class FilterTest extends \PHPUnit\Framework\TestCase
 
     /**
      * @param string $returnedResult
-     * @return \Magento\Widget\Block\BlockInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @return BlockInterface|MockObject
      */
     protected function getBlockMock($returnedResult = '')
     {
-        /** @var \Magento\Widget\Block\BlockInterface|\PHPUnit_Framework_MockObject_MockObject $blockMock */
-        $blockMock = $this->getMockBuilder(\Magento\Widget\Block\BlockInterface::class)
-            ->setMethods(['toHtml'])
+        /** @var BlockInterface|MockObject $blockMock */
+        $blockMock = $this->getMockBuilder(BlockInterface::class)
+            ->addMethods(['toHtml'])
             ->getMockForAbstractClass();
         $blockMock->expects($this->any())
             ->method('toHtml')
@@ -257,11 +287,11 @@ class FilterTest extends \PHPUnit\Framework\TestCase
     {
         $image = 'wysiwyg/VB.png';
         $construction = ['{{media url="' . $image . '"}}', 'media', ' url="' . $image . '"'];
-        $baseUrl = 'http://localhost/pub/media/';
+        $baseUrl = 'http://localhost/media/';
 
         $this->storeMock->expects($this->once())
             ->method('getBaseUrl')
-            ->with(\Magento\Framework\UrlInterface::URL_TYPE_MEDIA)
+            ->with(UrlInterface::URL_TYPE_MEDIA)
             ->willReturn($baseUrl);
         $this->storeManagerMock->expects($this->once())
             ->method('getStore')
@@ -275,11 +305,11 @@ class FilterTest extends \PHPUnit\Framework\TestCase
     {
         $image = 'wysiwyg/VB.png';
         $construction = ['{{media url=&quot;' . $image . '&quot;}}', 'media', ' url=&quot;' . $image . '&quot;'];
-        $baseUrl = 'http://localhost/pub/media/';
+        $baseUrl = 'http://localhost/media/';
 
         $this->storeMock->expects($this->once())
             ->method('getBaseUrl')
-            ->with(\Magento\Framework\UrlInterface::URL_TYPE_MEDIA)
+            ->with(UrlInterface::URL_TYPE_MEDIA)
             ->willReturn($baseUrl);
         $this->storeManagerMock->expects($this->once())
             ->method('getStore')

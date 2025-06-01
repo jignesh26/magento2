@@ -26,10 +26,11 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @dataProvider providerNotValidFiles
      * @param string $path
-     * @expectedException \Magento\Framework\Exception\FileSystemException
      */
     public function testAssertValid($path)
     {
+        $this->expectException(\Magento\Framework\Exception\FileSystemException::class);
+
         $this->getFileInstance($path);
     }
 
@@ -38,7 +39,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function providerNotValidFiles()
+    public static function providerNotValidFiles()
     {
         return [['invalid.csv']]; //File does not exist
     }
@@ -63,7 +64,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function providerRead()
+    public static function providerRead()
     {
         return [['popup.csv', 10, 'var myData'], ['popup.csv', 15, 'var myData = 5;']];
     }
@@ -86,7 +87,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function readAllProvider()
+    public static function readAllProvider()
     {
         return [
             ['popup.csv', 'var myData = 5;'],
@@ -115,7 +116,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function readLineProvider()
+    public static function readLineProvider()
     {
         return [
             ['popup.csv', ['var myData = 5;'], 999],
@@ -151,7 +152,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
         ];
         $result = $file->stat();
         foreach ($expectedInfo as $key) {
-            $this->assertTrue(array_key_exists($key, $result));
+            $this->assertArrayHasKey($key, $result);
         }
     }
 
@@ -160,7 +161,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function statProvider()
+    public static function statProvider()
     {
         return [['popup.csv'], ['foo/file_three.txt']];
     }
@@ -191,7 +192,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function providerCsv()
+    public static function providerCsv()
     {
         return [['data.csv', 0, ',', '"', '\\', ['field1', 'field2'], ['field3', 'field4']]];
     }
@@ -215,7 +216,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function providerPosition()
+    public static function providerPosition()
     {
         return [['popup.csv', 5], ['popup.csv', 10]];
     }
@@ -241,7 +242,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function providerSeek()
+    public static function providerSeek()
     {
         return [
             ['popup.csv', 5, SEEK_SET, 5],
@@ -269,7 +270,7 @@ class ReadTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function providerEof()
+    public static function providerEof()
     {
         return [['popup.csv', 5, false], ['popup.csv', 10, false]];
     }

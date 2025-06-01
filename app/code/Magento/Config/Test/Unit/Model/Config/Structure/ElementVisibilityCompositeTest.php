@@ -3,12 +3,17 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Config\Test\Unit\Model\Config\Structure;
 
 use Magento\Config\Model\Config\Structure\ElementVisibilityComposite;
 use Magento\Config\Model\Config\Structure\ElementVisibilityInterface;
+use PHPUnit\Framework\MockObject\Matcher\InvokedCount;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class ElementVisibilityCompositeTest extends \PHPUnit\Framework\TestCase
+class ElementVisibilityCompositeTest extends TestCase
 {
     /**
      * @var ElementVisibilityComposite
@@ -16,16 +21,16 @@ class ElementVisibilityCompositeTest extends \PHPUnit\Framework\TestCase
     private $model;
 
     /**
-     * @var ElementVisibilityInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ElementVisibilityInterface|MockObject
      */
     private $firstVisibilityMock;
 
     /**
-     * @var ElementVisibilityInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ElementVisibilityInterface|MockObject
      */
     private $secondVisibilityMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->firstVisibilityMock = $this->getMockBuilder(ElementVisibilityInterface::class)
             ->getMockForAbstractClass();
@@ -36,13 +41,16 @@ class ElementVisibilityCompositeTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
-     * @expectedException \Magento\Framework\Exception\ConfigurationMismatchException
      * @codingStandardsIgnoreStart
-     * @expectedExceptionMessage stdClass: Instance of Magento\Config\Model\Config\Structure\ElementVisibilityInterface is expected, got stdClass instead
      * @codingStandardsIgnoreEnd
      */
     public function testException()
     {
+        $this->expectException('Magento\Framework\Exception\ConfigurationMismatchException');
+        $this->expectExceptionMessage(sprintf(
+            'stdClass: Instance of %s, got stdClass instead',
+            'Magento\Config\Model\Config\Structure\ElementVisibilityInterface is expected'
+        ));
         $visibility = [
             'stdClass' => new \stdClass()
         ];
@@ -51,9 +59,9 @@ class ElementVisibilityCompositeTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
-     * @param \PHPUnit\Framework\MockObject\Matcher\InvokedCount $firstExpects
+     * @param InvokedCount $firstExpects
      * @param bool $firstResult
-     * @param \PHPUnit\Framework\MockObject\Matcher\InvokedCount $secondExpects
+     * @param InvokedCount $secondExpects
      * @param bool $secondResult
      * @param bool $expectedResult
      * @dataProvider visibilityDataProvider
@@ -74,9 +82,9 @@ class ElementVisibilityCompositeTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
-     * @param \PHPUnit\Framework\MockObject\Matcher\InvokedCount $firstExpects
+     * @param InvokedCount $firstExpects
      * @param bool $firstResult
-     * @param \PHPUnit\Framework\MockObject\Matcher\InvokedCount $secondExpects
+     * @param InvokedCount $secondExpects
      * @param bool $secondResult
      * @param bool $expectedResult
      * @dataProvider visibilityDataProvider
@@ -99,13 +107,13 @@ class ElementVisibilityCompositeTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function visibilityDataProvider()
+    public static function visibilityDataProvider()
     {
         return [
-            [$this->once(), false, $this->once(), false, false],
-            [$this->once(), false, $this->once(), true, true],
-            [$this->once(), true, $this->never(), true, true],
-            [$this->once(), true, $this->never(), false, true],
+            [self::once(), false, self::once(), false, false],
+            [self::once(), false, self::once(), true, true],
+            [self::once(), true, self::never(), true, true],
+            [self::once(), true, self::never(), false, true],
         ];
     }
 }

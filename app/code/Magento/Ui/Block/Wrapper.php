@@ -10,11 +10,12 @@ use Magento\Framework\View\Element\UiComponentInterface;
 use Magento\Ui\Model\UiComponentGenerator;
 
 /**
- * This block is wrapper for UI component, this done in order to save compatability with old
- * widgets mechanism
+ * This block is wrapper for UI component, this done in order to save compatibility with old widgets mechanism
  */
 class Wrapper extends \Magento\Framework\View\Element\Template
 {
+    protected const RENDER_TYPE = '';
+
     /**
      * @var UiComponentGenerator
      */
@@ -92,6 +93,6 @@ class Wrapper extends \Magento\Framework\View\Element\Template
             ->generateUiComponent($this->getData('uiComponent'), $this->getLayout());
         $this->injectDataInDataSource($uiComponent, $this->getData());
         $this->addDataToChildComponents($uiComponent, $data);
-        return (string) $uiComponent->render();
+        return (string) $uiComponent->render(static::RENDER_TYPE);
     }
 }

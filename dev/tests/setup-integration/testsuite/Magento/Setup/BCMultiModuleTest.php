@@ -51,7 +51,7 @@ class BCMultiModuleTest extends SetupTestCase
      */
     private $dbSchemaReader;
 
-    public function setUp()
+    protected function setUp(): void
     {
         $objectManager = Bootstrap::getObjectManager();
         $this->moduleManager = $objectManager->get(TestModuleManager::class);
@@ -243,7 +243,7 @@ class BCMultiModuleTest extends SetupTestCase
     /**
      * @return array
      */
-    public function firstCleanInstallOneModuleDataProvider()
+    public static function firstCleanInstallOneModuleDataProvider()
     {
         return [
             'Installation without db prefix' => [

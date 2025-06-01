@@ -1,13 +1,11 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 
 /**
  * Shopping cart downloadable item render block
- *
- * @author      Magento Core Team <core@magentocommerce.com>
  */
 namespace Magento\Downloadable\Block\Checkout\Cart\Item;
 
@@ -15,6 +13,8 @@ use Magento\Framework\Pricing\PriceCurrencyInterface;
 use Magento\Framework\View\Element\Message\InterpretationStrategyInterface;
 
 /**
+ * Item renderer.
+ *
  * @api
  * @since 100.0.2
  */
@@ -103,7 +103,8 @@ class Renderer extends \Magento\Checkout\Block\Cart\Item\Renderer
     }
 
     /**
-     * Get list of all options for product
+     * Get list of all options for product.
+     *
      * @param \Magento\Catalog\Model\Product\Configuration\Item\ItemInterface $item
      * @return array
      */

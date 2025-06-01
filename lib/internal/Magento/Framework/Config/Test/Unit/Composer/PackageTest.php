@@ -3,12 +3,14 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Framework\Config\Test\Unit\Composer;
 
-use \Magento\Framework\Config\Composer\Package;
+use Magento\Framework\Config\Composer\Package;
+use PHPUnit\Framework\TestCase;
 
-class PackageTest extends \PHPUnit\Framework\TestCase
+class PackageTest extends TestCase
 {
     const SAMPLE_DATA =
         '{"foo":"1","bar":"2","baz":["3","4"],"nested":{"one":"5","two":"6",
@@ -24,7 +26,7 @@ class PackageTest extends \PHPUnit\Framework\TestCase
      */
     private $object;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->sampleJson = json_decode(self::SAMPLE_DATA);
         $this->object = new Package($this->sampleJson);
@@ -47,10 +49,12 @@ class PackageTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(['3', '4'], $this->object->get('baz'));
         $nested = $this->object->get('nested');
         $this->assertInstanceOf('\StdClass', $nested);
-        $this->assertObjectHasAttribute('one', $nested);
+        $this->assertIsObject($nested);
+        $this->assertTrue(property_exists($nested, 'one'));
         $this->assertEquals('5', $nested->one);
         $this->assertEquals('5', $this->object->get('nested->one'));
-        $this->assertObjectHasAttribute('two', $nested);
+        $this->assertIsObject($nested);
+        $this->assertTrue(property_exists($nested, 'two'));
         $this->assertEquals('6', $nested->two);
         $this->assertEquals('6', $this->object->get('nested->two'));
         $this->assertEquals(

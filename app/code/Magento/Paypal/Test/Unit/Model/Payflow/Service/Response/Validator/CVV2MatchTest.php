@@ -3,18 +3,23 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Paypal\Test\Unit\Model\Payflow\Service\Response\Validator;
 
+use Magento\Framework\DataObject;
+use Magento\Payment\Model\Method\ConfigInterface;
 use Magento\Paypal\Model\Payflow\Service\Response\Validator\CVV2Match;
 use Magento\Paypal\Model\Payflow\Transparent;
-use Magento\Payment\Model\Method\ConfigInterface;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Class CVV2MatchTest
  *
  * Test class for \Magento\Paypal\Model\Payflow\Service\Response\Validator\CVV2Match
  */
-class CVV2MatchTest extends \PHPUnit\Framework\TestCase
+class CVV2MatchTest extends TestCase
 {
     /**
      * @var CVV2Match
@@ -22,12 +27,12 @@ class CVV2MatchTest extends \PHPUnit\Framework\TestCase
     protected $validator;
 
     /**
-     * @var \Magento\Payment\Model\Method\ConfigInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigInterface|MockObject
      */
     protected $configMock;
 
     /**
-     * @var Transparent|\PHPUnit_Framework_MockObject_MockObject
+     * @var Transparent|MockObject
      */
     protected $payflowproFacade;
 
@@ -36,13 +41,12 @@ class CVV2MatchTest extends \PHPUnit\Framework\TestCase
      *
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->configMock = $this->getMockBuilder(ConfigInterface::class)
             ->getMockForAbstractClass();
         $this->payflowproFacade = $this->getMockBuilder(Transparent::class)
             ->disableOriginalConstructor()
-            ->setMethods([])
             ->getMock();
 
         $this->validator = new CVV2Match();
@@ -50,14 +54,14 @@ class CVV2MatchTest extends \PHPUnit\Framework\TestCase
 
     /**
      * @param bool $expectedResult
-     * @param \Magento\Framework\DataObject $response
+     * @param DataObject $response
      * @param string $avsSecurityCodeFlag
      *
      * @dataProvider validationDataProvider
      */
     public function testValidation(
         $expectedResult,
-        \Magento\Framework\DataObject $response,
+        DataObject $response,
         $avsSecurityCodeFlag
     ) {
         $this->payflowproFacade->expects(static::once())
@@ -79,58 +83,67 @@ class CVV2MatchTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function validationDataProvider()
+    public static function validationDataProvider()
     {
         return [
             [
                 'expectedResult' => true,
-                'response' => new \Magento\Framework\DataObject(
+                'response' => new DataObject(
                     [
                         'cvv2match' => 'Y',
                     ]
                 ),
-                'configValue' => '0',
+                'avsSecurityCodeFlag' => '0',
             ],
             [
                 'expectedResult' => true,
-                'response' => new \Magento\Framework\DataObject(
+                'response' => new DataObject(
                     [
                         'cvv2match' => 'Y',
                     ]
                 ),
-                'configValue' => '1',
+                'avsSecurityCodeFlag' => '1',
             ],
             [
                 'expectedResult' => true,
-                'response' => new \Magento\Framework\DataObject(
+                'response' => new DataObject(
                     [
                         'cvv2match' => 'X',
                     ]
                 ),
-                'configValue' => '1',
+                'avsSecurityCodeFlag' => '1',
             ],
             [
                 'expectedResult' => false,
-                'response' => new \Magento\Framework\DataObject(
+                'response' => new DataObject(
                     [
                         'cvv2match' => 'N',
                     ]
                 ),
-                'configValue' => '1',
+                'avsSecurityCodeFlag' => '1',
             ],
             [
                 'expectedResult' => true,
-                'response' => new \Magento\Framework\DataObject(
+                'response' => new DataObject(
                     [
                         'cvv2match' => null,
                     ]
                 ),
-                'configValue' => '1',
+                'avsSecurityCodeFlag' => '1',
             ],
             [
                 'expectedResult' => true,
-                'response' => new \Magento\Framework\DataObject(),
-                'configValue' => '1',
+                'response' => new DataObject(),
+                'avsSecurityCodeFlag' => '1',
+            ],
+            [
+                'expectedResult' => true,
+                'response' => new DataObject(
+                    [
+                        'cvv2match' => 'N',
+                    ]
+                ),
+                'avsSecurityCodeFlag' => '0',
             ],
         ];
     }

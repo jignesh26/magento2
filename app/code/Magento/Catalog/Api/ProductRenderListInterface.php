@@ -1,28 +1,31 @@
 <?php
 /**
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
+
 namespace Magento\Catalog\Api;
 
 /**
- * Interface which provides product renders information for products
+ * Interface which provides product renders information for products.
+ *
  * @api
- * @since 101.1.0
+ * @since 102.0.0
  */
 interface ProductRenderListInterface
 {
     /**
-     * Collect and retrieve the list of product render info
-     * This info contains raw prices and formated prices, product name, stock status, store_id, etc
+     * Collect and retrieve the list of product render info.
+     *
+     * This info contains raw prices and formatted prices, product name, stock status, store_id, etc.
+     *
      * @see \Magento\Catalog\Api\Data\ProductRenderInfoDtoInterface
      *
      * @param \Magento\Framework\Api\SearchCriteriaInterface $searchCriteria
      * @param int $storeId
      * @param string $currencyCode
      * @return \Magento\Catalog\Api\Data\ProductRenderSearchResultsInterface
-     * @since 101.1.0
+     * @since 102.0.0
      */
     public function getList(\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria, $storeId, $currencyCode);
 }

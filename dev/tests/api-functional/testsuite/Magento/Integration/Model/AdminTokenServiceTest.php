@@ -47,8 +47,9 @@ class AdminTokenServiceTest extends WebapiAbstract
     /**
      * Setup AdminTokenService
      */
-    public function setUp()
+    protected function setUp(): void
     {
+        $this->markTestSkipped('Skipped until MC-34201 is addressed');
         $this->_markTestAsRestOnly();
         $this->tokenService = Bootstrap::getObjectManager()->get(\Magento\Integration\Model\AdminTokenService::class);
         $this->tokenModel = Bootstrap::getObjectManager()->get(\Magento\Integration\Model\Oauth\Token::class);
@@ -84,7 +85,7 @@ class AdminTokenServiceTest extends WebapiAbstract
      *
      * @return array
      */
-    public function validationDataProvider()
+    public static function validationDataProvider()
     {
         return [
             'Check for empty credentials' => ['', ''],

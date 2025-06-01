@@ -7,352 +7,224 @@ declare(strict_types=1);
 
 namespace Magento\GraphQl\UrlRewrite;
 
-use Magento\Catalog\Api\ProductRepositoryInterface;
-use Magento\CmsUrlRewrite\Model\CmsPageUrlRewriteGenerator;
+use Magento\Framework\Exception\AlreadyExistsException;
+use Magento\TestFramework\Helper\Bootstrap;
 use Magento\TestFramework\ObjectManager;
 use Magento\TestFramework\TestCase\GraphQlAbstract;
+use Magento\UrlRewrite\Model\ResourceModel\UrlRewrite as UrlRewriteResourceModel;
 use Magento\UrlRewrite\Model\UrlFinderInterface;
-use Magento\Cms\Helper\Page as PageHelper;
-use Magento\Store\Model\ScopeInterface;
-use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\UrlRewrite\Model\UrlRewrite as UrlRewriteModel;
+use Magento\UrlRewrite\Service\V1\Data\UrlRewrite as UrlRewriteService;
 
 /**
  * Test the GraphQL endpoint's URLResolver query to verify canonical URL's are correctly returned.
  */
 class UrlResolverTest extends GraphQlAbstract
 {
-
-    /** @var  ObjectManager */
+    /** @var ObjectManager */
     private $objectManager;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
+        $this->objectManager = Bootstrap::getObjectManager();
     }
 
     /**
-     * Tests if target_path(canonical_url) is resolved for Product entity
+     * Test for custom type which point to the invalid product/category/cms page.
      *
-     * @magentoApiDataFixture Magento/CatalogUrlRewrite/_files/product_with_category.php
+     * @magentoApiDataFixture Magento/UrlRewrite/_files/url_rewrite_not_existing_entity.php
      */
-    public function testProductUrlResolver()
+    public function testNonExistentEntityUrlRewrite()
     {
-        $productSku = 'p002';
-        $urlPath = 'p002.html';
-        /** @var ProductRepositoryInterface $productRepository */
-        $productRepository = $this->objectManager->get(ProductRepositoryInterface::class);
-        $product = $productRepository->get($productSku, false, null, true);
-        $storeId = $product->getStoreId();
-
-        /** @var  UrlFinderInterface $urlFinder */
-        $urlFinder = $this->objectManager->get(UrlFinderInterface::class);
-        $actualUrls = $urlFinder->findOneByData(
-            [
-                'request_path' => $urlPath,
-                'store_id' => $storeId
-            ]
-        );
-        $targetPath = $actualUrls->getTargetPath();
-        $expectedType = $actualUrls->getEntityType();
-        $query
-            = <<<QUERY
-{
-  urlResolver(url:"{$urlPath}")
-  {
-   id
-   canonical_url
-   type
-  }
-}
-QUERY;
-        $response = $this->graphQlQuery($query);
-        $this->assertArrayHasKey('urlResolver', $response);
-        $this->assertEquals($product->getEntityId(), $response['urlResolver']['id']);
-        $this->assertEquals($targetPath, $response['urlResolver']['canonical_url']);
-        $this->assertEquals(strtoupper($expectedType), $response['urlResolver']['type']);
-    }
-
-    /**
-     * Tests the use case where canonical_url is provided as resolver input in the Query
-     *
-     * @magentoApiDataFixture Magento/CatalogUrlRewrite/_files/product_with_category.php
-     */
-    public function testProductUrlWithCanonicalUrlInput()
-    {
-        $productSku = 'p002';
-        $urlPath = 'p002.html';
-        /** @var ProductRepositoryInterface $productRepository */
-        $productRepository = $this->objectManager->get(ProductRepositoryInterface::class);
-        $product = $productRepository->get($productSku, false, null, true);
-        $storeId = $product->getStoreId();
-        $product->getUrlKey();
-
-        /** @var  UrlFinderInterface $urlFinder */
-        $urlFinder = $this->objectManager->get(UrlFinderInterface::class);
-        $actualUrls = $urlFinder->findOneByData(
-            [
-                'request_path' => $urlPath,
-                'store_id' => $storeId
-            ]
-        );
-        $targetPath = $actualUrls->getTargetPath();
-        $expectedType = $actualUrls->getEntityType();
-        $canonicalPath = $actualUrls->getTargetPath();
-        $query
-            = <<<QUERY
-{
-  urlResolver(url:"{$canonicalPath}")
-  {
-   id
-   canonical_url
-   type
-  }
-}
-QUERY;
-        $response = $this->graphQlQuery($query);
-        $this->assertArrayHasKey('urlResolver', $response);
-        $this->assertEquals($product->getEntityId(), $response['urlResolver']['id']);
-        $this->assertEquals($targetPath, $response['urlResolver']['canonical_url']);
-        $this->assertEquals(strtoupper($expectedType), $response['urlResolver']['type']);
-    }
-
-    /**
-     * Test for category entity
-     *
-     * @magentoApiDataFixture Magento/CatalogUrlRewrite/_files/product_with_category.php
-     */
-    public function testCategoryUrlResolver()
-    {
-        $productSku = 'p002';
-        $urlPath2 = 'cat-1.html';
-        /** @var ProductRepositoryInterface $productRepository */
-        $productRepository = $this->objectManager->get(ProductRepositoryInterface::class);
-        $product = $productRepository->get($productSku, false, null, true);
-        $storeId = $product->getStoreId();
-
-        /** @var  UrlFinderInterface $urlFinder */
-        $urlFinder = $this->objectManager->get(UrlFinderInterface::class);
-        $actualUrls = $urlFinder->findOneByData(
-            [
-                'request_path' => $urlPath2,
-                'store_id' => $storeId
-            ]
-        );
-        $categoryId = $actualUrls->getEntityId();
-        $targetPath = $actualUrls->getTargetPath();
-        $expectedType = $actualUrls->getEntityType();
-        $query
-            = <<<QUERY
-{
-  urlResolver(url:"{$urlPath2}")
-  {
-   id
-   canonical_url
-   type
-  }
-}
-QUERY;
-        $response = $this->graphQlQuery($query);
-        $this->assertArrayHasKey('urlResolver', $response);
-        $this->assertEquals($categoryId, $response['urlResolver']['id']);
-        $this->assertEquals($targetPath, $response['urlResolver']['canonical_url']);
-        $this->assertEquals(strtoupper($expectedType), $response['urlResolver']['type']);
-    }
-
-    /**
-     * @magentoApiDataFixture Magento/Cms/_files/pages.php
-     */
-    public function testCMSPageUrlResolver()
-    {
-        /** @var \Magento\Cms\Model\Page $page */
-        $page = $this->objectManager->get(\Magento\Cms\Model\Page::class);
-        $page->load('page100');
-        $cmsPageId = $page->getId();
-        $requestPath = $page->getIdentifier();
-
-        /** @var \Magento\CmsUrlRewrite\Model\CmsPageUrlPathGenerator $urlPathGenerator */
-        $urlPathGenerator = $this->objectManager->get(\Magento\CmsUrlRewrite\Model\CmsPageUrlPathGenerator::class);
-
-        /** @param \Magento\Cms\Api\Data\PageInterface $page */
-        $targetPath = $urlPathGenerator->getCanonicalUrlPath($page);
-        $expectedEntityType = CmsPageUrlRewriteGenerator::ENTITY_TYPE;
-
-        $query
-            = <<<QUERY
-{
-  urlResolver(url:"{$requestPath}")
-  {
-   id
-   canonical_url
-   type
-  }
-}
-QUERY;
-        $response = $this->graphQlQuery($query);
-        $this->assertEquals($cmsPageId, $response['urlResolver']['id']);
-        $this->assertEquals($targetPath, $response['urlResolver']['canonical_url']);
-        $this->assertEquals(strtoupper(str_replace('-', '_', $expectedEntityType)), $response['urlResolver']['type']);
-    }
-
-    /**
-     * Tests the use case where the url_key of the existing product is changed
-     *
-     * @magentoApiDataFixture Magento/CatalogUrlRewrite/_files/product_with_category.php
-     */
-    public function testProductUrlRewriteResolver()
-    {
-        $productSku = 'p002';
-        /** @var ProductRepositoryInterface $productRepository */
-        $productRepository = $this->objectManager->get(ProductRepositoryInterface::class);
-        $product = $productRepository->get($productSku, false, null, true);
-        $storeId = $product->getStoreId();
-        $product->setUrlKey('p002-new')->save();
-        $urlPath = $product->getUrlKey() . '.html';
-        $this->assertEquals($urlPath, 'p002-new.html');
-
-        /** @var  UrlFinderInterface $urlFinder */
-        $urlFinder = $this->objectManager->get(UrlFinderInterface::class);
-        $actualUrls = $urlFinder->findOneByData(
-            [
-                'request_path' => $urlPath,
-                'store_id' => $storeId
-            ]
-        );
-        $targetPath = $actualUrls->getTargetPath();
-        $expectedType = $actualUrls->getEntityType();
-        $query
-            = <<<QUERY
-{
-  urlResolver(url:"{$urlPath}")
-  {
-   id
-   canonical_url
-   type
-  }
-}
-QUERY;
-        $response = $this->graphQlQuery($query);
-        $this->assertArrayHasKey('urlResolver', $response);
-        $this->assertEquals($product->getEntityId(), $response['urlResolver']['id']);
-        $this->assertEquals($targetPath, $response['urlResolver']['canonical_url']);
-        $this->assertEquals(strtoupper($expectedType), $response['urlResolver']['type']);
-    }
-
-    /**
-     * Tests if null is returned when an invalid request_path is provided as input to urlResolver
-     *
-     * @magentoApiDataFixture Magento/CatalogUrlRewrite/_files/product_with_category.php
-     */
-    public function testInvalidUrlResolverInput()
-    {
-        $productSku = 'p002';
-        $urlPath = 'p002';
-        /** @var ProductRepositoryInterface $productRepository */
-        $productRepository = $this->objectManager->get(ProductRepositoryInterface::class);
-        $product = $productRepository->get($productSku, false, null, true);
-        $storeId = $product->getStoreId();
-
-        /** @var  UrlFinderInterface $urlFinder */
-        $urlFinder = $this->objectManager->get(UrlFinderInterface::class);
-        $urlFinder->findOneByData(
-            [
-                'request_path' => $urlPath,
-                'store_id' => $storeId
-            ]
-        );
-        $query
-            = <<<QUERY
-{
-  urlResolver(url:"{$urlPath}")
-  {
-   id
-   canonical_url
-   type
-  }
-}
-QUERY;
-        $response = $this->graphQlQuery($query);
-        $this->assertArrayHasKey('urlResolver', $response);
-        $this->assertNull($response['urlResolver']);
-    }
-
-    /**
-     * Test for category entity with leading slash
-     *
-     * @magentoApiDataFixture Magento/CatalogUrlRewrite/_files/product_with_category.php
-     */
-    public function testCategoryUrlWithLeadingSlash()
-    {
-        $productSku = 'p002';
-        $urlPath = 'cat-1.html';
-        /** @var ProductRepositoryInterface $productRepository */
-        $productRepository = $this->objectManager->get(ProductRepositoryInterface::class);
-        $product = $productRepository->get($productSku, false, null, true);
-        $storeId = $product->getStoreId();
-
-        /** @var  UrlFinderInterface $urlFinder */
-        $urlFinder = $this->objectManager->get(UrlFinderInterface::class);
-        $actualUrls = $urlFinder->findOneByData(
-            [
-                'request_path' => $urlPath,
-                'store_id' => $storeId
-            ]
-        );
-        $categoryId = $actualUrls->getEntityId();
-        $targetPath = $actualUrls->getTargetPath();
-        $expectedType = $actualUrls->getEntityType();
+        $urlPath = 'non-exist-entity.html';
 
         $query = <<<QUERY
 {
-  urlResolver(url:"/{$urlPath}")
+  urlResolver(url:"{$urlPath}")
   {
    id
-   canonical_url
+   entity_uid
+   relative_url
    type
+   redirectCode
   }
 }
 QUERY;
-        $response = $this->graphQlQuery($query);
-        $this->assertArrayHasKey('urlResolver', $response);
-        $this->assertEquals($categoryId, $response['urlResolver']['id']);
-        $this->assertEquals($targetPath, $response['urlResolver']['canonical_url']);
-        $this->assertEquals(strtoupper($expectedType), $response['urlResolver']['type']);
+
+        $this->expectExceptionMessage(
+            "No such entity found with matching URL key: " . $urlPath
+        );
+        $this->graphQlQuery($query);
     }
 
     /**
-     * Test resolution of '/' path to home page
+     * Test for url rewrite to clean cache on rewrites update
+     *
+     * @magentoApiDataFixture Magento/Catalog/_files/product_with_category.php
+     * @magentoApiDataFixture Magento/Cms/_files/pages.php
+     *
+     * @dataProvider urlRewriteEntitiesDataProvider
+     * @param string $requestPath
+     * @throws AlreadyExistsException
      */
-    public function testResolveSlash()
+    public function testUrlRewriteCleansCacheOnChange(string $requestPath)
     {
-        /** @var \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfigInterface */
-        $scopeConfigInterface = $this->objectManager->get(ScopeConfigInterface::class);
-        $homePageIdentifier = $scopeConfigInterface->getValue(
-            PageHelper::XML_PATH_HOME_PAGE,
-            ScopeInterface::SCOPE_STORE
-        );
-        /** @var \Magento\Cms\Model\Page $page */
-        $page = $this->objectManager->get(\Magento\Cms\Model\Page::class);
-        $page->load($homePageIdentifier);
-        $homePageId = $page->getId();
-        /** @var \Magento\CmsUrlRewrite\Model\CmsPageUrlPathGenerator $urlPathGenerator */
-        $urlPathGenerator = $this->objectManager->get(\Magento\CmsUrlRewrite\Model\CmsPageUrlPathGenerator::class);
-        /** @param \Magento\Cms\Api\Data\PageInterface $page */
-        $targetPath = $urlPathGenerator->getCanonicalUrlPath($page);
-        $query
-            = <<<QUERY
+
+        /** @var UrlRewriteResourceModel $urlRewriteResourceModel */
+        $urlRewriteResourceModel = $this->objectManager->create(UrlRewriteResourceModel::class);
+        $storeId = 1;
+        $query = function ($requestUrl) {
+            return <<<QUERY
 {
-  urlResolver(url:"/")
+  urlResolver(url:"{$requestUrl}")
   {
    id
-   canonical_url
+   entity_uid
+   relative_url
    type
+   redirectCode
   }
 }
 QUERY;
-        $response = $this->graphQlQuery($query);
-        $this->assertArrayHasKey('urlResolver', $response);
-        $this->assertEquals($homePageId, $response['urlResolver']['id']);
-        $this->assertEquals($targetPath, $response['urlResolver']['canonical_url']);
-        $this->assertEquals('CMS_PAGE', $response['urlResolver']['type']);
+        };
+
+        // warming up urlResolver API response cache for entity and validate proper response
+        $apiResponse = $this->graphQlQuery($query($requestPath));
+        $this->assertEquals($requestPath, $apiResponse['urlResolver']['relative_url']);
+
+        $urlRewrite = $this->getUrlRewriteModelByRequestPath($requestPath, $storeId);
+
+        // renaming entity request path and validating that API will not return cached response
+        $urlRewrite->setRequestPath('test' . $requestPath);
+        $urlRewriteResourceModel->save($urlRewrite);
+        $apiResponse = $this->graphQlQuery($query($requestPath));
+        $this->assertNull($apiResponse['urlResolver']);
+
+        // rolling back changes
+        $urlRewrite->setRequestPath($requestPath);
+        $urlRewriteResourceModel->save($urlRewrite);
     }
+
+    public static function urlRewriteEntitiesDataProvider(): array
+    {
+        return [
+            [
+                'simple-product-in-stock.html'
+            ],
+            [
+                'category-1.html'
+            ],
+            [
+                'page100'
+            ]
+        ];
+    }
+
+    /**
+     * Test for custom url rewrite to clean cache on update combinations
+     *
+     * @magentoApiDataFixture Magento/Catalog/_files/product_with_category.php
+     * @magentoApiDataFixture Magento/Cms/_files/pages.php
+     *
+     * @throws AlreadyExistsException
+     */
+    public function testUrlRewriteCleansCacheForCustomRewrites()
+    {
+
+        /** @var UrlRewriteResourceModel $urlRewriteResourceModel */
+        $urlRewriteResourceModel = $this->objectManager->create(UrlRewriteResourceModel::class);
+        $storeId = 1;
+        $query = function ($requestUrl) {
+            return <<<QUERY
+{
+  urlResolver(url:"{$requestUrl}")
+  {
+   id
+   entity_uid
+   relative_url
+   type
+   redirectCode
+  }
+}
+QUERY;
+        };
+
+        $customRequestPath = 'test.html';
+        $customSecondRequestPath = 'test2.html';
+        $entitiesRequestPaths = [
+            'simple-product-in-stock.html',
+            'category-1.html',
+            'page100'
+        ];
+
+        // create custom url rewrite
+        $urlRewrite = $this->objectManager->create(UrlRewriteModel::class);
+        $urlRewrite->setEntityType('custom')
+            ->setRedirectType(302)
+            ->setStoreId($storeId)
+            ->setDescription(null)
+            ->setIsAutogenerated(0);
+
+        // create second custom url rewrite and target it to previous one to check
+        // if proper final target url will be resolved
+        $secondUrlRewrite = $this->objectManager->create(UrlRewriteModel::class);
+        $secondUrlRewrite->setEntityType('custom')
+            ->setRedirectType(302)
+            ->setStoreId($storeId)
+            ->setRequestPath($customSecondRequestPath)
+            ->setTargetPath($customRequestPath)
+            ->setDescription(null)
+            ->setIsAutogenerated(0);
+        $urlRewriteResourceModel->save($secondUrlRewrite);
+
+        foreach ($entitiesRequestPaths as $entityRequestPath) {
+            // updating custom rewrite for each entity
+            $urlRewrite->setRequestPath($customRequestPath)
+                ->setTargetPath($entityRequestPath);
+            $urlRewriteResourceModel->save($urlRewrite);
+
+            // confirm that API returns non-cached response for the first custom rewrite
+            $apiResponse = $this->graphQlQuery($query($customRequestPath));
+            $this->assertEquals($entityRequestPath, $apiResponse['urlResolver']['relative_url']);
+
+            // confirm that API returns non-cached response for the second custom rewrite
+            $apiResponse = $this->graphQlQuery($query($customSecondRequestPath));
+            $this->assertEquals($entityRequestPath, $apiResponse['urlResolver']['relative_url']);
+        }
+
+        $urlRewriteResourceModel->delete($secondUrlRewrite);
+
+        // delete custom rewrite and validate that API will not return cached response
+        $urlRewriteResourceModel->delete($urlRewrite);
+        $apiResponse = $this->graphQlQuery($query($customRequestPath));
+        $this->assertNull($apiResponse['urlResolver']);
+    }
+
+    /**
+     * Return UrlRewrite model instance by request_path
+     *
+     * @param string $requestPath
+     * @param int $storeId
+     * @return UrlRewriteModel
+     */
+    private function getUrlRewriteModelByRequestPath(string $requestPath, int $storeId): UrlRewriteModel
+    {
+        /** @var  UrlFinderInterface $urlFinder */
+        $urlFinder = $this->objectManager->get(UrlFinderInterface::class);
+
+        /** @var UrlRewriteService $urlRewriteService */
+        $urlRewriteService = $urlFinder->findOneByData(
+            [
+                'request_path' => $requestPath,
+                'store_id' => $storeId
+            ]
+        );
+
+        /** @var UrlRewriteModel $urlRewrite */
+        $urlRewrite = $this->objectManager->create(UrlRewriteModel::class);
+        $urlRewrite->load($urlRewriteService->getUrlRewriteId());
+
+        return $urlRewrite;
+    }
+
 }

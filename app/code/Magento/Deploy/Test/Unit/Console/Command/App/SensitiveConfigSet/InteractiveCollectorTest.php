@@ -3,17 +3,20 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Deploy\Test\Unit\Console\Command\App\SensitiveConfigSet;
 
 use Magento\Deploy\Console\Command\App\SensitiveConfigSet\InteractiveCollector;
-use PHPUnit_Framework_MockObject_MockObject as MockObject;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Question\QuestionFactory;
-use Symfony\Component\Console\Helper\QuestionHelper;
 
-class InteractiveCollectorTest extends \PHPUnit\Framework\TestCase
+class InteractiveCollectorTest extends TestCase
 {
     /**
      * @var QuestionFactory|MockObject
@@ -43,11 +46,11 @@ class InteractiveCollectorTest extends \PHPUnit\Framework\TestCase
     /**
      * @inheritdoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->questionFactoryMock = $this->getMockBuilder(QuestionFactory::class)
             ->disableOriginalConstructor()
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->getMock();
         $this->questionHelperMock = $this->getMockBuilder(QuestionHelper::class)
             ->disableOriginalConstructor()
@@ -80,12 +83,17 @@ class InteractiveCollectorTest extends \PHPUnit\Framework\TestCase
             ->willReturn('someValue');
         $this->questionFactoryMock->expects($this->exactly(3))
             ->method('create')
-            ->withConsecutive(
-                [['question' => $configPaths[0] . ': ']],
-                [['question' => $configPaths[1] . ': ']],
-                [['question' => $configPaths[2] . ': ']]
-            )
-            ->willReturn($questionMock);
+            ->willReturnCallback(
+                function ($arg) use ($configPaths, $questionMock) {
+                    if ($arg == ['question' => $configPaths[0] . ': ']) {
+                        return $questionMock;
+                    } elseif ($arg == ['question' => $configPaths[1] . ': ']) {
+                        return $questionMock;
+                    } elseif ($arg == ['question' => $configPaths[2] . ': ']) {
+                        return $questionMock;
+                    }
+                }
+            );
 
         $this->assertEquals(
             [

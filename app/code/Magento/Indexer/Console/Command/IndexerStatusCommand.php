@@ -5,11 +5,12 @@
  */
 namespace Magento\Indexer\Console\Command;
 
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
+use Magento\Framework\Console\Cli;
 use Magento\Framework\Indexer;
 use Magento\Framework\Mview;
 use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 
 /**
  * Command for displaying status of indexers.
@@ -17,7 +18,7 @@ use Symfony\Component\Console\Helper\Table;
 class IndexerStatusCommand extends AbstractIndexerManageCommand
 {
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     protected function configure()
     {
@@ -29,12 +30,14 @@ class IndexerStatusCommand extends AbstractIndexerManageCommand
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
+     * @param InputInterface $input
+     * @param OutputInterface $output
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $table = new Table($output);
-        $table->setHeaders(['Title', 'Status', 'Update On', 'Schedule Status', 'Schedule Updated']);
+        $table->setHeaders(['ID', 'Title', 'Status', 'Update On', 'Schedule Status', 'Schedule Updated']);
 
         $rows = [];
 
@@ -43,6 +46,7 @@ class IndexerStatusCommand extends AbstractIndexerManageCommand
             $view = $indexer->getView();
 
             $rowData = [
+                'ID'                => $indexer->getId(),
                 'Title'             => $indexer->getTitle(),
                 'Status'            => $this->getStatus($indexer),
                 'Update On'         => $indexer->isScheduled() ? 'Schedule' : 'Save',
@@ -59,15 +63,22 @@ class IndexerStatusCommand extends AbstractIndexerManageCommand
             $rows[] = $rowData;
         }
 
-        usort($rows, function ($comp1, $comp2) {
-            return strcmp($comp1['Title'], $comp2['Title']);
-        });
+        usort(
+            $rows,
+            function (array $comp1, array $comp2) {
+                return strcmp($comp1['Title'], $comp2['Title']);
+            }
+        );
 
         $table->addRows($rows);
         $table->render();
+
+        return Cli::RETURN_SUCCESS;
     }
 
     /**
+     * Returns the current status of the indexer
+     *
      * @param Indexer\IndexerInterface $indexer
      * @return string
      */
@@ -84,11 +95,16 @@ class IndexerStatusCommand extends AbstractIndexerManageCommand
             case \Magento\Framework\Indexer\StateInterface::STATUS_WORKING:
                 $status = 'Processing';
                 break;
+            case \Magento\Framework\Indexer\StateInterface::STATUS_SUSPENDED:
+                $status = 'Suspended';
+                break;
         }
         return $status;
     }
 
     /**
+     * Returns the pending count of the view
+     *
      * @param Mview\ViewInterface $view
      * @return string
      */

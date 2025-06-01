@@ -5,8 +5,9 @@
  */
 
 use Magento\Sales\Model\Order\ShipmentFactory;
+use Magento\TestFramework\Workaround\Override\Fixture\Resolver;
 
-require 'order.php';
+Resolver::getInstance()->requireDataFixture('Magento/Sales/_files/order.php');
 
 $objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
 
@@ -44,5 +45,6 @@ foreach ($order->getItems() as $orderItem) {
     $items[$orderItem->getId()] = $orderItem->getQtyOrdered();
 }
 $shipment = $objectManager->get(ShipmentFactory::class)->create($order, $items);
+$shipment->register();
 
 $transaction->addObject($invoice)->addObject($shipment)->addObject($order)->save();

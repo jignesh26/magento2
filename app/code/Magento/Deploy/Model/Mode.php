@@ -100,10 +100,10 @@ class Mode
         Reader $reader,
         MaintenanceMode $maintenanceMode,
         Filesystem $filesystem,
-        ConfigProvider $configProvider = null,
-        ProcessorFacadeFactory $processorFacadeFactory = null,
-        EmulatedAdminhtmlAreaProcessor $emulatedAreaProcessor = null,
-        MaintenanceModeEnabler $maintenanceModeEnabler = null
+        ?ConfigProvider $configProvider = null,
+        ?ProcessorFacadeFactory $processorFacadeFactory = null,
+        ?EmulatedAdminhtmlAreaProcessor $emulatedAreaProcessor = null,
+        ?MaintenanceModeEnabler $maintenanceModeEnabler = null
     ) {
         $this->input = $input;
         $this->output = $output;
@@ -205,7 +205,7 @@ class Mode
     public function getMode()
     {
         $env = $this->reader->load();
-        return isset($env[State::PARAM_MODE]) ? $env[State::PARAM_MODE] : null;
+        return $env[State::PARAM_MODE] ?? null;
     }
 
     /**

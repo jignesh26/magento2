@@ -1,11 +1,14 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Backend\Block\System\Design\Edit\Tab;
 
+/**
+ * General system tab block.
+ */
 class General extends \Magento\Backend\Block\Widget\Form\Generic
 {
     /**
@@ -90,7 +93,7 @@ class General extends \Magento\Backend\Block\Widget\Form\Generic
             ]
         );
 
-        $dateFormat = $this->_localeDate->getDateFormat(\IntlDateFormatter::SHORT);
+        $dateFormat = $this->_localeDate->getDateFormatWithLongYear();
         $fieldset->addField(
             'date_from',
             'date',

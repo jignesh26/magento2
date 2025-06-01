@@ -30,50 +30,50 @@ class DiRuleTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getDependencyInfoDataProvider()
+    public static function getDependencyInfoDataProvider()
     {
         return [
             'Di without dependencies' => [
                 'Magento\SomeModule',
-                $this->getFileContent('di_no_dependency.xml'),
+                self::getFileContent('di_no_dependency.xml'),
                 []
             ],
             'Di only in module dependencies' => [
                 'Magento\SomeModule',
-                $this->getFileContent('di_in_module_dependency.xml'),
+                self::getFileContent('di_in_module_dependency.xml'),
                 []
             ],
             'Di external dependencies' => [
                 'Magento\SomeModule',
-                $this->getFileContent('di_external_dependency.xml'),
+                self::getFileContent('di_external_dependency.xml'),
                 [
                     [
-                        'module' => 'Magento\ExternalModule3',
+                        'modules' => ['Magento\ExternalModule3'],
                         'type' => RuleInterface::TYPE_SOFT,
                         'source' => 'Magento\ExternalModule3\Some\Another\Class'
                     ],
                     [
-                        'module' => 'Magento\ExternalModule5',
+                        'modules' => ['Magento\ExternalModule5'],
                         'type' => RuleInterface::TYPE_SOFT,
                         'source' => 'Magento\ExternalModule5\Some\Another\Class'
                     ],
                     [
-                        'module' => 'Magento\ExternalModule6',
+                        'modules' => ['Magento\ExternalModule6'],
                         'type' => RuleInterface::TYPE_SOFT,
                         'source' => 'Magento\ExternalModule6\Some\Plugin\Class'
                     ],
                     [
-                        'module' => 'Magento\ExternalModule1',
+                        'modules' => ['Magento\ExternalModule1'],
                         'type' => RuleInterface::TYPE_HARD,
                         'source' => 'Magento\ExternalModule1\Some\Argument1'
                     ],
                     [
-                        'module' => 'Magento\ExternalModule2',
+                        'modules' => ['Magento\ExternalModule2'],
                         'type' => RuleInterface::TYPE_HARD,
                         'source' => 'Magento\ExternalModule2\Some\Argument2'
                     ],
                     [
-                        'module' => 'Magento\ExternalModule4',
+                        'modules' => ['Magento\ExternalModule4'],
                         'type' => RuleInterface::TYPE_HARD,
                         'source' => 'Magento\ExternalModule4\Some\Argument3'
                     ]
@@ -81,15 +81,15 @@ class DiRuleTest extends \PHPUnit\Framework\TestCase
             ],
             'Di virtual dependencies' => [
                 'Magento\SomeModule',
-                $this->getFileContent('di_virtual_dependency.xml'),
+                self::getFileContent('di_virtual_dependency.xml'),
                 [
                     [
-                        'module' => 'Magento\AnotherModule',
+                        'modules' => ['Magento\AnotherModule'],
                         'type' => RuleInterface::TYPE_HARD,
                         'source' => 'Magento\AnotherModule\Some\Class1',
                     ],
                     [
-                        'module' => 'Magento\AnotherModule',
+                        'modules' => ['Magento\AnotherModule'],
                         'type' => RuleInterface::TYPE_HARD,
                         'source' => 'Magento\AnotherModule\Some\Class2',
                     ]
@@ -104,7 +104,7 @@ class DiRuleTest extends \PHPUnit\Framework\TestCase
      * @param string $fileName
      * @return string
      */
-    private function getFileContent($fileName)
+    private static function getFileContent($fileName)
     {
         return file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . '_files' . DIRECTORY_SEPARATOR . $fileName);
     }

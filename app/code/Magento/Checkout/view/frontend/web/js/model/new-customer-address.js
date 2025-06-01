@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 /**
  * @api
@@ -38,7 +38,7 @@ define([
             regionCode: addressData.region ? addressData.region['region_code'] : null,
             region: addressData.region ? addressData.region.region : null,
             customerId: addressData['customer_id'] || addressData.customerId,
-            street: addressData.street ? _.compact(addressData.street) : addressData.street,
+            street: addressData.street,
             company: addressData.company,
             telephone: addressData.telephone,
             fax: addressData.fax,
@@ -52,6 +52,7 @@ define([
             vatId: addressData['vat_id'],
             saveInAddressBook: addressData['save_in_address_book'],
             customAttributes: addressData['custom_attributes'],
+            extensionAttributes: addressData['extension_attributes'],
 
             /**
              * @return {*}

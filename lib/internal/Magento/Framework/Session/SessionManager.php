@@ -1,19 +1,20 @@
 <?php
 /**
- * Magento session manager
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Framework\Session;
 
+use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
 use Magento\Framework\Session\Config\ConfigInterface;
 
 /**
- * Session Manager
+ * Standard session management.
+ *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @SuppressWarnings(PHPMD.CookieAndSessionMisuse)
  */
-class SessionManager implements SessionManagerInterface
+class SessionManager implements SessionManagerInterface, ResetAfterRequestInterface
 {
     /**
      * Default options when a call destroy()
@@ -27,57 +28,41 @@ class SessionManager implements SessionManagerInterface
     protected $defaultDestroyOptions = ['send_expire_cookie' => true, 'clear_storage' => true];
 
     /**
-     * URL host cache
-     *
      * @var array
      */
     protected static $urlHostCache = [];
 
     /**
-     * Validator
-     *
-     * @var \Magento\Framework\Session\ValidatorInterface
+     * @var ValidatorInterface
      */
     protected $validator;
 
     /**
-     * Request
-     *
      * @var \Magento\Framework\App\Request\Http
      */
     protected $request;
 
     /**
-     * SID resolver
-     *
-     * @var \Magento\Framework\Session\SidResolverInterface
+     * @var SidResolverInterface
      */
     protected $sidResolver;
 
     /**
-     * Session config
-     *
-     * @var \Magento\Framework\Session\Config\ConfigInterface
+     * @var Config\ConfigInterface
      */
     protected $sessionConfig;
 
     /**
-     * Save handler
-     *
-     * @var \Magento\Framework\Session\SaveHandlerInterface
+     * @var SaveHandlerInterface
      */
     protected $saveHandler;
 
     /**
-     * Storage
-     *
-     * @var \Magento\Framework\Session\StorageInterface
+     * @var StorageInterface
      */
     protected $storage;
 
     /**
-     * Cookie Manager
-     *
      * @var \Magento\Framework\Stdlib\CookieManagerInterface
      */
     protected $cookieManager;
@@ -93,6 +78,11 @@ class SessionManager implements SessionManagerInterface
     private $appState;
 
     /**
+     * @var SessionStartChecker
+     */
+    private $sessionStartChecker;
+
+    /**
      * @param \Magento\Framework\App\Request\Http $request
      * @param SidResolverInterface $sidResolver
      * @param ConfigInterface $sessionConfig
@@ -102,7 +92,10 @@ class SessionManager implements SessionManagerInterface
      * @param \Magento\Framework\Stdlib\CookieManagerInterface $cookieManager
      * @param \Magento\Framework\Stdlib\Cookie\CookieMetadataFactory $cookieMetadataFactory
      * @param \Magento\Framework\App\State $appState
+     * @param SessionStartChecker|null $sessionStartChecker
      * @throws \Magento\Framework\Exception\SessionException
+     *
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\App\Request\Http $request,
@@ -113,7 +106,8 @@ class SessionManager implements SessionManagerInterface
         StorageInterface $storage,
         \Magento\Framework\Stdlib\CookieManagerInterface $cookieManager,
         \Magento\Framework\Stdlib\Cookie\CookieMetadataFactory $cookieMetadataFactory,
-        \Magento\Framework\App\State $appState
+        \Magento\Framework\App\State $appState,
+        ?SessionStartChecker $sessionStartChecker = null
     ) {
         $this->request = $request;
         $this->sidResolver = $sidResolver;
@@ -124,11 +118,15 @@ class SessionManager implements SessionManagerInterface
         $this->cookieManager = $cookieManager;
         $this->cookieMetadataFactory = $cookieMetadataFactory;
         $this->appState = $appState;
+        $this->sessionStartChecker = $sessionStartChecker ?: \Magento\Framework\App\ObjectManager::getInstance()->get(
+            SessionStartChecker::class
+        );
         $this->start();
     }
 
     /**
-     * This method needs to support sessions with APC enabled
+     * This method needs to support sessions with APC enabled.
+     *
      * @return void
      */
     public function writeClose()
@@ -146,7 +144,7 @@ class SessionManager implements SessionManagerInterface
      */
     public function __call($method, $args)
     {
-        if (!in_array(substr($method, 0, 3), ['get', 'set', 'uns', 'has'])) {
+        if (!$method || !in_array(substr($method, 0, 3), ['get', 'set', 'uns', 'has'])) {
             throw new \InvalidArgumentException(
                 sprintf('Invalid method %s::%s(%s)', get_class($this), $method, print_r($args, 1))
             );
@@ -163,48 +161,60 @@ class SessionManager implements SessionManagerInterface
      */
     public function start()
     {
-        if (!$this->isSessionExists()) {
-            \Magento\Framework\Profiler::start('session_start');
+        if ($this->sessionStartChecker->check()) {
+            if (!$this->isSessionExists()) {
+                \Magento\Framework\Profiler::start('session_start');
 
-            try {
-                $this->appState->getAreaCode();
-            } catch (\Magento\Framework\Exception\LocalizedException $e) {
-                throw new \Magento\Framework\Exception\SessionException(
-                    new \Magento\Framework\Phrase(
-                        'Area code not set: Area code must be set before starting a session.'
-                    ),
-                    $e
-                );
+                try {
+                    $this->appState->getAreaCode();
+                } catch (\Magento\Framework\Exception\LocalizedException $e) {
+                    throw new \Magento\Framework\Exception\SessionException(
+                        new \Magento\Framework\Phrase(
+                            'Area code not set: Area code must be set before starting a session.'
+                        ),
+                        $e
+                    );
+                }
+
+                // Need to apply the config options so they can be ready by session_start
+                $this->initIniOptions();
+                $this->registerSaveHandler();
+                if (isset($_SESSION['new_session_id'])) {
+                    // Not fully expired yet. Could be lost cookie by unstable network.
+                    session_commit();
+                    session_id($_SESSION['new_session_id']);
+                }
+                session_start();
+                if (isset($_SESSION['destroyed'])
+                    && $_SESSION['destroyed'] < time() - $this->sessionConfig->getCookieLifetime()
+                ) {
+                    $this->destroy(['clear_storage' => true]);
+                }
+
+                $this->validator->validate($this);
+                $this->renewCookie(null);
+
+                $this->registerShutdown();
+
+                $this->_addHost();
+                \Magento\Framework\Profiler::stop('session_start');
+            } else {
+                $this->validator->validate($this);
             }
-
-            // Need to apply the config options so they can be ready by session_start
-            $this->initIniOptions();
-            $this->registerSaveHandler();
-            if (isset($_SESSION['new_session_id'])) {
-                // Not fully expired yet. Could be lost cookie by unstable network.
-                session_commit();
-                session_id($_SESSION['new_session_id']);
-            }
-            $sid = $this->sidResolver->getSid($this);
-            // potential custom logic for session id (ex. switching between hosts)
-            $this->setSessionId($sid);
-            session_start();
-            if (isset($_SESSION['destroyed'])
-                && $_SESSION['destroyed'] < time() - $this->sessionConfig->getCookieLifetime()
-            ) {
-                $this->destroy(['clear_storage' => true]);
-            }
-
-            $this->validator->validate($this);
-            $this->renewCookie($sid);
-
-            register_shutdown_function([$this, 'writeClose']);
-
-            $this->_addHost();
-            \Magento\Framework\Profiler::stop('session_start');
+            // phpstan:ignore
+            $this->storage->init(isset($_SESSION) ? $_SESSION : []);
         }
-        $this->storage->init(isset($_SESSION) ? $_SESSION : []);
         return $this;
+    }
+
+    /**
+     * Execute after script terminates
+     *
+     * @return void
+     */
+    public function registerShutdown()
+    {
+        register_shutdown_function([$this, 'writeClose']);
     }
 
     /**
@@ -228,6 +238,7 @@ class SessionManager implements SessionManagerInterface
             $metadata->setDuration($this->sessionConfig->getCookieLifetime());
             $metadata->setSecure($this->sessionConfig->getCookieSecure());
             $metadata->setHttpOnly($this->sessionConfig->getCookieHttpOnly());
+            $metadata->setSameSite($this->sessionConfig->getCookieSameSite());
 
             $this->cookieManager->setPublicCookie(
                 $this->getName(),
@@ -247,12 +258,8 @@ class SessionManager implements SessionManagerInterface
     protected function registerSaveHandler()
     {
         return session_set_save_handler(
-            [$this->saveHandler, 'open'],
-            [$this->saveHandler, 'close'],
-            [$this->saveHandler, 'read'],
-            [$this->saveHandler, 'write'],
-            [$this->saveHandler, 'destroy'],
-            [$this->saveHandler, 'gc']
+            $this->saveHandler,
+            true
         );
     }
 
@@ -323,7 +330,7 @@ class SessionManager implements SessionManagerInterface
      * @param  array $options
      * @return void
      */
-    public function destroy(array $options = null)
+    public function destroy(?array $options = null)
     {
         $options = $options ?? [];
         $options = array_merge($this->defaultDestroyOptions, $options);
@@ -394,6 +401,9 @@ class SessionManager implements SessionManagerInterface
     {
         $this->_addHost();
         if ($sessionId !== null && preg_match('#^[0-9a-zA-Z,-]+$#', $sessionId)) {
+            if ($this->getSessionId() !== $sessionId) {
+                $this->writeClose();
+            }
             session_id($sessionId);
         }
         return $this;
@@ -404,6 +414,7 @@ class SessionManager implements SessionManagerInterface
      *
      * @param string $urlHost can be host or url
      * @return string {session_id_key}={session_id_encrypted}
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function getSessionIdForHost($urlHost)
@@ -413,14 +424,14 @@ class SessionManager implements SessionManagerInterface
             return '';
         }
 
-        $urlHostArr = explode('/', $urlHost, 4);
+        $urlHostArr = explode('/', $urlHost ?: '', 4);
         if (!empty($urlHostArr[2])) {
             $urlHost = $urlHostArr[2];
         }
         $urlPath = empty($urlHostArr[3]) ? '' : $urlHostArr[3];
 
         if (!isset(self::$urlHostCache[$urlHost])) {
-            $urlHostArr = explode(':', $urlHost);
+            $urlHostArr = explode(':', $urlHost ?: '');
             $urlHost = $urlHostArr[0];
             $sessionId = $httpHost !== $urlHost && !$this->isValidForHost($urlHost) ? $this->getSessionId() : '';
             self::$urlHostCache[$urlHost] = $sessionId;
@@ -437,7 +448,7 @@ class SessionManager implements SessionManagerInterface
      */
     public function isValidForHost($host)
     {
-        $hostArr = explode(':', $host);
+        $hostArr = explode(':', $host ?: '');
         $hosts = $this->_getHosts();
         return !empty($hosts[$hostArr[0]]);
     }
@@ -535,7 +546,7 @@ class SessionManager implements SessionManagerInterface
         } else {
             session_start();
         }
-
+        // phpstan:ignore
         $this->storage->init(isset($_SESSION) ? $_SESSION : []);
 
         if ($this->sessionConfig->getUseCookies()) {
@@ -602,7 +613,9 @@ class SessionManager implements SessionManagerInterface
         }
 
         foreach ($this->sessionConfig->getOptions() as $option => $value) {
-            if ($option=='session.save_handler') {
+            // Since PHP 7.2 it is explicitly forbidden to set the module name to "user".
+            // https://bugs.php.net/bug.php?id=77384
+            if ($option === 'session.save_handler' && $value !== 'memcached') {
                 continue;
             } else {
                 $result = ini_set($option, $value);
@@ -614,5 +627,13 @@ class SessionManager implements SessionManagerInterface
                 }
             }
         }
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function _resetState(): void
+    {
+        static::$urlHostCache = [];
     }
 }

@@ -1,8 +1,11 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+
+declare(strict_types=1);
+
 namespace Magento\Catalog\Model;
 
 use Magento\Catalog\Api\CategoryListInterface;
@@ -15,6 +18,9 @@ use Magento\Framework\Api\ExtensionAttribute\JoinProcessorInterface;
 use Magento\Framework\Api\SearchCriteriaInterface;
 use Magento\Framework\Api\SearchCriteria\CollectionProcessorInterface;
 
+/**
+ * Class for getting category list.
+ */
 class CategoryList implements CategoryListInterface
 {
     /**
@@ -47,14 +53,14 @@ class CategoryList implements CategoryListInterface
      * @param JoinProcessorInterface $extensionAttributesJoinProcessor
      * @param CategorySearchResultsInterfaceFactory $categorySearchResultsFactory
      * @param CategoryRepositoryInterface $categoryRepository
-     * @param CollectionProcessorInterface $collectionProcessor
+     * @param CollectionProcessorInterface|null $collectionProcessor
      */
     public function __construct(
         CollectionFactory $categoryCollectionFactory,
         JoinProcessorInterface $extensionAttributesJoinProcessor,
         CategorySearchResultsInterfaceFactory $categorySearchResultsFactory,
         CategoryRepositoryInterface $categoryRepository,
-        CollectionProcessorInterface $collectionProcessor = null
+        ?CollectionProcessorInterface $collectionProcessor = null
     ) {
         $this->categoryCollectionFactory = $categoryCollectionFactory;
         $this->extensionAttributesJoinProcessor = $extensionAttributesJoinProcessor;
@@ -64,19 +70,20 @@ class CategoryList implements CategoryListInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function getList(SearchCriteriaInterface $searchCriteria)
     {
         /** @var Collection $collection */
         $collection = $this->categoryCollectionFactory->create();
         $this->extensionAttributesJoinProcessor->process($collection);
-
         $this->collectionProcessor->process($searchCriteria, $collection);
 
         $items = [];
-        foreach ($collection->getAllIds() as $id) {
-            $items[] = $this->categoryRepository->get($id);
+        foreach ($collection->getData() as $categoryData) {
+            $items[] = $this->categoryRepository->get(
+                $categoryData[$collection->getEntity()->getIdFieldName()]
+            );
         }
 
         /** @var CategorySearchResultsInterface $searchResult */
@@ -90,16 +97,19 @@ class CategoryList implements CategoryListInterface
     /**
      * Retrieve collection processor
      *
-     * @deprecated 101.1.0
+     * @deprecated 102.0.0
+     * @see Updated deprecation doc annotations
      * @return CollectionProcessorInterface
      */
     private function getCollectionProcessor()
     {
+        // phpcs:disable
         if (!$this->collectionProcessor) {
             $this->collectionProcessor = \Magento\Framework\App\ObjectManager::getInstance()->get(
-                'Magento\Eav\Model\Api\SearchCriteria\CollectionProcessor'
+                '\Magento\Eav\Model\Api\SearchCriteria\CollectionProcessor'
             );
         }
+        // phpcs:enable
         return $this->collectionProcessor;
     }
 }

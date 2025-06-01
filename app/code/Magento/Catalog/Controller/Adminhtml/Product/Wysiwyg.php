@@ -1,12 +1,14 @@
 <?php
 /**
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Controller\Adminhtml\Product;
 
-class Wysiwyg extends \Magento\Catalog\Controller\Adminhtml\Product
+use Magento\Framework\App\Action\HttpPostActionInterface;
+use Magento\Framework\App\ObjectManager;
+
+class Wysiwyg extends \Magento\Catalog\Controller\Adminhtml\Product implements HttpPostActionInterface
 {
     /**
      * @var \Magento\Framework\Controller\Result\RawFactory
@@ -19,20 +21,29 @@ class Wysiwyg extends \Magento\Catalog\Controller\Adminhtml\Product
     protected $layoutFactory;
 
     /**
+     * @var \Magento\Store\Model\StoreManagerInterface
+     */
+    private $storeManager;
+
+    /**
      * @param \Magento\Backend\App\Action\Context $context
      * @param \Magento\Catalog\Controller\Adminhtml\Product\Builder $productBuilder
      * @param \Magento\Framework\Controller\Result\RawFactory $resultRawFactory
      * @param \Magento\Framework\View\LayoutFactory $layoutFactory
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      */
     public function __construct(
         \Magento\Backend\App\Action\Context $context,
         \Magento\Catalog\Controller\Adminhtml\Product\Builder $productBuilder,
         \Magento\Framework\Controller\Result\RawFactory $resultRawFactory,
-        \Magento\Framework\View\LayoutFactory $layoutFactory
+        \Magento\Framework\View\LayoutFactory $layoutFactory,
+        ?\Magento\Store\Model\StoreManagerInterface $storeManager = null
     ) {
         parent::__construct($context, $productBuilder);
         $this->resultRawFactory = $resultRawFactory;
         $this->layoutFactory = $layoutFactory;
+        $this->storeManager = $storeManager ?: ObjectManager::getInstance()
+            ->get(\Magento\Store\Model\StoreManagerInterface::class);
     }
 
     /**
@@ -42,10 +53,11 @@ class Wysiwyg extends \Magento\Catalog\Controller\Adminhtml\Product
      */
     public function execute()
     {
+        // @codingStandardsIgnoreStart
         $elementId = $this->getRequest()->getParam('element_id', md5(microtime()));
+        // @codingStandardsIgnoreEnd
         $storeId = $this->getRequest()->getParam('store_id', 0);
-        $storeMediaUrl = $this->_objectManager->get(\Magento\Store\Model\StoreManagerInterface::class)
-            ->getStore($storeId)
+        $storeMediaUrl = $this->storeManager->getStore($storeId)
             ->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_MEDIA);
 
         $content = $this->layoutFactory->create()

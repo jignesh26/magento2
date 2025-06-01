@@ -1,15 +1,17 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Bundle\Test\Unit\Ui\DataProvider\Product\Form\Modifier;
 
 use Magento\Bundle\Ui\DataProvider\Product\Form\Modifier\BundleWeight;
 use Magento\Catalog\Api\Data\ProductAttributeInterface;
 use Magento\Framework\Stdlib\ArrayManager;
 
-class BundleWeightTest extends AbstractModifierTest
+class BundleWeightTest extends AbstractModifierTestCase
 {
     /**
      * @return BundleWeight
@@ -58,6 +60,7 @@ class BundleWeightTest extends AbstractModifierTest
         $weightParams = [
             'imports' => [
                 'disabled' => 'ns = ${ $.ns }, index = ' . BundleWeight::CODE_WEIGHT_TYPE . ':checked',
+                '__disableTmpl' => ['disabled' => false],
             ]
         ];
         $hasWeightParams = [

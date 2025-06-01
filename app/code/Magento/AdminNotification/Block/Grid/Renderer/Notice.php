@@ -1,13 +1,19 @@
 <?php
+declare(strict_types=1);
+
 /**
- * Adminhtml AdminNotification Severity Renderer
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\AdminNotification\Block\Grid\Renderer;
 
-class Notice extends \Magento\Backend\Block\Widget\Grid\Column\Renderer\AbstractRenderer
+use Magento\Backend\Block\Widget\Grid\Column\Renderer\AbstractRenderer;
+use Magento\Framework\DataObject;
+
+/**
+ * Renderer class for notice in the admin notifications grid
+ */
+class Notice extends AbstractRenderer
 {
     /**
      * Renders grid column
@@ -15,7 +21,7 @@ class Notice extends \Magento\Backend\Block\Widget\Grid\Column\Renderer\Abstract
      * @param   \Magento\Framework\DataObject $row
      * @return  string
      */
-    public function render(\Magento\Framework\DataObject $row)
+    public function render(DataObject $row)
     {
         return '<span class="grid-row-title">' .
             $this->escapeHtml($row->getTitle()) .

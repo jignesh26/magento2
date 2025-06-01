@@ -22,7 +22,7 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
      */
     protected $_model;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $directoryList = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(
             \Magento\Framework\App\Filesystem\DirectoryList::class,
@@ -71,7 +71,7 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function expectedThemeDataFromConfiguration()
+    public static function expectedThemeDataFromConfiguration()
     {
         return [
             [

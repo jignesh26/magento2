@@ -1,43 +1,44 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\Catalog\Test\Unit\Model\ResourceModel\Category;
 
-use Magento\Catalog\Model\ResourceModel\Category\Flat\CollectionFactory;
-use Magento\Catalog\Model\ResourceModel\Category\Flat\Collection;
-use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
 use Magento\Catalog\Model\ResourceModel\Category\Flat;
-use Magento\Framework\DB\Select;
-use Magento\Framework\DB\Adapter\AdapterInterface as Adapter;
+use Magento\Catalog\Model\ResourceModel\Category\Flat\Collection;
+use Magento\Catalog\Model\ResourceModel\Category\Flat\CollectionFactory;
 use Magento\Framework\App\ResourceConnection;
+use Magento\Framework\DB\Adapter\AdapterInterface as Adapter;
+use Magento\Framework\DB\Select;
 use Magento\Framework\Model\ResourceModel\Db\Context;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
 use Magento\Store\Model\Store;
 use Magento\Store\Model\StoreManagerInterface;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
- * Category flat model test
- *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class FlatTest extends \PHPUnit\Framework\TestCase
+class FlatTest extends TestCase
 {
-    const STORE_ID = 1;
-    const TABLE_NAME = 'test_table';
-    const PARENT_PATH = '1';
-    const SORTED = false;
-    const PARENT = 1;
-    const RECURSION_LEVEL = 0;
+    private const STORE_ID = 1;
+    private const TABLE_NAME = 'test_table';
+    private const PARENT_PATH = '1';
+    private const SORTED = false;
+    private const PARENT = 1;
+    private const RECURSION_LEVEL = 0;
 
     /**
-     * @var CollectionFactory|\PHPUnit_Framework_MockObject_MockObject
+     * @var CollectionFactory|MockObject
      */
     private $categoryCollectionFactoryMock;
 
     /**
-     * @var Collection|\PHPUnit_Framework_MockObject_MockObject
+     * @var Collection|MockObject
      */
     private $categoryCollectionMock;
 
@@ -52,45 +53,45 @@ class FlatTest extends \PHPUnit\Framework\TestCase
     private $objectManager;
 
     /**
-     * @var Select|\PHPUnit_Framework_MockObject_MockObject
+     * @var Select|MockObject
      */
     private $selectMock;
 
     /**
-     * @var Adapter|\PHPUnit_Framework_MockObject_MockObject
+     * @var Adapter|MockObject
      */
     private $connectionMock;
 
     /**
-     * @var ResourceConnection|\PHPUnit_Framework_MockObject_MockObject
+     * @var ResourceConnection|MockObject
      */
     private $resourceMock;
 
     /**
-     * @var Context|\PHPUnit_Framework_MockObject_MockObject
+     * @var Context|MockObject
      */
     private $contextMock;
 
     /**
-     * @var Store|\PHPUnit_Framework_MockObject_MockObject
+     * @var Store|MockObject
      */
     private $storeMock;
 
     /**
-     * @var StoreManagerInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var StoreManagerInterface|MockObject
      */
     private $storeManagerMock;
 
     /**
      * {@inheritdoc}
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = new ObjectManager($this);
 
         $this->selectMock = $this->getMockBuilder(Select::class)
             ->disableOriginalConstructor()
-            ->setMethods(['where', 'from'])
+            ->onlyMethods(['where', 'from'])
             ->getMock();
         $this->selectMock->expects($this->once())
             ->method('where')
@@ -109,7 +110,7 @@ class FlatTest extends \PHPUnit\Framework\TestCase
             ->willReturn(self::PARENT_PATH);
         $this->resourceMock = $this->getMockBuilder(ResourceConnection::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getConnection', 'getTableName'])
+            ->onlyMethods(['getConnection', 'getTableName'])
             ->getMock();
         $this->resourceMock->expects($this->any())
             ->method('getConnection')
@@ -119,7 +120,7 @@ class FlatTest extends \PHPUnit\Framework\TestCase
             ->willReturn(self::TABLE_NAME);
         $this->contextMock = $this->getMockBuilder(Context::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getResources'])
+            ->onlyMethods(['getResources'])
             ->getMock();
         $this->contextMock->expects($this->any())
             ->method('getResources')
@@ -127,7 +128,7 @@ class FlatTest extends \PHPUnit\Framework\TestCase
 
         $this->storeMock = $this->getMockBuilder(Store::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getId'])
+            ->onlyMethods(['getId'])
             ->getMock();
         $this->storeMock->expects($this->any())
             ->method('getId')
@@ -143,11 +144,11 @@ class FlatTest extends \PHPUnit\Framework\TestCase
     {
         $this->categoryCollectionFactoryMock = $this->getMockBuilder(CollectionFactory::class)
             ->disableOriginalConstructor()
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->getMock();
         $this->categoryCollectionMock = $this->getMockBuilder(Collection::class)
             ->disableOriginalConstructor()
-            ->setMethods(
+            ->onlyMethods(
                 [
                     'addNameToResult',
                     'addUrlRewriteToResult',

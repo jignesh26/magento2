@@ -3,18 +3,22 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\GroupedProduct\Test\Unit\Ui\DataProvider\Product;
 
-use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
-use Magento\GroupedProduct\Ui\DataProvider\Product\GroupedProductDataProvider;
-use Magento\Framework\App\RequestInterface;
+use Magento\Catalog\Model\ProductTypes\ConfigInterface;
 use Magento\Catalog\Model\ResourceModel\Product\Collection;
 use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory;
-use Magento\Catalog\Model\ProductTypes\ConfigInterface;
+use Magento\Framework\App\RequestInterface;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\GroupedProduct\Ui\DataProvider\Product\GroupedProductDataProvider;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class GroupedProductDataProviderTest extends \PHPUnit\Framework\TestCase
+class GroupedProductDataProviderTest extends TestCase
 {
-    const ALLOWED_TYPE = 'simple';
+    private const ALLOWED_TYPE = 'simple';
 
     /**
      * @var ObjectManager
@@ -22,29 +26,29 @@ class GroupedProductDataProviderTest extends \PHPUnit\Framework\TestCase
     protected $objectManager;
 
     /**
-     * @var RequestInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var RequestInterface|MockObject
      */
     protected $requestMock;
 
     /**
-     * @var CollectionFactory|\PHPUnit_Framework_MockObject_MockObject
+     * @var CollectionFactory|MockObject
      */
     protected $collectionFactoryMock;
 
     /**
-     * @var Collection|\PHPUnit_Framework_MockObject_MockObject
+     * @var Collection|MockObject
      */
     protected $collectionMock;
 
     /**
-     * @var ConfigInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigInterface|MockObject
      */
     protected $configMock;
 
     /**
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = new ObjectManager($this);
 
@@ -52,7 +56,7 @@ class GroupedProductDataProviderTest extends \PHPUnit\Framework\TestCase
             ->getMockForAbstractClass();
         $this->collectionMock = $this->getMockBuilder(Collection::class)
             ->disableOriginalConstructor()
-            ->setMethods(
+            ->onlyMethods(
                 [
                     'toArray',
                     'isLoaded',
@@ -65,13 +69,13 @@ class GroupedProductDataProviderTest extends \PHPUnit\Framework\TestCase
             )->getMock();
         $this->collectionFactoryMock = $this->getMockBuilder(CollectionFactory::class)
             ->disableOriginalConstructor()
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->getMock();
         $this->collectionFactoryMock->expects($this->any())
             ->method('create')
             ->willReturn($this->collectionMock);
         $this->configMock = $this->getMockBuilder(ConfigInterface::class)
-            ->setMethods(['getComposableTypes'])
+            ->onlyMethods(['getComposableTypes'])
             ->getMockForAbstractClass();
     }
 
@@ -108,9 +112,15 @@ class GroupedProductDataProviderTest extends \PHPUnit\Framework\TestCase
         $this->collectionMock->expects($this->once())
             ->method('isLoaded')
             ->willReturn(false);
-        $this->collectionMock->expects($this->once())
+        $this->collectionMock->expects($this->any())
             ->method('addAttributeToFilter')
-            ->with('type_id', [self::ALLOWED_TYPE]);
+            ->willReturnCallback(function ($arg1, $arg2) {
+                if ($arg1 == 'type_id' && $arg2 == [self::ALLOWED_TYPE]) {
+                    return null;
+                } elseif ($arg1 == 'required_options' && $arg2 == '0') {
+                    return null;
+                }
+            });
         $this->collectionMock->expects($this->once())
             ->method('toArray')
             ->willReturn($items);

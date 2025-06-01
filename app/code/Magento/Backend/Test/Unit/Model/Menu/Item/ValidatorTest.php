@@ -1,44 +1,50 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Backend\Test\Unit\Model\Menu\Item;
 
-class ValidatorTest extends \PHPUnit\Framework\TestCase
+use Magento\Backend\Model\Menu\Item\Validator;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+
+class ValidatorTest extends TestCase
 {
     /**
-     * @var \Magento\Backend\Model\Menu\Item\Validator
+     * @var Validator
      */
     protected $_model;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $_factoryMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $_urlModelMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $_aclMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $_helperMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $_appConfigMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $_scopeConfigMock;
 
@@ -57,24 +63,24 @@ class ValidatorTest extends \PHPUnit\Framework\TestCase
         'toolTip' => 'Item tooltip',
     ];
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->_model = new \Magento\Backend\Model\Menu\Item\Validator();
+        $this->_model = new Validator();
     }
 
     /**
      * @param string $requiredParam
      * @throws \BadMethodCallException
-     * @expectedException \BadMethodCallException
      * @dataProvider requiredParamsProvider
      */
     public function testValidateWithMissingRequiredParamThrowsException($requiredParam)
     {
+        $this->expectException('BadMethodCallException');
         try {
             unset($this->_params[$requiredParam]);
             $this->_model->validate($this->_params);
         } catch (\BadMethodCallException $e) {
-            $this->assertContains($requiredParam, $e->getMessage());
+            $this->assertStringContainsString($requiredParam, $e->getMessage());
             throw $e;
         }
     }
@@ -82,7 +88,7 @@ class ValidatorTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function requiredParamsProvider()
+    public static function requiredParamsProvider()
     {
         return [['id'], ['title'], ['resource']];
     }
@@ -91,16 +97,16 @@ class ValidatorTest extends \PHPUnit\Framework\TestCase
      * @param string $param
      * @param mixed $invalidValue
      * @throws \InvalidArgumentException
-     * @expectedException \InvalidArgumentException
      * @dataProvider invalidParamsProvider
      */
     public function testValidateWithNonValidPrimitivesThrowsException($param, $invalidValue)
     {
+        $this->expectException('InvalidArgumentException');
         try {
             $this->_params[$param] = $invalidValue;
             $this->_model->validate($this->_params);
         } catch (\InvalidArgumentException $e) {
-            $this->assertContains($param, $e->getMessage());
+            $this->assertStringContainsString($param, $e->getMessage());
             throw $e;
         }
     }
@@ -108,7 +114,7 @@ class ValidatorTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function invalidParamsProvider()
+    public static function invalidParamsProvider()
     {
         return [
             ['id', 'ab'],
@@ -134,11 +140,13 @@ class ValidatorTest extends \PHPUnit\Framework\TestCase
      * @param $existedItems
      * @param $newItem
      * @dataProvider duplicateIdsProvider
-     * @expectedException \InvalidArgumentException
      */
     public function testValidateWithDuplicateIdsThrowsException($existedItems, $newItem)
     {
+        $this->expectException('InvalidArgumentException');
+
         foreach ($existedItems as $item) {
+            // phpcs:ignore Magento2.Performance.ForeachArrayMerge
             $item = array_merge($item, $this->_params);
             $this->_model->validate($item);
         }
@@ -153,7 +161,7 @@ class ValidatorTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function duplicateIdsProvider()
+    public static function duplicateIdsProvider()
     {
         return [
             [
@@ -203,11 +211,9 @@ class ValidatorTest extends \PHPUnit\Framework\TestCase
         ];
     }
 
-    /**
-     * @expectedException \InvalidArgumentException
-     */
     public function testValidateParamWithNullForRequiredParamThrowsException()
     {
+        $this->expectException('InvalidArgumentException');
         $this->_model->validateParam('title', null);
     }
 
@@ -221,11 +227,9 @@ class ValidatorTest extends \PHPUnit\Framework\TestCase
         }
     }
 
-    /**
-     * @expectedException \InvalidArgumentException
-     */
     public function testValidateParamValidatesPrimitiveValues()
     {
+        $this->expectException('InvalidArgumentException');
         $this->_model->validateParam('toolTip', '/:');
     }
 

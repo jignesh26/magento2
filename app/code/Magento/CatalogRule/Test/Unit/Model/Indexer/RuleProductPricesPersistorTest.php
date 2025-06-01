@@ -1,56 +1,66 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\CatalogRule\Test\Unit\Model\Indexer;
 
 use Magento\Catalog\Model\ResourceModel\Indexer\ActiveTableSwitcher;
 use Magento\CatalogRule\Model\Indexer\IndexerTableSwapperInterface;
+use Magento\CatalogRule\Model\Indexer\RuleProductPricesPersistor;
+use Magento\Framework\App\ResourceConnection;
+use Magento\Framework\DB\Adapter\AdapterInterface;
+use Magento\Framework\Stdlib\DateTime;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class RuleProductPricesPersistorTest extends \PHPUnit\Framework\TestCase
+class RuleProductPricesPersistorTest extends TestCase
 {
     /**
-     * @var \Magento\CatalogRule\Model\Indexer\RuleProductPricesPersistor
+     * @var RuleProductPricesPersistor
      */
     private $model;
 
     /**
-     * @var \Magento\Framework\Stdlib\DateTime|\PHPUnit_Framework_MockObject_MockObject
+     * @var DateTime|MockObject
      */
     private $dateTimeMock;
 
     /**
-     * @var \Magento\Framework\App\ResourceConnection|\PHPUnit_Framework_MockObject_MockObject
+     * @var ResourceConnection|MockObject
      */
     private $resourceMock;
 
     /**
-     * @var ActiveTableSwitcher|\PHPUnit_Framework_MockObject_MockObject
+     * @var ActiveTableSwitcher|MockObject
      */
     private $activeTableSwitcherMock;
 
     /**
-     * @var IndexerTableSwapperInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var IndexerTableSwapperInterface|MockObject
      */
     private $tableSwapperMock;
 
-    protected function setUp()
+    /**
+     * @inheritDoc
+     */
+    protected function setUp(): void
     {
-        $this->dateTimeMock = $this->getMockBuilder(\Magento\Framework\Stdlib\DateTime::class)
+        $this->dateTimeMock = $this->getMockBuilder(DateTime::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $this->resourceMock = $this->getMockBuilder(\Magento\Framework\App\ResourceConnection::class)
+        $this->resourceMock = $this->getMockBuilder(ResourceConnection::class)
             ->disableOriginalConstructor()
             ->getMock();
         $this->activeTableSwitcherMock = $this->getMockBuilder(ActiveTableSwitcher::class)
-                ->disableOriginalConstructor()
-                ->getMock();
+            ->disableOriginalConstructor()
+            ->getMock();
         $this->tableSwapperMock = $this->getMockForAbstractClass(
             IndexerTableSwapperInterface::class
         );
-        $this->model = new \Magento\CatalogRule\Model\Indexer\RuleProductPricesPersistor(
+        $this->model = new RuleProductPricesPersistor(
             $this->dateTimeMock,
             $this->resourceMock,
             $this->activeTableSwitcherMock,
@@ -58,19 +68,25 @@ class RuleProductPricesPersistorTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function testExecuteWithEmptyPriceData()
+    /**
+     * @return void
+     */
+    public function testExecuteWithEmptyPriceData(): void
     {
         $this->assertFalse($this->model->execute([]));
     }
 
-    public function testExecute()
+    /**
+     * @return void
+     */
+    public function testExecute(): void
     {
         $priceData = [
             [
-               'product_id' => 1,
+                'product_id' => 1,
                 'rule_date' => '2017-05-01',
                 'latest_start_date' => '2017-05-10',
-                'earliest_end_date' => '2017-05-20',
+                'earliest_end_date' => '2017-05-20'
             ]
         ];
         $tableName = 'catalogrule_product_price_replica';
@@ -80,33 +96,30 @@ class RuleProductPricesPersistorTest extends \PHPUnit\Framework\TestCase
             ->with('catalogrule_product_price')
             ->willReturn($tableName);
 
-        $connectionMock = $this->getMockBuilder(\Magento\Framework\DB\Adapter\AdapterInterface::class)
+        $connectionMock = $this->getMockBuilder(AdapterInterface::class)
             ->disableOriginalConstructor()
-            ->getMock();
+            ->getMockForAbstractClass();
         $this->resourceMock->expects($this->once())->method('getConnection')->willReturn($connectionMock);
-        $this->resourceMock->expects($this->at(1))
+        $this->resourceMock
             ->method('getTableName')
-            ->with('catalogrule_product_price')
-            ->willReturn('catalogrule_product_price');
-        $this->resourceMock->expects($this->at(2))
-            ->method('getTableName')
-            ->with($tableName)
-            ->willReturn($tableName);
+            ->willReturnCallback(fn($param) => match ([$param]) {
+                ['catalogrule_product_price'] =>'catalogrule_product_price',
+                [$tableName] => $tableName
+            });
 
-        $this->dateTimeMock->expects($this->at(0))
+        $this->dateTimeMock
             ->method('formatDate')
-            ->with($priceData[0]['rule_date'], false)
-            ->willReturn($priceData[0]['rule_date']);
-
-        $this->dateTimeMock->expects($this->at(1))
-            ->method('formatDate')
-            ->with($priceData[0]['latest_start_date'], false)
-            ->willReturn($priceData[0]['latest_start_date']);
-
-        $this->dateTimeMock->expects($this->at(2))
-            ->method('formatDate')
-            ->with($priceData[0]['earliest_end_date'], false)
-            ->willReturn($priceData[0]['earliest_end_date']);
+            ->willReturnCallback(
+                function ($arg1, $arg2) use ($priceData) {
+                    if ($arg1 == $priceData[0]['rule_date'] && $arg2 == false) {
+                        return $priceData[0]['rule_date'];
+                    } elseif ($arg1 == $priceData[0]['latest_start_date'] && $arg2 == false) {
+                        return $priceData[0]['latest_start_date'];
+                    } elseif ($arg1 == $priceData[0]['earliest_end_date'] && $arg2 == false) {
+                        return $priceData[0]['earliest_end_date'];
+                    }
+                }
+            );
 
         $connectionMock->expects($this->once())
             ->method('insertOnDuplicate')
@@ -116,17 +129,18 @@ class RuleProductPricesPersistorTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage Insert error.
+     * @return void
      */
-    public function testExecuteWithException()
+    public function testExecuteWithException(): void
     {
+        $this->expectException('Exception');
+        $this->expectExceptionMessage('Insert error.');
         $priceData = [
             [
                 'product_id' => 1,
                 'rule_date' => '2017-05-5',
                 'latest_start_date' => '2017-05-10',
-                'earliest_end_date' => '2017-05-22',
+                'earliest_end_date' => '2017-05-22'
             ]
         ];
         $tableName = 'catalogrule_product_price_replica';
@@ -136,38 +150,35 @@ class RuleProductPricesPersistorTest extends \PHPUnit\Framework\TestCase
             ->with('catalogrule_product_price')
             ->willReturn($tableName);
 
-        $this->dateTimeMock->expects($this->at(0))
+        $this->dateTimeMock
             ->method('formatDate')
-            ->with($priceData[0]['rule_date'], false)
-            ->willReturn($priceData[0]['rule_date']);
+            ->willReturnCallback(
+                function ($arg1, $arg2) use ($priceData) {
+                    if ($arg1 == $priceData[0]['rule_date'] && $arg2 == false) {
+                        return $priceData[0]['rule_date'];
+                    } elseif ($arg1 == $priceData[0]['latest_start_date'] && $arg2 == false) {
+                        return $priceData[0]['latest_start_date'];
+                    } elseif ($arg1 == $priceData[0]['earliest_end_date'] && $arg2 == false) {
+                        return $priceData[0]['earliest_end_date'];
+                    }
+                }
+            );
 
-        $this->dateTimeMock->expects($this->at(1))
-            ->method('formatDate')
-            ->with($priceData[0]['latest_start_date'], false)
-            ->willReturn($priceData[0]['latest_start_date']);
-
-        $this->dateTimeMock->expects($this->at(2))
-            ->method('formatDate')
-            ->with($priceData[0]['earliest_end_date'], false)
-            ->willReturn($priceData[0]['earliest_end_date']);
-
-        $connectionMock = $this->getMockBuilder(\Magento\Framework\DB\Adapter\AdapterInterface::class)
+        $connectionMock = $this->getMockBuilder(AdapterInterface::class)
             ->disableOriginalConstructor()
-            ->getMock();
+            ->getMockForAbstractClass();
         $connectionMock->expects($this->once())
             ->method('insertOnDuplicate')
             ->with($tableName, $priceData)
             ->willThrowException(new \Exception('Insert error.'));
 
         $this->resourceMock->expects($this->once())->method('getConnection')->willReturn($connectionMock);
-        $this->resourceMock->expects($this->at(1))
+        $this->resourceMock
             ->method('getTableName')
-            ->with('catalogrule_product_price')
-            ->willReturn('catalogrule_product_price');
-        $this->resourceMock->expects($this->at(2))
-            ->method('getTableName')
-            ->with($tableName)
-            ->willReturn($tableName);
+            ->willReturnCallback(fn($param) => match ([$param]) {
+                ['catalogrule_product_price'] =>'catalogrule_product_price',
+                [$tableName] => $tableName
+            });
 
         $this->assertTrue($this->model->execute($priceData, true));
     }

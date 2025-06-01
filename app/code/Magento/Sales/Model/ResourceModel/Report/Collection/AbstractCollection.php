@@ -25,7 +25,7 @@ class AbstractCollection extends \Magento\Reports\Model\ResourceModel\Report\Col
      * @param \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy
      * @param \Magento\Framework\Event\ManagerInterface $eventManager
      * @param \Magento\Sales\Model\ResourceModel\Report $resource
-     * @param null $connection
+     * @param \Magento\Framework\DB\Adapter\AdapterInterface $connection
      */
     public function __construct(
         \Magento\Framework\Data\Collection\EntityFactory $entityFactory,
@@ -33,7 +33,7 @@ class AbstractCollection extends \Magento\Reports\Model\ResourceModel\Report\Col
         \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy,
         \Magento\Framework\Event\ManagerInterface $eventManager,
         \Magento\Sales\Model\ResourceModel\Report $resource,
-        \Magento\Framework\DB\Adapter\AdapterInterface $connection = null
+        ?\Magento\Framework\DB\Adapter\AdapterInterface $connection = null
     ) {
         parent::__construct($entityFactory, $logger, $fetchStrategy, $eventManager, $connection, $resource);
         $this->setModel(\Magento\Reports\Model\Item::class);

@@ -1,17 +1,23 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Cms\Test\Unit\Model;
 
 use Magento\Cms\Model\GetPageByIdentifier;
+use Magento\Cms\Model\Page;
+use Magento\Cms\Model\PageFactory;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Test for Magento\Cms\Model\GetPageByIdentifier
  */
 
-class GetPageByIdentifierTest extends \PHPUnit\Framework\TestCase
+class GetPageByIdentifierTest extends TestCase
 {
     /**
      * @var GetPageByIdentifier
@@ -19,34 +25,35 @@ class GetPageByIdentifierTest extends \PHPUnit\Framework\TestCase
     protected $getPageByIdentifierCommand;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|\Magento\Cms\Model\Page
+     * @var MockObject|Page
      */
     protected $page;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|\Magento\Cms\Model\PageFactory
+     * @var MockObject|PageFactory
      */
     protected $pageFactory;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|\Magento\Cms\Model\ResourceModel\Page
+     * @var MockObject|\Magento\Cms\Model\ResourceModel\Page
      */
     protected $pageResource;
 
-    public function setUp()
+    protected function setUp(): void
     {
-        $this->pageFactory = $this->getMockBuilder(\Magento\Cms\Model\PageFactory::class)
+        $this->pageFactory = $this->getMockBuilder(PageFactory::class)
             ->disableOriginalConstructor(true)
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->getMock();
 
         $this->pageResource = $this->getMockBuilder(\Magento\Cms\Model\ResourceModel\Page::class)
             ->disableOriginalConstructor(true)
             ->getMock();
 
-        $this->page = $this->getMockBuilder(\Magento\Cms\Model\Page::class)
+        $this->page = $this->getMockBuilder(Page::class)
             ->disableOriginalConstructor()
-            ->setMethods(['setStoreId', 'getId'])
+            ->addMethods(['setStoreId'])
+            ->onlyMethods(['getId'])
             ->getMock();
 
         $this->getPageByIdentifierCommand = new GetPageByIdentifier($this->pageFactory, $this->pageResource);

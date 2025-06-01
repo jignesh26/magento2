@@ -31,14 +31,14 @@ class BatchIndexTest extends \PHPUnit\Framework\TestCase
      */
     protected $resourceRule;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->resourceRule = Bootstrap::getObjectManager()->get(\Magento\CatalogRule\Model\ResourceModel\Rule::class);
         $this->product = Bootstrap::getObjectManager()->get(\Magento\Catalog\Model\Product::class);
         $this->productRepository = Bootstrap::getObjectManager()->get(\Magento\Catalog\Model\ProductRepository::class);
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         /** @var \Magento\Framework\Registry $registry */
         $registry = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()
@@ -125,7 +125,7 @@ class BatchIndexTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function dataProvider()
+    public static function dataProvider()
     {
         return [
             [1, 20, 17],

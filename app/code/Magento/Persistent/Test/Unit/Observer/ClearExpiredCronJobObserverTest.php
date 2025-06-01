@@ -1,60 +1,78 @@
 <?php
 /**
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2020 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\Persistent\Test\Unit\Observer;
 
-class ClearExpiredCronJobObserverTest extends \PHPUnit\Framework\TestCase
+use Magento\Cron\Model\Schedule;
+use Magento\Persistent\Model\Session;
+use Magento\Persistent\Model\SessionFactory;
+use Magento\Persistent\Observer\ClearExpiredCronJobObserver;
+use Magento\Store\Model\ResourceModel\Website\Collection;
+use Magento\Store\Model\ResourceModel\Website\CollectionFactory;
+use Magento\Persistent\Model\CleanExpiredPersistentQuotes;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+
+class ClearExpiredCronJobObserverTest extends TestCase
 {
     /**
-     * @var \Magento\Persistent\Observer\ClearExpiredCronJobObserver
+     * @var ClearExpiredCronJobObserver
      */
     protected $model;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $collectionFactoryMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $sessionFactoryMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $scheduleMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $websiteCollectionMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
+     */
+    protected $cleanExpiredPersistentQuotesMock;
+
+    /**
+     * @var MockObject
      */
     protected $sessionMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->collectionFactoryMock =
-            $this->createPartialMock(\Magento\Store\Model\ResourceModel\Website\CollectionFactory::class, ['create']);
+            $this->createPartialMock(CollectionFactory::class, ['create']);
         $this->sessionFactoryMock = $this->createPartialMock(
-            \Magento\Persistent\Model\SessionFactory::class,
+            SessionFactory::class,
             ['create']
         );
-        $this->scheduleMock = $this->createMock(\Magento\Cron\Model\Schedule::class);
-        $this->sessionMock = $this->createMock(\Magento\Persistent\Model\Session::class);
+        $this->scheduleMock = $this->createMock(Schedule::class);
+        $this->sessionMock = $this->createMock(Session::class);
         $this->websiteCollectionMock
-            = $this->createMock(\Magento\Store\Model\ResourceModel\Website\Collection::class);
+            = $this->createMock(Collection::class);
 
-        $this->model = new \Magento\Persistent\Observer\ClearExpiredCronJobObserver(
+        $this->cleanExpiredPersistentQuotesMock = $this->createMock(CleanExpiredPersistentQuotes::class);
+
+        $this->model = new ClearExpiredCronJobObserver(
             $this->collectionFactoryMock,
-            $this->sessionFactoryMock
+            $this->sessionFactoryMock,
+            $this->cleanExpiredPersistentQuotesMock
         );
     }
 
@@ -63,13 +81,14 @@ class ClearExpiredCronJobObserverTest extends \PHPUnit\Framework\TestCase
         $this->collectionFactoryMock
             ->expects($this->once())
             ->method('create')
-            ->will($this->returnValue($this->websiteCollectionMock));
-        $this->websiteCollectionMock->expects($this->once())->method('getAllIds')->will($this->returnValue([1]));
+            ->willReturn($this->websiteCollectionMock);
+        $this->websiteCollectionMock->expects($this->once())->method('getAllIds')->willReturn([1]);
         $this->sessionFactoryMock
             ->expects($this->once())
             ->method('create')
-            ->will($this->returnValue($this->sessionMock));
+            ->willReturn($this->sessionMock);
         $this->sessionMock->expects($this->once())->method('deleteExpired')->with(1);
+        $this->cleanExpiredPersistentQuotesMock->expects($this->once())->method('execute')->with(1);
         $this->model->execute($this->scheduleMock);
     }
 
@@ -78,7 +97,7 @@ class ClearExpiredCronJobObserverTest extends \PHPUnit\Framework\TestCase
         $this->collectionFactoryMock
             ->expects($this->once())
             ->method('create')
-            ->will($this->returnValue($this->websiteCollectionMock));
+            ->willReturn($this->websiteCollectionMock);
         $this->websiteCollectionMock->expects($this->once())->method('getAllIds');
         $this->sessionFactoryMock
             ->expects($this->never())

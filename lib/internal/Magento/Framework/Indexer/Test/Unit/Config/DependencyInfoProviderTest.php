@@ -3,6 +3,7 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Framework\Indexer\Test\Unit\Config;
 
@@ -10,8 +11,10 @@ use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Framework\Indexer\Config\DependencyInfoProvider;
 use Magento\Framework\Indexer\ConfigInterface;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class DependencyInfoProviderTest extends \PHPUnit\Framework\TestCase
+class DependencyInfoProviderTest extends TestCase
 {
     /**
      * @var ObjectManagerHelper
@@ -19,7 +22,7 @@ class DependencyInfoProviderTest extends \PHPUnit\Framework\TestCase
     private $objectManagerHelper;
 
     /**
-     * @var ConfigInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigInterface|MockObject
      */
     private $configMock;
 
@@ -31,7 +34,7 @@ class DependencyInfoProviderTest extends \PHPUnit\Framework\TestCase
     /**
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManagerHelper = new ObjectManagerHelper($this);
 
@@ -92,12 +95,12 @@ class DependencyInfoProviderTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getDependentIndexerIdsDataProvider()
+    public static function getDependentIndexerIdsDataProvider()
     {
         return [
             [
-                'indexer' => 'indexer_2',
-                'indexers' => [
+                'indexerId' => 'indexer_2',
+                'indexersData' => [
                     'indexer_2' => [
                         'indexer_id' => 'indexer_2',
                         'dependencies' => [],
@@ -126,7 +129,7 @@ class DependencyInfoProviderTest extends \PHPUnit\Framework\TestCase
                         'dependencies' => [],
                     ],
                 ],
-                'dependent_indexers' => ['indexer_4', 'indexer_1'],
+                'dependentIndexerIds' => ['indexer_4', 'indexer_1'],
             ]
         ];
     }

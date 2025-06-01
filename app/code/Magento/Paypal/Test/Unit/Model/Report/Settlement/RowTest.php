@@ -3,22 +3,25 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Paypal\Test\Unit\Model\Report\Settlement;
 
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
+use Magento\Paypal\Model\Report\Settlement\Row;
+use PHPUnit\Framework\TestCase;
 
-class RowTest extends \PHPUnit\Framework\TestCase
+class RowTest extends TestCase
 {
     /**
-     * @var \Magento\Paypal\Model\Report\Settlement\Row
+     * @var Row
      */
     protected $row;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $objectManagerHelper = new ObjectManagerHelper($this);
-        $this->row = $objectManagerHelper->getObject(\Magento\Paypal\Model\Report\Settlement\Row::class);
+        $this->row = $objectManagerHelper->getObject(Row::class);
     }
 
     /**
@@ -71,7 +74,7 @@ class RowTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getReferenceTypeDataProvider()
+    public static function getReferenceTypeDataProvider()
     {
         return [
             ['ODR', __('Order ID')],
@@ -82,7 +85,7 @@ class RowTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getTransactionEventDataProvider()
+    public static function getTransactionEventDataProvider()
     {
         return [
             ['T1502', __('ACH Deposit (Hold for Dispute or Other Investigation)')],
@@ -93,7 +96,7 @@ class RowTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getDebitCreditTextDataProvider()
+    public static function getDebitCreditTextDataProvider()
     {
         return [
             ['CR', __('Credit')],
@@ -104,7 +107,7 @@ class RowTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getCastedAmountDataProvider()
+    public static function getCastedAmountDataProvider()
     {
         return [
             ['fee_amount', ['fee_amount' => 1, 'fee_debit_or_credit' => 'CR'], -1],

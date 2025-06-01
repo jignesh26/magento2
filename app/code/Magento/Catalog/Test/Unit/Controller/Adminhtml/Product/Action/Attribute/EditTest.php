@@ -1,69 +1,96 @@
 <?php
 /**
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Catalog\Test\Unit\Controller\Adminhtml\Product\Action\Attribute;
+
+use Magento\Backend\App\Action\Context;
+use Magento\Backend\Model\View\Result\Redirect;
+use Magento\Backend\Model\View\Result\RedirectFactory;
+use Magento\Catalog\Controller\Adminhtml\Product\Action\Attribute\Edit;
+use Magento\Catalog\Controller\Adminhtml\Product\Action\Attribute\Save;
+use Magento\Catalog\Helper\Product\Edit\Action\Attribute;
+use Magento\Catalog\Model\Product;
+use Magento\Catalog\Model\ResourceModel\Product\Collection;
+use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory;
+use Magento\Framework\App\Request\Http;
+use Magento\Framework\Message\ManagerInterface;
+use Magento\Framework\ObjectManagerInterface;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Framework\View\Page\Config;
+use Magento\Framework\View\Page\Title;
+use Magento\Framework\View\Result\Page;
+use Magento\Framework\View\Result\PageFactory;
+use Magento\Ui\Component\MassAction\Filter;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class EditTest extends \PHPUnit\Framework\TestCase
+class EditTest extends TestCase
 {
-    /** @var \Magento\Catalog\Controller\Adminhtml\Product\Action\Attribute\Save */
+    /** @var Save */
     private $object;
 
-    /** @var \Magento\Catalog\Helper\Product\Edit\Action\Attribute|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Attribute|MockObject */
     private $attributeHelper;
 
-    /** @var \Magento\Backend\Model\View\Result\RedirectFactory|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var RedirectFactory|MockObject */
     private $resultRedirectFactory;
 
-    /** @var \Magento\Ui\Component\MassAction\Filter|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Filter|MockObject */
     private $filter;
 
-    /** @var \Magento\Backend\App\Action\Context|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Context|MockObject */
     private $context;
 
-    /** @var \Magento\Catalog\Model\ResourceModel\Product\CollectionFactory|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var CollectionFactory|MockObject */
     private $collectionFactory;
 
-    /** @var \Magento\Framework\View\Result\Page|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Page|MockObject */
     private $resultPage;
 
-    /** @var \Magento\Framework\App\Request\Http|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Http|MockObject */
     private $request;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->attributeHelper = $this->getMockBuilder(\Magento\Catalog\Helper\Product\Edit\Action\Attribute::class)
-            ->setMethods(['getProductIds', 'setProductIds'])
-            ->disableOriginalConstructor()->getMock();
-
-        $this->resultRedirectFactory = $this->getMockBuilder(\Magento\Backend\Model\View\Result\RedirectFactory::class)
+        $this->attributeHelper = $this->getMockBuilder(Attribute::class)
+            ->onlyMethods(['getProductIds', 'setProductIds'])
             ->disableOriginalConstructor()
-            ->setMethods(['create'])
             ->getMock();
 
-        $this->filter = $this->getMockBuilder(\Magento\Ui\Component\MassAction\Filter::class)
-            ->setMethods(['getCollection'])->disableOriginalConstructor()->getMock();
+        $this->resultRedirectFactory = $this->getMockBuilder(RedirectFactory::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['create'])
+            ->getMock();
+
+        $this->filter = $this->getMockBuilder(Filter::class)
+            ->onlyMethods(['getCollection'])->disableOriginalConstructor()
+            ->getMock();
 
         $this->collectionFactory = $this->getMockBuilder(
-            \Magento\Catalog\Model\ResourceModel\Product\CollectionFactory::class
-        )->setMethods(['create'])->disableOriginalConstructor()->getMock();
+            CollectionFactory::class
+        )->onlyMethods(['create'])->disableOriginalConstructor()
+            ->getMock();
 
-        $this->resultPage = $this->getMockBuilder(\Magento\Framework\View\Result\Page::class)
-            ->setMethods(['getConfig'])->disableOriginalConstructor()->getMock();
+        $this->resultPage = $this->getMockBuilder(Page::class)
+            ->onlyMethods(['getConfig'])->disableOriginalConstructor()
+            ->getMock();
 
-        $resultPageFactory = $this->getMockBuilder(\Magento\Framework\View\Result\PageFactory::class)
-            ->setMethods(['create'])->disableOriginalConstructor()->getMock();
+        $resultPageFactory = $this->getMockBuilder(PageFactory::class)
+            ->onlyMethods(['create'])->disableOriginalConstructor()
+            ->getMock();
         $resultPageFactory->expects($this->any())->method('create')->willReturn($this->resultPage);
 
         $this->prepareContext();
 
-        $this->object = (new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this))->getObject(
-            \Magento\Catalog\Controller\Adminhtml\Product\Action\Attribute\Edit::class,
+        $this->object = (new ObjectManager($this))->getObject(
+            Edit::class,
             [
                 'context' => $this->context,
                 'attributeHelper' => $this->attributeHelper,
@@ -76,28 +103,31 @@ class EditTest extends \PHPUnit\Framework\TestCase
 
     private function prepareContext()
     {
-        $this->request = $this->getMockBuilder(\Magento\Framework\App\Request\Http::class)
-            ->setMethods(['getParam', 'getParams', 'setParams'])
-            ->disableOriginalConstructor()->getMock();
+        $this->request = $this->getMockBuilder(Http::class)
+            ->onlyMethods(['getParam', 'getParams', 'setParams'])
+            ->disableOriginalConstructor()
+            ->getMock();
 
-        $objectManager = $this->createMock(\Magento\Framework\ObjectManagerInterface::class);
-        $product = $this->getMockBuilder(\Magento\Catalog\Model\Product::class)
-            ->setMethods(['isProductsHasSku'])
-            ->disableOriginalConstructor()->getMock();
+        $objectManager = $this->getMockForAbstractClass(ObjectManagerInterface::class);
+        $product = $this->getMockBuilder(Product::class)
+            ->onlyMethods(['isProductsHasSku'])
+            ->disableOriginalConstructor()
+            ->getMock();
         $product->expects($this->any())->method('isProductsHasSku')
             ->with([1, 2, 3])
             ->willReturn(true);
         $objectManager->expects($this->any())
             ->method('create')
-            ->with(\Magento\Catalog\Model\Product::class)
+            ->with(Product::class)
             ->willReturn($product);
-        $messageManager = $this->getMockBuilder(\Magento\Framework\Message\ManagerInterface::class)
-            ->setMethods([])
-            ->disableOriginalConstructor()->getMock();
+        $messageManager = $this->getMockBuilder(ManagerInterface::class)
+            ->disableOriginalConstructor()
+            ->getMockForAbstractClass();
         $messageManager->expects($this->any())->method('addErrorMessage')->willReturn(true);
-        $this->context = $this->getMockBuilder(\Magento\Backend\App\Action\Context::class)
-            ->setMethods(['getRequest', 'getObjectManager', 'getMessageManager', 'getResultRedirectFactory'])
-            ->disableOriginalConstructor()->getMock();
+        $this->context = $this->getMockBuilder(Context::class)
+            ->onlyMethods(['getRequest', 'getObjectManager', 'getMessageManager', 'getResultRedirectFactory'])
+            ->disableOriginalConstructor()
+            ->getMock();
         $this->context->expects($this->any())->method('getRequest')->willReturn($this->request);
         $this->context->expects($this->any())->method('getObjectManager')->willReturn($objectManager);
         $this->context->expects($this->any())->method('getMessageManager')->willReturn($messageManager);
@@ -119,19 +149,22 @@ class EditTest extends \PHPUnit\Framework\TestCase
         $this->attributeHelper->expects($this->any())->method('getProductIds')->willReturn([1, 2, 3]);
         $this->attributeHelper->expects($this->any())->method('setProductIds')->with([1, 2, 3]);
 
-        $collection = $this->getMockBuilder(\Magento\Catalog\Model\ResourceModel\Product\Collection::class)
-            ->setMethods(['getAllIds'])
-            ->disableOriginalConstructor()->getMock();
+        $collection = $this->getMockBuilder(Collection::class)
+            ->onlyMethods(['getAllIds'])
+            ->disableOriginalConstructor()
+            ->getMock();
         $collection->expects($this->any())->method('getAllIds')->willReturn([1, 2, 3]);
         $this->filter->expects($this->any())->method('getCollection')->with($collection)->willReturn($collection);
         $this->collectionFactory->expects($this->any())->method('create')->willReturn($collection);
 
-        $title = $this->getMockBuilder(\Magento\Framework\View\Page\Title::class)
-            ->setMethods(['prepend'])
-            ->disableOriginalConstructor()->getMock();
-        $config = $this->getMockBuilder(\Magento\Framework\View\Page\Config::class)
-            ->setMethods(['getTitle'])
-            ->disableOriginalConstructor()->getMock();
+        $title = $this->getMockBuilder(Title::class)
+            ->onlyMethods(['prepend'])
+            ->disableOriginalConstructor()
+            ->getMock();
+        $config = $this->getMockBuilder(Config::class)
+            ->onlyMethods(['getTitle'])
+            ->disableOriginalConstructor()
+            ->getMock();
         $config->expects($this->any())->method('getTitle')->willReturn($title);
         $this->resultPage->expects($this->any())->method('getConfig')->willReturn($config);
 
@@ -146,12 +179,14 @@ class EditTest extends \PHPUnit\Framework\TestCase
         $this->attributeHelper->expects($this->any())->method('getProductIds')->willReturn([1, 2, 3]);
         $this->attributeHelper->expects($this->any())->method('setProductIds')->with([1, 2, 3]);
 
-        $title = $this->getMockBuilder(\Magento\Framework\View\Page\Title::class)
-            ->setMethods(['prepend'])
-            ->disableOriginalConstructor()->getMock();
-        $config = $this->getMockBuilder(\Magento\Framework\View\Page\Config::class)
-            ->setMethods(['getTitle'])
-            ->disableOriginalConstructor()->getMock();
+        $title = $this->getMockBuilder(Title::class)
+            ->onlyMethods(['prepend'])
+            ->disableOriginalConstructor()
+            ->getMock();
+        $config = $this->getMockBuilder(Config::class)
+            ->onlyMethods(['getTitle'])
+            ->disableOriginalConstructor()
+            ->getMock();
         $config->expects($this->any())->method('getTitle')->willReturn($title);
         $this->resultPage->expects($this->any())->method('getConfig')->willReturn($config);
 
@@ -164,8 +199,8 @@ class EditTest extends \PHPUnit\Framework\TestCase
         $this->request->expects($this->any())->method('getParams')->willReturn([]);
         $this->attributeHelper->expects($this->any())->method('getProductIds')->willReturn(null);
 
-        $resultRedirect = $this->getMockBuilder(\Magento\Backend\Model\View\Result\Redirect::class)
-            ->setMethods(['setPath'])
+        $resultRedirect = $this->getMockBuilder(Redirect::class)
+            ->onlyMethods(['setPath'])
             ->disableOriginalConstructor()
             ->getMock();
         $resultRedirect->expects($this->any())->method('setPath')

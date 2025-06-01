@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Cms\Model\Page\Source;
 
@@ -20,6 +20,7 @@ class PageLayout implements OptionSourceInterface
 
     /**
      * @var array
+     * @deprecated 103.0.1 since the cache is now handled by \Magento\Theme\Model\PageLayout\Config\Builder::$configFiles
      */
     protected $options;
 
@@ -34,16 +35,10 @@ class PageLayout implements OptionSourceInterface
     }
 
     /**
-     * Get options
-     *
-     * @return array
+     * @inheritdoc
      */
     public function toOptionArray()
     {
-        if ($this->options !== null) {
-            return $this->options;
-        }
-
         $configOptions = $this->pageLayoutBuilder->getPageLayoutsConfig()->getOptions();
         $options = [];
         foreach ($configOptions as $key => $value) {
@@ -54,6 +49,6 @@ class PageLayout implements OptionSourceInterface
         }
         $this->options = $options;
 
-        return $this->options;
+        return $options;
     }
 }

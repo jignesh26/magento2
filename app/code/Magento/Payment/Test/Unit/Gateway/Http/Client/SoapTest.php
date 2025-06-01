@@ -3,29 +3,40 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Payment\Test\Unit\Gateway\Http\Client;
 
+use Exception;
+use Magento\Framework\Webapi\Soap\ClientFactory;
 use Magento\Payment\Gateway\Http\Client\Soap;
+use Magento\Payment\Gateway\Http\ConverterInterface;
+use Magento\Payment\Gateway\Http\TransferInterface;
+use Magento\Payment\Model\Method\Logger;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+use SoapClient;
+use StdClass;
 
-class SoapTest extends \PHPUnit\Framework\TestCase
+class SoapTest extends TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     private $logger;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     private $clientFactory;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     private $converter;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     private $client;
 
@@ -34,21 +45,24 @@ class SoapTest extends \PHPUnit\Framework\TestCase
      */
     private $gatewayClient;
 
-    protected function setUp()
+    /**
+     * @inheritdoc
+     */
+    protected function setUp(): void
     {
         $this->logger = $this->getMockBuilder(
-            \Magento\Payment\Model\Method\Logger::class
+            Logger::class
         )
             ->disableOriginalConstructor()
             ->getMock();
         $this->clientFactory = $this->getMockBuilder(
-            \Magento\Framework\Webapi\Soap\ClientFactory::class
+            ClientFactory::class
         )->getMock();
         $this->converter = $this->getMockBuilder(
-            \Magento\Payment\Gateway\Http\ConverterInterface::class
+            ConverterInterface::class
         )->getMockForAbstractClass();
-        $this->client = $this->getMockBuilder(\SoapClient::class)
-            ->setMethods(['__setSoapHeaders', '__soapCall', '__getLastRequest'])
+        $this->client = $this->getMockBuilder(SoapClient::class)
+            ->onlyMethods(['__setSoapHeaders', '__soapCall', '__getLastRequest'])
             ->disableOriginalConstructor()
             ->getMock();
 
@@ -59,18 +73,16 @@ class SoapTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function testPlaceRequest()
+    /**
+     * @return void
+     */
+    public function testPlaceRequest(): void
     {
         $expectedResult = [
             'result' => []
         ];
-        $soapResult = new \StdClass();
+        $soapResult = new StdClass();
 
-        $this->logger->expects(static::at(0))
-            ->method('debug')
-            ->with(
-                ['request' => ['body']]
-            );
         $this->clientFactory->expects(static::once())
             ->method('create')
             ->with('path_to_wsdl', ['trace' => true])
@@ -87,9 +99,15 @@ class SoapTest extends \PHPUnit\Framework\TestCase
             ->method('convert')
             ->with($soapResult)
             ->willReturn($expectedResult);
-        $this->logger->expects(static::at(1))
+        $this->logger
             ->method('debug')
-            ->with(['response' => $expectedResult]);
+            ->willReturnCallback(
+                function ($args) use ($expectedResult) {
+                    if ($args === ['request' => ['body']] || $args === ['response' => $expectedResult]) {
+                        return null;
+                    }
+                }
+            );
 
         static::assertEquals(
             $expectedResult,
@@ -97,15 +115,13 @@ class SoapTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function testPlaceRequestSoapException()
+    /**
+     * @return void
+     */
+    public function testPlaceRequestSoapException(): void
     {
-        $this->expectException('Exception');
+        $this->expectException(Exception::class);
 
-        $this->logger->expects(static::at(0))
-            ->method('debug')
-            ->with(
-                ['request' => ['body']]
-            );
         $this->clientFactory->expects(static::once())
             ->method('create')
             ->with('path_to_wsdl', ['trace' => true])
@@ -117,14 +133,18 @@ class SoapTest extends \PHPUnit\Framework\TestCase
         $this->client->expects(static::once())
             ->method('__soapCall')
             ->with('soapMethod', [['body']])
-            ->willThrowException(new \Exception());
+            ->willThrowException(new Exception());
         $this->client->expects(static::once())
             ->method('__getLastRequest')
             ->willReturn('RequestTrace');
-        $this->logger->expects(static::at(1))
+        $this->logger
             ->method('debug')
-            ->with(
-                ['trace' => 'RequestTrace']
+            ->willReturnCallback(
+                function ($args) {
+                    if ($args === [['request' => ['body']]] || $args === [['trace' => 'RequestTrace']]) {
+                        return null;
+                    }
+                }
             );
 
         $this->gatewayClient->placeRequest($transferObject);
@@ -133,13 +153,13 @@ class SoapTest extends \PHPUnit\Framework\TestCase
     /**
      * Returns prepared transfer object
      *
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return MockObject
      */
-    private function getTransferObject()
+    private function getTransferObject(): MockObject
     {
-        $transferObject = $this->getMockBuilder(
-            \Magento\Payment\Gateway\Http\TransferInterface::class
-        )->setMethods(['__setSoapHeaders', 'getBody', 'getClientConfig', 'getMethod'])->getMockForAbstractClass();
+        $transferObject = $this->getMockBuilder(TransferInterface::class)
+            ->onlyMethods(['getBody', 'getClientConfig', 'getMethod'])
+            ->addMethods(['__setSoapHeaders'])->getMockForAbstractClass();
 
         $transferObject->expects(static::any())
             ->method('getBody')

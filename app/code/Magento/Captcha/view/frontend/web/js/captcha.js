@@ -1,11 +1,11 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 
 define([
     'jquery',
-    'jquery/ui'
+    'jquery-ui-modules/widget'
 ], function ($) {
     'use strict';
 
@@ -42,7 +42,6 @@ define([
             $.ajax({
                 url: this.options.url,
                 type: 'post',
-                async: false,
                 dataType: 'json',
                 context: this,
                 data: {

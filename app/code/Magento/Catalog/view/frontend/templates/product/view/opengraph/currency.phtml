@@ -1,11 +1,10 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
-
-// @codingStandardsIgnoreFile
 
 /** @var $block \Magento\Directory\Block\Currency */
 ?>
-<meta property="product:price:currency" content="<?= /* @escapeNotVerified */ $block->stripTags($block->getCurrentCurrencyCode()) ?>"/>
+<meta property="product:price:currency"
+      content="<?= /* @noEscape */ $block->stripTags($block->getCurrentCurrencyCode()) ?>"/>

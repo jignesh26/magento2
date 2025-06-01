@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Model\ResourceModel\Product\Indexer;
 
@@ -15,6 +15,13 @@ use Magento\Framework\Indexer\DimensionFactory;
 use Magento\Store\Model\Indexer\WebsiteDimensionProvider;
 use Magento\Framework\Search\Request\IndexScopeResolverInterface;
 
+/**
+ * Class LinkedProductSelectBuilderByIndexPrice
+ *
+ * Provide Select object for retrieve product id by index price.
+ *
+ * @SuppressWarnings(PHPMD.CookieAndSessionMisuse)
+ */
 class LinkedProductSelectBuilderByIndexPrice implements LinkedProductSelectBuilderInterface
 {
     /**
@@ -67,9 +74,9 @@ class LinkedProductSelectBuilderByIndexPrice implements LinkedProductSelectBuild
         \Magento\Framework\App\ResourceConnection $resourceConnection,
         \Magento\Customer\Model\Session $customerSession,
         \Magento\Framework\EntityManager\MetadataPool $metadataPool,
-        BaseSelectProcessorInterface $baseSelectProcessor = null,
-        IndexScopeResolverInterface $priceTableResolver = null,
-        DimensionFactory $dimensionFactory = null
+        ?BaseSelectProcessorInterface $baseSelectProcessor = null,
+        ?IndexScopeResolverInterface $priceTableResolver = null,
+        ?DimensionFactory $dimensionFactory = null
     ) {
         $this->storeManager = $storeManager;
         $this->resource = $resourceConnection;
@@ -83,13 +90,13 @@ class LinkedProductSelectBuilderByIndexPrice implements LinkedProductSelectBuild
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
-    public function build($productId)
+    public function build(int $productId, int $storeId) : array
     {
         $linkField = $this->metadataPool->getMetadata(ProductInterface::class)->getLinkField();
         $productTable = $this->resource->getTableName('catalog_product_entity');
-        $websiteId = $this->storeManager->getStore()->getWebsiteId();
+        $websiteId = $this->storeManager->getStore($storeId)->getWebsiteId();
         $customerGroupId = $this->customerSession->getCustomerGroupId();
 
         $priceSelect = $this->resource->getConnection()->select()

@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <!--
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
@@ -11,5 +11,8 @@
     </event>
     <event name="catalog_category_change_products">
         <observer name="category_product_indexer" instance="Magento\Catalog\Observer\CategoryProductIndexer"/>
+    </event>
+    <event name="category_move">
+        <observer name="clean_cagegory_page_cache" instance="Magento\Catalog\Observer\FlushCategoryPagesCache" />
     </event>
 </config>

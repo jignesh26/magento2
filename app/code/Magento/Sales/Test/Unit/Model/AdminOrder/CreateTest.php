@@ -1,8 +1,9 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\Sales\Test\Unit\Model\AdminOrder;
 
@@ -17,76 +18,101 @@ use Magento\Customer\Model\Metadata\Form;
 use Magento\Customer\Model\Metadata\FormFactory;
 use Magento\Framework\Api\DataObjectHelper;
 use Magento\Framework\App\RequestInterface;
+use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Message\ManagerInterface;
+use Magento\Framework\ObjectManagerInterface;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
 use Magento\Quote\Api\CartRepositoryInterface;
 use Magento\Quote\Model\Quote;
 use Magento\Quote\Model\Quote\Address;
 use Magento\Quote\Model\Quote\Item;
 use Magento\Quote\Model\Quote\Item\Updater;
-use Magento\Sales\Model\AdminOrder\Create;
-use Magento\Sales\Model\AdminOrder\Product;
 use Magento\Quote\Model\QuoteFactory;
-use PHPUnit_Framework_MockObject_MockObject as MockObject;
+use Magento\Sales\Model\AdminOrder\Create;
+use Magento\Sales\Model\Order;
+use Magento\Sales\Model\Order\Item as OrderItem;
+use Magento\Sales\Model\ResourceModel\Order\Item\Collection as ItemCollection;
+use Magento\Store\Api\Data\StoreInterface;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  * @SuppressWarnings(PHPMD.TooManyFields)
  */
-class CreateTest extends \PHPUnit\Framework\TestCase
+class CreateTest extends TestCase
 {
-    const CUSTOMER_ID = 1;
+    public const CUSTOMER_ID = 1;
 
     /**
      * @var Create
      */
-    private $adminOrderCreate;
+    private Create $adminOrderCreate;
 
     /**
-     * @var CartRepositoryInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var CartRepositoryInterface|MockObject
      */
-    private $quoteRepository;
+    private CartRepositoryInterface $quoteRepository;
 
     /**
-     * @var QuoteFactory|\PHPUnit_Framework_MockObject_MockObject
+     * @var QuoteFactory|MockObject
      */
-    private $quoteFactory;
+    private QuoteFactory $quoteFactory;
 
     /**
      * @var SessionQuote|MockObject
      */
-    private $sessionQuote;
+    private SessionQuote $sessionQuote;
 
     /**
      * @var FormFactory|MockObject
      */
-    private $formFactory;
+    private FormFactory $formFactory;
 
     /**
      * @var CustomerInterfaceFactory|MockObject
      */
-    private $customerFactory;
+    private CustomerInterfaceFactory $customerFactory;
 
     /**
      * @var Updater|MockObject
      */
-    private $itemUpdater;
+    private Updater $itemUpdater;
 
     /**
      * @var Mapper|MockObject
      */
-    private $customerMapper;
+    private Mapper $customerMapper;
 
     /**
      * @var GroupRepositoryInterface|MockObject
      */
-    private $groupRepository;
+    private GroupRepositoryInterface $groupRepository;
 
     /**
      * @var DataObjectHelper|MockObject
      */
-    private $dataObjectHelper;
+    private DataObjectHelper $dataObjectHelper;
 
-    protected function setUp()
+    /**
+     * @var Order|MockObject
+     */
+    private Order $orderMock;
+
+    /**
+     * @var ObjectManagerInterface|ObjectManagerInterface&MockObject|MockObject
+     */
+    private ObjectManagerInterface $objectManager;
+
+    /**
+     * @var ManagerInterface|ManagerInterface&MockObject|MockObject
+     */
+    private ManagerInterface $messageManager;
+
+    /**
+     * @inheritdoc
+     */
+    protected function setUp(): void
     {
         $this->formFactory = $this->createPartialMock(FormFactory::class, ['create']);
         $this->quoteFactory = $this->createPartialMock(QuoteFactory::class, ['create']);
@@ -96,16 +122,38 @@ class CreateTest extends \PHPUnit\Framework\TestCase
 
         $this->quoteRepository = $this->getMockBuilder(CartRepositoryInterface::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getForCustomer'])
+            ->onlyMethods(['getForCustomer'])
             ->getMockForAbstractClass();
 
-        $this->sessionQuote = $this->getMockBuilder(\Magento\Backend\Model\Session\Quote::class)
+        $this->sessionQuote = $this->getMockBuilder(SessionQuote::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getQuote', 'getStoreId', 'getCustomerId'])
+            ->addMethods([
+                'getStoreId',
+                'getCustomerId',
+                'setData',
+                'setCurrencyId',
+                'setCustomerId',
+                'setStoreId',
+                'setCustomerGroupId',
+                'getUseOldShippingMethod'
+            ])
+            ->onlyMethods(
+                [
+                    'getQuote',
+                    'getData',
+                    'getStore'
+                ]
+            )
             ->getMock();
 
+        $storeMock = $this->getMockBuilder(StoreInterface::class)
+            ->onlyMethods(['getId'])
+            ->getMockForAbstractClass();
+        $this->sessionQuote->method('getStore')
+            ->willReturn($storeMock);
+
         $this->customerMapper = $this->getMockBuilder(Mapper::class)
-            ->setMethods(['toFlatArray'])
+            ->onlyMethods(['toFlatArray'])
             ->disableOriginalConstructor()
             ->getMock();
 
@@ -114,10 +162,31 @@ class CreateTest extends \PHPUnit\Framework\TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
+        $this->orderMock = $this->getMockBuilder(Order::class)
+            ->disableOriginalConstructor()
+            ->addMethods(['setReordered', 'getReordered'])
+            ->onlyMethods(
+                [
+                    'getEntityId',
+                    'getId',
+                    'getOrderCurrencyCode',
+                    'getCustomerGroupId',
+                    'getItemsCollection',
+                    'getShippingAddress',
+                    'getBillingAddress',
+                    'getCouponCode',
+                ]
+            )
+            ->getMock();
+
+        $this->objectManager = $this->createMock(ObjectManagerInterface::class);
+        $this->messageManager = $this->createMock(ManagerInterface::class);
         $objectManagerHelper = new ObjectManagerHelper($this);
         $this->adminOrderCreate = $objectManagerHelper->getObject(
             Create::class,
             [
+                '_objectManager' => $this->objectManager,
+                'messageManager' => $this->messageManager,
                 'quoteSession' => $this->sessionQuote,
                 'metadataFormFactory' => $this->formFactory,
                 'customerFactory' => $this->customerFactory,
@@ -131,6 +200,46 @@ class CreateTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    /**
+     * @return void
+     * @throws \PHPUnit\Framework\MockObject\Exception|LocalizedException
+     */
+    public function testInitFromOrderItemNoExceptionThrownOnAddProduct(): void
+    {
+        $orderItemId = $productId = 1;
+        $exceptionMessage = 'Exception message';
+
+        $buyRequest = $this->createMock(\Magento\Framework\DataObject::class);
+
+        $orderItem = $this->createMock(\Magento\Sales\Model\Order\Item::class);
+        $orderItem->expects($this->once())->method('getId')->willReturn($orderItemId);
+        $orderItem->expects($this->once())->method('getProductId')->willReturn($productId);
+        $orderItem->expects($this->once())->method('getBuyRequest')->willReturn($buyRequest);
+        $orderItem->expects($this->once())->method('getProductOptions')->willReturn(null);
+
+        $product = $this->createMock(\Magento\Catalog\Model\Product::class);
+        $product->expects($this->once())->method('setStoreId')->willReturnSelf();
+        $product->expects($this->once())->method('load')->willReturnSelf();
+        $product->expects($this->once())->method('getId')->willReturn($productId);
+        $this->objectManager->expects($this->once())->method('create')->willReturn($product);
+
+        $exception = new LocalizedException(__($exceptionMessage));
+        $quote = $this->createMock(Quote::class);
+        $quote->expects($this->once())
+            ->method('addProduct')
+            ->with($product, $buyRequest)
+            ->willThrowException($exception);
+        $this->sessionQuote->method('getQuote')
+            ->willReturn($quote);
+
+        $this->messageManager->expects($this->once())
+            ->method('addErrorMessage')
+            ->with(__($exceptionMessage))
+            ->willReturnSelf();
+
+        $this->adminOrderCreate->initFromOrderItem($orderItem);
+    }
+
     public function testSetAccountData()
     {
         $taxClassId = 1;
@@ -141,7 +250,7 @@ class CreateTest extends \PHPUnit\Framework\TestCase
         $attributeMocks = [];
 
         foreach ($attributes as $value) {
-            $attribute = $this->createMock(AttributeMetadataInterface::class);
+            $attribute = $this->getMockForAbstractClass(AttributeMetadataInterface::class);
             $attribute->method('getAttributeCode')
                 ->willReturn($value[0]);
 
@@ -161,8 +270,13 @@ class CreateTest extends \PHPUnit\Framework\TestCase
             ->method('restoreData')
             ->willReturn(['group_id' => 1]);
 
+        $requestMock = $this->getMockBuilder(RequestInterface::class)
+            ->addMethods(['getPostValue'])
+            ->disableOriginalConstructor()
+            ->getMockForAbstractClass();
+        $requestMock->expects($this->atLeastOnce())->method('getPostValue')->willReturn(null);
         $customerForm->method('prepareRequest')
-            ->willReturn($this->createMock(RequestInterface::class));
+            ->willReturn($requestMock);
 
         $customer = $this->createMock(CustomerInterface::class);
         $this->customerMapper->expects(self::atLeastOnce())
@@ -177,6 +291,7 @@ class CreateTest extends \PHPUnit\Framework\TestCase
                 'customer_tax_class_id' => $taxClassId
             ]
         );
+        $quote->method('getStoreId')->willReturn(1);
         $this->dataObjectHelper->method('populateWithArray')
             ->with(
                 $customer,
@@ -194,6 +309,10 @@ class CreateTest extends \PHPUnit\Framework\TestCase
 
         $this->groupRepository->method('getById')
             ->willReturn($customerGroup);
+
+        $customer->expects($this->once())
+            ->method('setStoreId')
+            ->with(1);
 
         $this->adminOrderCreate->setAccountData(['group_id' => 1]);
     }
@@ -267,11 +386,18 @@ class CreateTest extends \PHPUnit\Framework\TestCase
     public function testApplyCoupon()
     {
         $couponCode = '123';
-        $quote = $this->createPartialMock(Quote::class, ['getShippingAddress', 'setCouponCode']);
+        $quote = $this->getMockBuilder(Quote::class)
+            ->addMethods(['setCouponCode'])
+            ->onlyMethods(['getShippingAddress'])
+            ->disableOriginalConstructor()
+            ->getMock();
         $this->sessionQuote->method('getQuote')
             ->willReturn($quote);
 
-        $address = $this->createPartialMock(Address::class, ['setCollectShippingRates', 'setFreeShipping']);
+        $address = $this->getMockBuilder(Address::class)
+            ->addMethods(['setCollectShippingRates', 'setFreeShipping'])
+            ->disableOriginalConstructor()
+            ->getMock();
         $quote->method('getShippingAddress')
             ->willReturn($address);
         $quote->method('setCouponCode')
@@ -311,5 +437,208 @@ class CreateTest extends \PHPUnit\Framework\TestCase
             ->willReturn($cartResult);
 
         $this->assertEquals($cartResult, $this->adminOrderCreate->getCustomerCart());
+    }
+
+    public function testInitFromOrder()
+    {
+        $this->sessionQuote->method('getData')
+            ->with('reordered')
+            ->willReturn(true);
+
+        $address = $this->createPartialMock(
+            Address::class,
+            [
+                'setSameAsBilling',
+                'setCustomerAddressId',
+                'getSameAsBilling',
+            ]
+        );
+        $address->method('getSameAsBilling')
+            ->willReturn(true);
+        $address->method('setCustomerAddressId')
+            ->willReturnSelf();
+
+        $quote = $this->getMockBuilder(Quote::class)
+            ->disableOriginalConstructor()
+            ->addMethods(['setCustomerGroupId'])
+            ->onlyMethods(
+                [
+                    'getBillingAddress',
+                    'getShippingAddress',
+                    'isVirtual',
+                    'collectTotals',
+                ]
+            )
+            ->getMock();
+
+        $quote->method('getBillingAddress')
+            ->willReturn($address);
+        $quote->method('getShippingAddress')
+            ->willReturn($address);
+
+        $this->sessionQuote
+            ->method('getQuote')
+            ->willReturn($quote);
+
+        $orderItem = $this->createPartialMock(
+            OrderItem::class,
+            [
+                'getParentItem',
+                'getQtyOrdered',
+                'getQtyShipped',
+                'getQtyInvoiced',
+            ]
+        );
+        $orderItem->method('getQtyOrdered')
+            ->willReturn(2);
+        $orderItem->method('getParentItem')
+            ->willReturn(false);
+
+        $iterator = new \ArrayIterator([$orderItem]);
+
+        $itemCollectionMock = $this->getMockBuilder(ItemCollection::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getIterator'])
+            ->getMock();
+        $itemCollectionMock->method('getIterator')
+            ->willReturn($iterator);
+
+        $this->orderMock->method('getItemsCollection')
+            ->willReturn($itemCollectionMock);
+        $this->orderMock->method('getReordered')
+            ->willReturn(false);
+        $this->orderMock->method('getShippingAddress')
+            ->willReturn($address);
+        $this->orderMock->method('getBillingAddress')
+            ->willReturn($address);
+        $this->orderMock->method('getCouponCode')
+            ->willReturn(true);
+
+        $quote->expects($this->once())
+            ->method('setCustomerGroupId');
+
+        $this->adminOrderCreate->initFromOrder($this->orderMock);
+    }
+
+    /**
+     *  Test case for setShippingAsBilling
+     *
+     * @dataProvider setShippingAsBillingDataProvider
+     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
+     */
+    public function testSetShippingAsBilling(bool $flag, array $billingData, array $shippingData): void
+    {
+        $billingAddress = $this->createPartialMock(Address::class, ['getData']);
+        $shippingAddress = $this->createPartialMock(
+            Address::class,
+            [
+                'addData',
+                'setSameAsBilling',
+                'getData',
+            ]
+        );
+        $billingAddress->expects($this->any())
+            ->method('getData')
+            ->willReturn($billingData);
+        $shippingAddress->expects($this->any())
+            ->method('getData')
+            ->willReturn($shippingData);
+        $shippingAddress->expects($this->any())
+            ->method('addData')
+            ->willReturnSelf();
+        $shippingAddress->expects($this->any())
+            ->method('setSameAsBilling')
+            ->with($flag)
+            ->willReturnSelf();
+        $quote = $this->getMockBuilder(Quote::class)
+            ->disableOriginalConstructor()
+            ->addMethods(['setRecollect'])
+            ->onlyMethods(
+                [
+                    'getBillingAddress',
+                    'getShippingAddress'
+                ]
+            )
+            ->getMock();
+
+        $quote->expects($this->any())
+            ->method('getBillingAddress')
+            ->willReturn($billingAddress);
+        $quote->expects($this->any())
+            ->method('getShippingAddress')
+            ->willReturn($shippingAddress);
+        $quote->expects($this->any())
+            ->method('setRecollect')
+            ->willReturn(true);
+        $this->sessionQuote
+            ->method('getQuote')
+            ->willReturn($quote);
+        $this->adminOrderCreate->setShippingAsBilling($flag);
+    }
+
+    /**
+     * Data provider for setShippingAsBilling function
+     *
+     * @return array
+     */
+    public static function setShippingAsBillingDataProvider(): array
+    {
+        return [
+            'testcase when sameAsBillingFlag is false' => [
+                false,
+                [
+                    'quote_id' => 1,
+                    'entity_id' => 1,
+                    'same_as_billing' => 1,
+                    'customer_address_id' => null,
+                    'weight' => '0.0000',
+                    'free_shipping' => '0'
+                ],
+                [
+                    'quote_id' => 1,
+                    'entity_id' => 1,
+                    'same_as_billing' => 1,
+                    'customer_address_id' => null,
+                    'weight' => '0.0000',
+                    'free_shipping' => '0'
+                ]
+            ],
+            'testcase when sameAsBillingFlag is true and there is no `weight` property' => [
+                true,
+                [
+                    'quote_id' => 1,
+                    'entity_id' => 1,
+                    'same_as_billing' => 1,
+                    'customer_address_id' => null,
+                    'free_shipping' => '0'
+                ],
+                [
+                    'quote_id' => 1,
+                    'entity_id' => 1,
+                    'same_as_billing' => 1,
+                    'customer_address_id' => null,
+                    'free_shipping' => '0'
+                ]
+            ],
+            'testcase when sameAsBillingFlag is true and there is `weight` property' => [
+                false,
+                [
+                    'quote_id' => 1,
+                    'entity_id' => 1,
+                    'same_as_billing' => 1,
+                    'customer_address_id' => null,
+                    'weight' => '0.0000',
+                    'free_shipping' => '1'
+                ],
+                [
+                    'quote_id' => 1,
+                    'entity_id' => 1,
+                    'same_as_billing' => 1,
+                    'customer_address_id' => null,
+                    'weight' => '8.0000',
+                    'free_shipping' => '1'
+                ]
+            ]
+        ];
     }
 }

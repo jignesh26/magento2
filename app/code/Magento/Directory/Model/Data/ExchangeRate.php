@@ -5,6 +5,9 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+
+declare(strict_types=1);
+
 namespace Magento\Directory\Model\Data;
 
 /**
@@ -17,6 +20,7 @@ class ExchangeRate extends \Magento\Framework\Api\AbstractExtensibleObject imple
 {
     const KEY_CURRENCY_TO = 'currency_to';
     const KEY_RATE = 'rate';
+    private const KEY_EXCHANGE_RATES = 'exchange_rates';
 
     /**
      * @inheritDoc
@@ -61,7 +65,7 @@ class ExchangeRate extends \Magento\Framework\Api\AbstractExtensibleObject imple
     /**
      * @inheritDoc
      */
-    public function setExchangeRates(array $exchangeRates = null)
+    public function setExchangeRates(?array $exchangeRates = null)
     {
         return $this->setData(self::KEY_EXCHANGE_RATES, $exchangeRates);
     }

@@ -9,6 +9,7 @@ use Magento\Framework\App\Area;
 use Magento\Framework\App\State;
 use Magento\Framework\App\TemplateTypesInterface;
 use Magento\Framework\Phrase;
+use Magento\Framework\View\Asset\ContentProcessorInterface;
 use Magento\Setup\Module\I18n\Locale;
 use Magento\Theme\Block\Html\Footer;
 
@@ -28,7 +29,7 @@ class FilterTest extends \PHPUnit\Framework\TestCase
      */
     protected $objectManager;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
 
@@ -64,7 +65,7 @@ class FilterTest extends \PHPUnit\Framework\TestCase
             " class='$class' name='test.block' template='Magento_Theme::html/footer.phtml'",
         ];
         $html = $this->model->blockDirective($data);
-        $this->assertContains('<div class="footer-container">', $html);
+        $this->assertStringContainsString('<div class="footer-container">', $html);
     }
 
     /**
@@ -124,7 +125,7 @@ class FilterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function layoutDirectiveDataProvider()
+    public static function layoutDirectiveDataProvider()
     {
         $result = [
             'area parameter - omitted' => [
@@ -155,21 +156,27 @@ class FilterTest extends \PHPUnit\Framework\TestCase
      * @param $directive
      * @param $translations
      * @param $expectedResult
+     * @param array $variables
      * @internal param $translatorData
+     * @magentoConfigFixture default_store dev/translate_inline/active 1
+     * @magentoAppArea frontend
      * @dataProvider transDirectiveDataProvider
      */
-    public function testTransDirective($directive, $translations, $expectedResult)
+    public function testTransDirective($directive, $translations, $expectedResult, $variables = [])
     {
         $renderer = Phrase::getRenderer();
 
         $translator = $this->getMockBuilder(\Magento\Framework\Translate::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getData'])
+            ->onlyMethods(['getData'])
             ->getMock();
 
-        $translator->expects($this->atLeastOnce())
-            ->method('getData')
-            ->will($this->returnValue($translations));
+        $translator->method('getData')
+            ->willReturn($translations);
+
+        if (!empty($variables)) {
+            $this->model->setVariables($variables);
+        }
 
         $this->objectManager->addSharedInstance($translator, \Magento\Framework\Translate::class);
         $this->objectManager->removeSharedInstance(\Magento\Framework\Phrase\Renderer\Translate::class);
@@ -183,7 +190,7 @@ class FilterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function transDirectiveDataProvider()
+    public static function transDirectiveDataProvider()
     {
         return [
             [
@@ -195,7 +202,65 @@ class FilterTest extends \PHPUnit\Framework\TestCase
                 '{{trans "foobar"}}',
                 ['foobar' => 'barfoo'],
                 'barfoo',
-            ]
+            ],
+            'empty directive' => [
+                '{{trans}}',
+                [],
+                '',
+            ],
+            'empty string' => [
+                '{{trans ""}}',
+                [],
+                '',
+            ],
+            'no padding' => [
+                '{{trans"Hello cruel coder..."}}',
+                [],
+                'Hello cruel coder...',
+            ],
+            'multi-line padding' => [
+                "{{trans \t\n\r'Hello cruel coder...' \t\n\r}}",
+                [],
+                'Hello cruel coder...',
+            ],
+            'capture escaped double-quotes inside text' => [
+                '{{trans "Hello \"tested\" world!"}}',
+                [],
+                'Hello &quot;tested&quot; world!',
+            ],
+            'capture escaped single-quotes inside text' => [
+                "{{trans 'Hello \\'tested\\' world!'|escape}}",
+                [],
+                "Hello &#039;tested&#039; world!",
+            ],
+            'filter with params' => [
+                "{{trans 'Hello \\'tested\\' world!'|escape:html}}",
+                [],
+                "Hello &#039;tested&#039; world!",
+            ],
+            'basic var' => [
+                '{{trans "Hello %adjective world!" adjective="tested"}}',
+                [],
+                'Hello tested world!',
+            ],
+            'auto-escaped output' => [
+                '{{trans "Hello %adjective <strong>world</strong>!" adjective="<em>bad</em>"}}',
+                [],
+                'Hello &lt;em&gt;bad&lt;/em&gt; &lt;strong&gt;world&lt;/strong&gt;!',
+            ],
+            'unescaped modifier' => [
+                '{{trans "Hello %adjective <strong>world</strong>!" adjective="<em>bad</em>"|raw}}',
+                [],
+                'Hello <em>bad</em> <strong>world</strong>!',
+            ],
+            'variable replacement' => [
+                '{{trans "Hello %adjective world!" adjective="$mood"}}',
+                [],
+                'Hello happy world!',
+                [
+                    'mood' => 'happy'
+                ],
+            ],
         ];
     }
 
@@ -227,7 +292,7 @@ class FilterTest extends \PHPUnit\Framework\TestCase
         $output = $this->model->cssDirective(['{{css ' . $directiveParams . '}}', 'css', ' ' . $directiveParams]);
 
         if ($expectedOutput !== '') {
-            $this->assertContains($expectedOutput, $output);
+            $this->assertStringContainsString($expectedOutput, $output);
         } else {
             $this->assertSame($expectedOutput, $output);
         }
@@ -236,7 +301,7 @@ class FilterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function cssDirectiveDataProvider()
+    public static function cssDirectiveDataProvider()
     {
         return [
             'CSS from theme' => [
@@ -267,7 +332,7 @@ class FilterTest extends \PHPUnit\Framework\TestCase
             'Empty or missing file' => [
                 TemplateTypesInterface::TYPE_HTML,
                 'file="css/non-existent-file.css"',
-                '/* Contents of css/non-existent-file.css could not be loaded or is empty */'
+                '/*' . PHP_EOL . ContentProcessorInterface::ERROR_MESSAGE_PREFIX . 'LESS file is empty: ',
             ],
             'File with compilation error results in error message' => [
                 TemplateTypesInterface::TYPE_HTML,
@@ -314,13 +379,13 @@ class FilterTest extends \PHPUnit\Framework\TestCase
         $appMode = $productionMode ? State::MODE_PRODUCTION : State::MODE_DEVELOPER;
         $this->objectManager->get(\Magento\Framework\App\State::class)->setMode($appMode);
 
-        $this->assertContains($expectedOutput, $this->model->filter($templateText));
+        $this->assertStringContainsString($expectedOutput, $this->model->filter($templateText));
     }
 
     /**
      * @return array
      */
-    public function inlinecssDirectiveDataProvider()
+    public static function inlinecssDirectiveDataProvider()
     {
         return [
             'CSS from theme' => [
@@ -389,7 +454,7 @@ class FilterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function inlinecssDirectiveThrowsExceptionWhenMissingParameterDataProvider()
+    public static function inlinecssDirectiveThrowsExceptionWhenMissingParameterDataProvider()
     {
         return [
             'Missing "file" parameter' => [
@@ -407,10 +472,12 @@ class FilterTest extends \PHPUnit\Framework\TestCase
     protected function setUpDesignParams()
     {
         $themeCode = 'Vendor_EmailTest/custom_theme';
-        $this->model->setDesignParams([
-            'area' => Area::AREA_FRONTEND,
-            'theme' => $themeCode,
-            'locale' => Locale::DEFAULT_SYSTEM_LOCALE,
-        ]);
+        $this->model->setDesignParams(
+            [
+                'area' => Area::AREA_FRONTEND,
+                'theme' => $themeCode,
+                'locale' => Locale::DEFAULT_SYSTEM_LOCALE,
+            ]
+        );
     }
 }

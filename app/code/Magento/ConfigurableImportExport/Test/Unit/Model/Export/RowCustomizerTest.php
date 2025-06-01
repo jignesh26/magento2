@@ -3,17 +3,21 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\ConfigurableImportExport\Test\Unit\Model\Export;
 
-use Magento\ConfigurableImportExport\Model\Export\RowCustomizer as ExportRowCustomizer;
-use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
-use Magento\Catalog\Model\ResourceModel\Product\Collection as ProductCollection;
-use Magento\ConfigurableProduct\Model\Product\Type\Configurable as ConfigurableProductType;
 use Magento\Catalog\Model\Product;
+use Magento\Catalog\Model\ResourceModel\Product\Collection as ProductCollection;
 use Magento\CatalogImportExport\Model\Import\Product as ImportProduct;
+use Magento\ConfigurableImportExport\Model\Export\RowCustomizer as ExportRowCustomizer;
+use Magento\ConfigurableProduct\Model\Product\Type\Configurable as ConfigurableProductType;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
 use Magento\ImportExport\Model\Import;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class RowCustomizerTest extends \PHPUnit\Framework\TestCase
+class RowCustomizerTest extends TestCase
 {
     /**
      * @var ExportRowCustomizer
@@ -26,21 +30,21 @@ class RowCustomizerTest extends \PHPUnit\Framework\TestCase
     private $objectManagerHelper;
 
     /**
-     * @var ProductCollection|\PHPUnit_Framework_MockObject_MockObject
+     * @var ProductCollection|MockObject
      */
     private $productCollectionMock;
 
     /**
-     * @var ConfigurableProductType|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigurableProductType|MockObject
      */
     private $configurableProductTypeMock;
 
     /**
      * @var int
      */
-    private $productId = 11;
+    private static $productId = 11;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->productCollectionMock = $this->getMockBuilder(ProductCollection::class)
             ->disableOriginalConstructor()
@@ -85,19 +89,19 @@ class RowCustomizerTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function addDataDataProvider()
+    public static function addDataDataProvider()
     {
-        $expectedConfigurableData = $this->getExpectedConfigurableData();
-        $data = $expectedConfigurableData[$this->productId];
+        $expectedConfigurableData = self::getExpectedConfigurableData();
+        $data = $expectedConfigurableData[self::$productId];
 
         return [
             [
-                '$expected' => [
+                'expected' => [
                     'key_1' => 'value_1',
                     'key_2' => 'value_2',
                     'key_3' => 'value_3'
                 ],
-                '$data' => [
+                'data' => [
                     'data_row' => [
                         'key_1' => 'value_1',
                         'key_2' => 'value_2',
@@ -107,20 +111,20 @@ class RowCustomizerTest extends \PHPUnit\Framework\TestCase
                 ]
             ],
             [
-                '$expected' => [
+                'expected' => [
                     'key_1' => 'value_1',
                     'key_2' => 'value_2',
                     'key_3' => 'value_3',
                     'configurable_variations' => $data['configurable_variations'],
                     'configurable_variation_labels' => $data['configurable_variation_labels']
                 ],
-                '$data' => [
+                'data' => [
                     'data_row' => [
                         'key_1' => 'value_1',
                         'key_2' => 'value_2',
                         'key_3' => 'value_3'
                     ],
-                    'product_id' => $this->productId
+                    'product_id' => self::$productId
                 ]
             ]
         ];
@@ -145,7 +149,7 @@ class RowCustomizerTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getAdditionalRowsCountDataProvider()
+    public static function getAdditionalRowsCountDataProvider()
     {
         return [
             [
@@ -208,7 +212,7 @@ class RowCustomizerTest extends \PHPUnit\Framework\TestCase
 
         $productMock->expects(static::any())
             ->method('getId')
-            ->willReturn($this->productId);
+            ->willReturn(self::$productId);
         $productMock->expects(static::any())
             ->method('getTypeInstance')
             ->willReturn($this->configurableProductTypeMock);
@@ -239,10 +243,10 @@ class RowCustomizerTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    private function getExpectedConfigurableData()
+    private static function getExpectedConfigurableData()
     {
         return [
-            $this->productId => [
+            self::$productId => [
                 'configurable_variations' => implode(
                     ImportProduct::PSEUDO_MULTI_LINE_SEPARATOR,
                     [
@@ -272,7 +276,7 @@ class RowCustomizerTest extends \PHPUnit\Framework\TestCase
     /**
      * Create product mock object
      *
-     * @return Product|\PHPUnit_Framework_MockObject_MockObject
+     * @return Product|MockObject
      */
     private function createProductMock()
     {

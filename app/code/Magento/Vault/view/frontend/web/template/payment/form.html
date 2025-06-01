@@ -19,7 +19,8 @@
             <img data-bind="attr: {
             'src': getIcons(getCardType()).url,
             'width': getIcons(getCardType()).width,
-            'height': getIcons(getCardType()).height
+            'height': getIcons(getCardType()).height,
+            'alt': getIcons(getCardType()).title
             }" class="payment-icon">
             <span translate="'ending'"></span>
             <span text="getMaskedCard()"></span>
@@ -34,7 +35,7 @@
         <each args="getRegion('messages')" render=""></each>
         <div class="payment-method-billing-address">
             <each args="data: $parent.getRegion(getBillingAddressFormName()), as: '$item'">
-                <render args="$item.getTemplate()"/>
+                <render args="$item.getTemplate()"></render>
             </each>
         </div>
         <div class="checkout-agreements-block">
@@ -48,7 +49,10 @@
                         type="submit"
                         data-bind="
                             click: placeOrder,
-                            attr: {title: $t('Place Order')}">
+                            attr: {title: $t('Place Order')},
+                            enable: isButtonActive()
+                        "
+                    disabled>
                     <span translate="'Place Order'"></span>
                 </button>
             </div>

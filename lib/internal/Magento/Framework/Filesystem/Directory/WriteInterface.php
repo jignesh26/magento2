@@ -8,6 +8,7 @@ namespace Magento\Framework\Filesystem\Directory;
 /**
  * Interface \Magento\Framework\Filesystem\Directory\WriteInterface
  * @api
+ * @since 100.0.2
  */
 interface WriteInterface extends ReadInterface
 {
@@ -38,7 +39,7 @@ interface WriteInterface extends ReadInterface
      * @return bool
      * @throws \Magento\Framework\Exception\FileSystemException
      */
-    public function renameFile($path, $newPath, WriteInterface $targetDirectory = null);
+    public function renameFile($path, $newPath, ?WriteInterface $targetDirectory = null);
 
     /**
      * Copy a file
@@ -49,7 +50,7 @@ interface WriteInterface extends ReadInterface
      * @return bool
      * @throws \Magento\Framework\Exception\FileSystemException
      */
-    public function copyFile($path, $destination, WriteInterface $targetDirectory = null);
+    public function copyFile($path, $destination, ?WriteInterface $targetDirectory = null);
 
     /**
      * Creates symlink on a file or directory and places it to destination
@@ -60,7 +61,7 @@ interface WriteInterface extends ReadInterface
      * @return bool
      * @throws \Magento\Framework\Exception\FileSystemException
      */
-    public function createSymlink($path, $destination, WriteInterface $targetDirectory = null);
+    public function createSymlink($path, $destination, ?WriteInterface $targetDirectory = null);
 
     /**
      * Change permissions of given path

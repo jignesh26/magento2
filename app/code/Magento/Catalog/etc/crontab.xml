@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <!--
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
@@ -16,7 +16,7 @@
         <job name="catalog_product_outdated_price_values_cleanup" instance="Magento\Catalog\Cron\DeleteOutdatedPriceValues" method="execute">
             <schedule>* * * * *</schedule>
         </job>
-        <job name="catalog_product_frontend_actions_flush" instance="Magento\Catalog\Cron\DeleteOutdatedPriceValues" method="execute">
+        <job name="catalog_product_frontend_actions_flush" instance="Magento\Catalog\Cron\FrontendActionsFlush" method="execute">
             <schedule>* * * * *</schedule>
         </job>
         <job name="catalog_product_attribute_value_synchronize" instance="Magento\Catalog\Cron\SynchronizeWebsiteAttributes" method="execute">

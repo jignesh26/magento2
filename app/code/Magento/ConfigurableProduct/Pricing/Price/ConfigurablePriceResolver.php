@@ -19,13 +19,13 @@ class ConfigurablePriceResolver implements PriceResolverInterface
 
     /**
      * @var PriceCurrencyInterface
-     * @deprecated 100.1.1
+     * @deprecated 100.0.2
      */
     protected $priceCurrency;
 
     /**
      * @var Configurable
-     * @deprecated 100.1.1
+     * @deprecated 100.0.2
      */
     protected $configurable;
 
@@ -44,7 +44,7 @@ class ConfigurablePriceResolver implements PriceResolverInterface
         PriceResolverInterface $priceResolver,
         Configurable $configurable,
         PriceCurrencyInterface $priceCurrency,
-        LowestPriceOptionsProviderInterface $lowestPriceOptionsProvider = null
+        ?LowestPriceOptionsProviderInterface $lowestPriceOptionsProvider = null
     ) {
         $this->priceResolver = $priceResolver;
         $this->configurable = $configurable;

@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\CatalogSearch\Model\Indexer;
 
@@ -10,6 +10,8 @@ namespace Magento\CatalogSearch\Model\Indexer;
  *
  * @api
  * @since 100.2.0
+ * @deprecated mysql search engine has been removed
+ * @see \Magento\Elasticsearch
  */
 interface IndexSwitcherInterface
 {

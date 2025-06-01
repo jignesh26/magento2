@@ -11,9 +11,12 @@ use Magento\Customer\Api\Data\AddressInterface;
 use Magento\Customer\Api\Data\AddressInterfaceFactory;
 use Magento\Customer\Api\Data\RegionInterface;
 use Magento\Customer\Api\Data\RegionInterfaceFactory;
+use Magento\Customer\Model\Address\AbstractAddress\CountryModelsCache;
+use Magento\Customer\Model\Address\AbstractAddress\RegionModelsCache;
 use Magento\Customer\Model\Data\Address as AddressData;
 use Magento\Framework\App\ObjectManager;
 use Magento\Framework\Model\AbstractExtensibleModel;
+use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
 
 /**
  * Address abstract model
@@ -31,18 +34,20 @@ use Magento\Framework\Model\AbstractExtensibleModel;
  * @method string getPostcode()
  * @method bool getShouldIgnoreValidation()
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @SuppressWarnings(PHPMD.TooManyFields)
  *
  * @api
  * @since 100.0.2
  */
-class AbstractAddress extends AbstractExtensibleModel implements AddressModelInterface
+class AbstractAddress extends AbstractExtensibleModel implements AddressModelInterface, ResetAfterRequestInterface
 {
     /**
      * Possible customer address types
      */
-    const TYPE_BILLING = 'billing';
+    public const TYPE_BILLING = 'billing';
 
-    const TYPE_SHIPPING = 'shipping';
+    public const TYPE_SHIPPING = 'shipping';
 
     /**
      * Prefix of model events
@@ -62,19 +67,33 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
      * Directory country models
      *
      * @var \Magento\Directory\Model\Country[]
+     * @deprecated
+     * @see $countryModelsCache
      */
     protected static $_countryModels = [];
+
+    /**
+     * @var CountryModelsCache
+     * phpcs:disable Magento2.Commenting.ClassPropertyPHPDocFormatting
+     */
+    private readonly CountryModelsCache $countryModelsCache;
 
     /**
      * Directory region models
      *
      * @var \Magento\Directory\Model\Region[]
+     * @deprecated
+     * @see $regionModelsCache
      */
     protected static $_regionModels = [];
 
     /**
-     * Directory data
-     *
+     * @var RegionModelsCache
+     * phpcs:disable Magento2.Commenting.ClassPropertyPHPDocFormatting
+     */
+    private readonly RegionModelsCache $regionModelsCache;
+
+    /**
      * @var \Magento\Directory\Helper\Data
      */
     protected $_directoryData = null;
@@ -123,6 +142,11 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
     private $compositeValidator;
 
     /**
+     * @var array
+     */
+    private array $regionIdCountry = [];
+
+    /**
      * @param \Magento\Framework\Model\Context $context
      * @param \Magento\Framework\Registry $registry
      * @param \Magento\Framework\Api\ExtensionAttributesFactory $extensionFactory
@@ -140,6 +164,8 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
      * @param \Magento\Framework\Data\Collection\AbstractDb $resourceCollection
      * @param array $data
      * @param CompositeValidator $compositeValidator
+     * @param CountryModelsCache|null $countryModelsCache
+     * @param RegionModelsCache|null $regionModelsCache
      *
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
@@ -157,10 +183,12 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
         AddressInterfaceFactory $addressDataFactory,
         RegionInterfaceFactory $regionDataFactory,
         \Magento\Framework\Api\DataObjectHelper $dataObjectHelper,
-        \Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
-        \Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
+        ?\Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
+        ?\Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
         array $data = [],
-        CompositeValidator $compositeValidator = null
+        ?CompositeValidator $compositeValidator = null,
+        ?CountryModelsCache $countryModelsCache = null,
+        ?RegionModelsCache $regionModelsCache = null,
     ) {
         $this->_directoryData = $directoryData;
         $data = $this->_implodeArrayField($data);
@@ -174,6 +202,10 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
         $this->dataObjectHelper = $dataObjectHelper;
         $this->compositeValidator = $compositeValidator ?: ObjectManager::getInstance()
             ->get(CompositeValidator::class);
+        $this->countryModelsCache = $countryModelsCache ?: ObjectManager::getInstance()
+            ->get(CountryModelsCache::class);
+        $this->regionModelsCache = $regionModelsCache ?: ObjectManager::getInstance()
+            ->get(RegionModelsCache::class);
         parent::__construct(
             $context,
             $registry,
@@ -194,7 +226,7 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
     {
         $name = '';
         if ($this->_eavConfig->getAttribute('customer_address', 'prefix')->getIsVisible() && $this->getPrefix()) {
-            $name .= $this->getPrefix() . ' ';
+            $name .= __($this->getPrefix()) . ' ';
         }
         $name .= $this->getFirstname();
         $middleName = $this->_eavConfig->getAttribute('customer_address', 'middlename');
@@ -203,7 +235,7 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
         }
         $name .= ' ' . $this->getLastname();
         if ($this->_eavConfig->getAttribute('customer_address', 'suffix')->getIsVisible() && $this->getSuffix()) {
-            $name .= ' ' . $this->getSuffix();
+            $name .= ' ' . __($this->getSuffix());
         }
         return $name;
     }
@@ -222,7 +254,7 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
     }
 
     /**
-     * Get steet line by number
+     * Get street line by number
      *
      * @param int $number
      * @return string
@@ -230,7 +262,7 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
     public function getStreetLine($number)
     {
         $lines = $this->getStreet();
-        return isset($lines[$number - 1]) ? $lines[$number - 1] : '';
+        return $lines[$number - 1] ?? '';
     }
 
     /**
@@ -241,7 +273,7 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
     public function getStreetFull()
     {
         $street = $this->getData('street');
-        return is_array($street) ? implode("\n", $street) : $street;
+        return is_array($street) ? implode("\n", $street) : ($street ?? '');
     }
 
     /**
@@ -271,8 +303,9 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
      * Enforce format of the street field or other multiline custom attributes
      *
      * @param array|string $key
-     * @param mixed $value
-     * @return $this
+     * @param array|string|null $value
+     *
+     * @return \Magento\Framework\DataObject
      */
     public function setData($key, $value = null)
     {
@@ -280,7 +313,13 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
             $key = $this->_implodeArrayField($key);
         } elseif (is_array($value) && $this->isAddressMultilineAttribute($key)) {
             $value = $this->_implodeArrayValues($value);
+        } elseif (self::CUSTOM_ATTRIBUTES === $key && is_array($value)) {
+            $value = $this->filterCustomAttributes([self::CUSTOM_ATTRIBUTES => $value])[self::CUSTOM_ATTRIBUTES];
+            foreach ($value as $attribute) {
+                $this->processCustomAttribute($attribute);
+            }
         }
+
         return parent::setData($key, $value);
     }
 
@@ -324,10 +363,11 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
                 return '';
             }
 
-            $isScalar = false;
+            $isScalar = true;
             foreach ($value as $val) {
-                if (is_scalar($val)) {
-                    $isScalar = true;
+                if ($val !== null && !is_scalar($val)) {
+                    $isScalar = false;
+                    break;
                 }
             }
             if ($isScalar) {
@@ -374,6 +414,8 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
             }
         } elseif (is_string($region)) {
             $this->setData('region', $region);
+        } elseif (!$regionId && is_array($region)) {
+            $this->setData('region', $regionId);
         }
 
         return $this->getData('region');
@@ -390,7 +432,13 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
         $region = $this->getData('region');
 
         if (!$regionId && is_numeric($region)) {
-            if ($this->getRegionModel($region)->getCountryId() == $this->getCountryId()) {
+            $regionId = $this->getRegionIdByCode(
+                (string)$region,
+                (string)$this->getCountryId()
+            );
+            if ($regionId) {
+                $this->setData('region_code', $region);
+            } elseif ($this->getRegionModel($region)->getCountryId() == $this->getCountryId()) {
                 $this->setData('region_code', $this->getRegionModel($region)->getCode());
             }
         } elseif ($regionId) {
@@ -404,27 +452,63 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
     }
 
     /**
-     * Get region id
+     * Return Region ID
      *
      * @return int
      */
     public function getRegionId()
     {
         $regionId = $this->getData('region_id');
+        if ($regionId) {
+            return $regionId;
+        }
+
         $region = $this->getData('region');
-        if (!$regionId) {
-            if (is_numeric($region)) {
-                $this->setData('region_id', $region);
+        if (is_numeric($region)) {
+            $regionId = $this->getRegionIdByCode(
+                (string)$region,
+                (string)$this->getCountryId()
+            );
+            if ($regionId) {
+                $this->setData('region_id', $regionId);
                 $this->unsRegion();
             } else {
-                $regionModel = $this->_createRegionInstance()->loadByCode(
-                    $this->getRegionCode(),
-                    $this->getCountryId()
-                );
-                $this->setData('region_id', $regionModel->getId());
+                $this->setData('region_id', $region);
             }
+        } else {
+            $regionId = $this->getRegionIdByCode(
+                (string)$this->getRegionCode(),
+                (string)$this->getCountryId()
+            );
+            if (empty($regionId)) {
+                $regionId = $this->getData('region_id');
+            }
+            $this->setData('region_id', $regionId);
         }
-        return $this->getData('region_id');
+
+        return $regionId;
+    }
+
+    /**
+     * Returns region id.
+     *
+     * @param string $regionCode
+     * @param string $countryId
+     * @return int|null
+     */
+    private function getRegionIdByCode(string $regionCode, string $countryId): ?int
+    {
+        $key = $countryId . '_' . $regionCode;
+        if (!array_key_exists($key, $this->regionIdCountry)) {
+            $regionModel = $this->_createRegionInstance()->loadByCode(
+                $regionCode,
+                $countryId
+            );
+
+            $this->regionIdCountry[$key] = $regionModel->getId() ? (int)$regionModel->getId() : null;
+        }
+
+        return $this->regionIdCountry[$key];
     }
 
     /**
@@ -445,13 +529,12 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
      */
     public function getCountryModel()
     {
-        if (!isset(self::$_countryModels[$this->getCountryId()])) {
+        if (!($country = $this->countryModelsCache->get($this->getCountryId()))) {
             $country = $this->_createCountryInstance();
             $country->load($this->getCountryId());
-            self::$_countryModels[$this->getCountryId()] = $country;
+            $this->countryModelsCache->add($this->getCountryId(), $country);
         }
-
-        return self::$_countryModels[$this->getCountryId()];
+        return $country;
     }
 
     /**
@@ -465,14 +548,12 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
         if ($regionId === null) {
             $regionId = $this->getRegionId();
         }
-
-        if (!isset(self::$_regionModels[$regionId])) {
+        if (!($region = $this->regionModelsCache->get($regionId))) {
             $region = $this->_createRegionInstance();
             $region->load($regionId);
-            self::$_regionModels[$regionId] = $region;
+            $this->regionModelsCache->add($regionId, $region);
         }
-
-        return self::$_regionModels[$regionId];
+        return $region;
     }
 
     /**
@@ -507,7 +588,7 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
     }
 
     /**
-     * Before save handler
+     * Processing object before save data
      *
      * @return $this
      */
@@ -523,10 +604,12 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
      *
      * @param int|null $defaultBillingAddressId
      * @param int|null $defaultShippingAddressId
+     *
      * @return AddressInterface
      * Use Api/Data/AddressInterface as a result of service operations. Don't rely on the model to provide
      * the instance of Api/Data/AddressInterface
      * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function getDataModel($defaultBillingAddressId = null, $defaultShippingAddressId = null)
     {
@@ -621,7 +704,7 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
      * Unset Region from address
      *
      * @return $this
-     * @since 100.2.0
+     * @since 101.0.0
      */
     public function unsRegion()
     {
@@ -632,7 +715,8 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
      * Is company required
      *
      * @return bool
-     * @since 100.2.0
+     * @throws \Magento\Framework\Exception\LocalizedException
+     * @since 101.0.0
      */
     protected function isCompanyRequired()
     {
@@ -643,7 +727,8 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
      * Is telephone required
      *
      * @return bool
-     * @since 100.2.0
+     * @throws \Magento\Framework\Exception\LocalizedException
+     * @since 101.0.0
      */
     protected function isTelephoneRequired()
     {
@@ -654,10 +739,33 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
      * Is fax required
      *
      * @return bool
-     * @since 100.2.0
+     * @throws \Magento\Framework\Exception\LocalizedException
+     * @since 101.0.0
      */
     protected function isFaxRequired()
     {
         return ($this->_eavConfig->getAttribute('customer_address', 'fax')->getIsRequired());
+    }
+
+    /**
+     * Normalize custom attribute value
+     *
+     * @param \Magento\Framework\Api\AttributeInterface $attribute
+     * @return void
+     */
+    private function processCustomAttribute(\Magento\Framework\Api\AttributeInterface $attribute): void
+    {
+        if (is_array($attribute->getValue()) && $this->isAddressMultilineAttribute($attribute->getAttributeCode())) {
+            $attribute->setValue($this->_implodeArrayValues($attribute->getValue()));
+        }
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function _resetState(): void
+    {
+        self::$_countryModels  = [];
+        self::$_regionModels = [];
     }
 }

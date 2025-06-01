@@ -15,7 +15,7 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
      */
     private $_collection;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->_collection = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(
             \Magento\Reports\Model\ResourceModel\Report\Product\Viewed\Collection::class
@@ -27,6 +27,7 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
 
     /**
      * @magentoDataFixture Magento/Reports/_files/viewed_products.php
+     * @magentoConfigFixture default/reports/options/enabled 1
      */
     public function testGetItems()
     {
@@ -71,20 +72,20 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
             $this->assertArrayHasKey('tableName', $from[$dbTableName]);
         } else {
             $union = $this->_collection->getSelect()->getPart('union');
+            $count = count($union);
             if ($period !== null && $dateFrom !== null && $dateTo !== null && $period != 'month') {
-                $count = count($union);
                 if ($period == 'year') {
                     if ($dbTableName == "report_viewed_product_aggregated_daily") {
-                        $this->assertEquals($count, 2);
+                        $this->assertEquals(2, $count);
                     }
                     if ($dbTableName == "report_viewed_product_aggregated_yearly") {
-                        $this->assertEquals($count, 3);
+                        $this->assertEquals(3, $count);
                     }
                 } else {
-                    $this->assertEquals($count, 3);
+                    $this->assertEquals(3, $count);
                 }
             } else {
-                $this->assertEquals(count($union), 2);
+                $this->assertEquals(2, $count);
             }
         }
     }
@@ -95,119 +96,119 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
      * @return array
      * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
-    public function tableForPeriodDataProvider()
+    public static function tableForPeriodDataProvider()
     {
-        $dateNow = date('Y-m-d', time());
-        $dateYearAgo = date('Y-m-d', strtotime($dateNow . ' -1 year'));
+        $dateFrom = '2019-10-15';
+        $dateYearBefore = date('Y-m-d', strtotime($dateFrom . ' -1 year'));
         return [
             [
                 'period'    => 'year',
-                'table'     => 'report_viewed_product_aggregated_yearly',
-                'date_from' => null,
-                'date_to'   => null,
-                'is_total'  => true,
+                'expectedTable'     => 'report_viewed_product_aggregated_yearly',
+                'dateFrom' => null,
+                'dateTo'   => null,
+                'isTotal'  => true,
             ],
             [
                 'period'    => 'year',
-                'table'     => 'report_viewed_product_aggregated_yearly',
-                'date_from' => $dateYearAgo,
-                'date_to'   => $dateNow,
+                'expectedTable'     => 'report_viewed_product_aggregated_yearly',
+                'dateFrom' => $dateYearBefore,
+                'dateTo'   => $dateFrom,
             ],
             [
                 'period'    => 'year',
-                'table'     => 'report_viewed_product_aggregated_yearly',
-                'date_from' => $dateYearAgo,
-                'date_to'   => null,
+                'expectedTable'     => 'report_viewed_product_aggregated_yearly',
+                'dateFrom' => $dateYearBefore,
+                'dateTo'   => null,
             ],
             [
                 'period'    => 'month',
-                'table'     => 'report_viewed_product_aggregated_monthly',
-                'date_from' => null,
-                'date_to'   => $dateNow,
+                'expectedTable'     => 'report_viewed_product_aggregated_monthly',
+                'dateFrom' => null,
+                'dateTo'   => $dateFrom,
             ],
             [
                 'period'    => 'year',
-                'table'     => 'report_viewed_product_aggregated_yearly',
-                'date_from' => $dateYearAgo,
-                'date_to'   => null,
+                'expectedTable'     => 'report_viewed_product_aggregated_yearly',
+                'dateFrom' => $dateYearBefore,
+                'dateTo'   => null,
             ],
             [
                 'period'    => 'year',
-                'table'     => 'report_viewed_product_aggregated_yearly',
-                'date_from' => null,
-                'date_to'   => $dateNow,
+                'expectedTable'     => 'report_viewed_product_aggregated_yearly',
+                'dateFrom' => null,
+                'dateTo'   => $dateFrom,
             ],
             [
                 'period'    => 'month',
-                'table'     => 'report_viewed_product_aggregated_monthly',
-                'date_from' => null,
-                'date_to'   => null,
+                'expectedTable'     => 'report_viewed_product_aggregated_monthly',
+                'dateFrom' => null,
+                'dateTo'   => null,
             ],
             [
                 'period'    => 'month',
-                'table'     => 'report_viewed_product_aggregated_monthly',
-                'date_from' => $dateYearAgo,
-                'date_to'   => $dateYearAgo,
+                'expectedTable'     => 'report_viewed_product_aggregated_monthly',
+                'dateFrom' => $dateYearBefore,
+                'dateTo'   => $dateYearBefore,
             ],
             [
                 'period'    => 'month',
-                'table'     => 'report_viewed_product_aggregated_monthly',
-                'date_from' => null,
-                'date_to'   => $dateYearAgo,
+                'expectedTable'     => 'report_viewed_product_aggregated_monthly',
+                'dateFrom' => null,
+                'dateTo'   => $dateYearBefore,
             ],
             [
                 'period'    => 'month',
-                'table'     => 'report_viewed_product_aggregated_monthly',
-                'date_from' => $dateYearAgo,
-                'date_to'   => null,
+                'expectedTable'     => 'report_viewed_product_aggregated_monthly',
+                'dateFrom' => $dateYearBefore,
+                'dateTo'   => null,
             ],
             [
                 'period'    => 'day',
-                'table'     => 'report_viewed_product_aggregated_daily',
-                'date_from' => null,
-                'date_to'   => null,
+                'expectedTable'     => 'report_viewed_product_aggregated_daily',
+                'dateFrom' => null,
+                'dateTo'   => null,
             ],
             [
                 'period'    => 'undefinedPeriod',
-                'table'     => 'report_viewed_product_aggregated_daily',
-                'date_from' => null,
-                'date_to'   => null,
+                'expectedTable'     => 'report_viewed_product_aggregated_daily',
+                'dateFrom' => null,
+                'dateTo'   => null,
             ],
             [
                 'period'    => null,
-                'table'     => 'report_viewed_product_aggregated_daily',
-                'date_from' => $dateYearAgo,
-                'date_to'   => $dateNow,
+                'expectedTable'     => 'report_viewed_product_aggregated_daily',
+                'dateFrom' => $dateYearBefore,
+                'dateTo'   => $dateFrom,
             ],
             [
                 'period'    => null,
-                'table'     => 'report_viewed_product_aggregated_daily',
-                'date_from' => $dateNow,
-                'date_to'   => $dateNow,
+                'expectedTable'     => 'report_viewed_product_aggregated_daily',
+                'dateFrom' => $dateFrom,
+                'dateTo'   => $dateFrom,
             ],
             [
                 'period'    => 'day',
-                'table'     => 'report_viewed_product_aggregated_daily',
-                'date_from' => $dateYearAgo,
-                'date_to'   => $dateYearAgo,
+                'expectedTable'     => 'report_viewed_product_aggregated_daily',
+                'dateFrom' => $dateYearBefore,
+                'dateTo'   => $dateYearBefore,
             ],
             [
                 'period'    => 'year',
-                'table'     => 'report_viewed_product_aggregated_daily',
-                'date_from' => $dateYearAgo,
-                'date_to'   => $dateYearAgo,
+                'expectedTable'     => 'report_viewed_product_aggregated_daily',
+                'dateFrom' => $dateYearBefore,
+                'dateTo'   => $dateYearBefore,
             ],
             [
                 'period'    => 'year',
-                'table'     => 'report_viewed_product_aggregated_daily',
-                'date_from' => null,
-                'date_to'   => $dateYearAgo,
+                'expectedTable'     => 'report_viewed_product_aggregated_daily',
+                'dateFrom' => null,
+                'dateTo'   => $dateYearBefore,
             ],
             [
                 'period'    => null,
-                'table'     => 'report_viewed_product_aggregated_yearly',
-                'date_from' => null,
-                'date_to'   => null,
+                'expectedTable'     => 'report_viewed_product_aggregated_yearly',
+                'dateFrom' => null,
+                'dateTo'   => null,
             ]
         ];
     }

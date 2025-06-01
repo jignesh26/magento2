@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 
 /**
@@ -45,7 +45,7 @@ class Tierprice extends \Magento\Catalog\Model\Product\Attribute\Backend\GroupPr
         \Magento\Catalog\Model\Product\Type $catalogProductType,
         \Magento\Customer\Api\GroupManagementInterface $groupManagement,
         \Magento\Catalog\Model\ResourceModel\Product\Attribute\Backend\Tierprice $productAttributeTierprice,
-        ScopeOverriddenValue $scopeOverriddenValue = null
+        ?ScopeOverriddenValue $scopeOverriddenValue = null
     ) {
         $this->_productAttributeBackendTierprice = $productAttributeTierprice;
         parent::__construct(
@@ -165,19 +165,6 @@ class Tierprice extends \Magento\Catalog\Model\Product\Attribute\Backend\GroupPr
         /** @var \Magento\Catalog\Model\Product $object */
         $data = parent::modifyPriceData($object, $data);
         $price = $object->getPrice();
-
-        $specialPrice = $object->getSpecialPrice();
-        $specialPriceFromDate = $object->getSpecialFromDate();
-        $specialPriceToDate = $object->getSpecialToDate();
-        $today = time();
-
-        if ($specialPrice && ($object->getPrice() > $object->getFinalPrice())) {
-            if ($today >= strtotime($specialPriceFromDate) && $today <= strtotime($specialPriceToDate) ||
-                $today >= strtotime($specialPriceFromDate) && $specialPriceToDate === null) {
-                $price = $specialPrice;
-            }
-        }
-
         foreach ($data as $key => $tierPrice) {
             $percentageValue = $this->getPercentage($tierPrice);
             if ($percentageValue) {

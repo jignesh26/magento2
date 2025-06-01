@@ -13,6 +13,8 @@ use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldT
 
 /**
  * Integer type resolver.
+ * @deprecated Elasticsearch is no longer supported by Adobe
+ * @see this class will be responsible for ES only
  */
 class IntegerType implements ResolverInterface
 {
@@ -37,9 +39,7 @@ class IntegerType implements ResolverInterface
      */
     public function getFieldType(AttributeAdapter $attribute): ?string
     {
-        if (($attribute->isIntegerType() || $attribute->isBooleanType())
-                && !$attribute->isUserDefined()
-        ) {
+        if ($attribute->isIntegerType() || $attribute->isBooleanType()) {
             return $this->fieldTypeConverter->convert(ConverterInterface::INTERNAL_DATA_TYPE_INT);
         }
 

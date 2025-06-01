@@ -1,15 +1,16 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\CatalogSearch\Model\Indexer\Scope;
 
-use Magento\Framework\Search\Request\Dimension;
-
 /**
  * Implementation of IndexScopeResolverInterface which resolves index scope dynamically depending on current scope state
+ *
+ * @deprecated mysql search engine has been removed
+ * @see \Magento\Elasticsearch
  */
 class ScopeProxy implements \Magento\Framework\Search\Request\IndexScopeResolverInterface
 {

@@ -52,6 +52,9 @@ interface CartManagementInterface
      * @param int $customerId The customer ID.
      * @param int $storeId
      * @return boolean
+     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws \Magento\Framework\Exception\StateException
+     * @throws \Magento\Framework\Exception\NoSuchEntityException
      */
     public function assignCustomer($cartId, $customerId, $storeId);
 
@@ -63,5 +66,5 @@ interface CartManagementInterface
      * @throws \Magento\Framework\Exception\CouldNotSaveException
      * @return int Order ID.
      */
-    public function placeOrder($cartId, PaymentInterface $paymentMethod = null);
+    public function placeOrder($cartId, ?PaymentInterface $paymentMethod = null);
 }

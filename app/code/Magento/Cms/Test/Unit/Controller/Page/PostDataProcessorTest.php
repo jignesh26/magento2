@@ -1,34 +1,34 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Cms\Test\Unit\Controller\Page;
 
 use Magento\Cms\Controller\Adminhtml\Page\PostDataProcessor;
-use Magento\Framework\Stdlib\DateTime\Filter\Date;
 use Magento\Framework\Message\ManagerInterface;
+use Magento\Framework\Stdlib\DateTime\Filter\Date;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
 use Magento\Framework\View\Model\Layout\Update\ValidatorFactory;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-/**
- * Class PostDataProcessorTest
- * @package Magento\Cms\Test\Unit\Controller\Page
- */
-class PostDataProcessorTest extends \PHPUnit\Framework\TestCase
+class PostDataProcessorTest extends TestCase
 {
     /**
-     * @var Date|\PHPUnit_Framework_MockObject_MockObject
+     * @var Date|MockObject
      */
     protected $dateFilterMock;
 
     /**
-     * @var ManagerInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ManagerInterface|MockObject
      */
     protected $messageManagerMock;
 
     /**
-     * @var ValidatorFactory|\PHPUnit_Framework_MockObject_MockObject
+     * @var ValidatorFactory|MockObject
      */
     protected $validatorFactoryMock;
 
@@ -37,7 +37,7 @@ class PostDataProcessorTest extends \PHPUnit\Framework\TestCase
      */
     protected $postDataProcessor;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->dateFilterMock = $this->getMockBuilder(Date::class)
             ->disableOriginalConstructor()
@@ -46,7 +46,7 @@ class PostDataProcessorTest extends \PHPUnit\Framework\TestCase
             ->getMockForAbstractClass();
         $this->validatorFactoryMock = $this->getMockBuilder(ValidatorFactory::class)
             ->disableOriginalConstructor()
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->getMock();
 
         $this->postDataProcessor = (new ObjectManager($this))->getObject(

@@ -1,7 +1,7 @@
 <!--
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 -->
 <form id="co-shipping-method-form" data-bind="blockLoader: isLoading, visible: isVisible()">
@@ -24,12 +24,13 @@
                                 checked: $parents[1].selectedShippingMethod,
                                 attr: {
                                         value: carrier_code + '_' + method_code,
-                                        id: 's_method_' + carrier_code + '_' + method_code
+                                        id: 's_method_' + carrier_code + '_' + method_code,
+                                        disabled: false
                                         }
                                 "/>
                     <label class="label" data-bind="attr: {for: 's_method_' + carrier_code + '_' + method_code}">
                         <!-- ko text: $data.method_title --><!-- /ko -->
-                        <each args="element.getRegion('price')" render="" />
+                        <each args="element.getRegion('price')" render=""></each>
                     </label>
                     <!-- /ko -->
                 </div>

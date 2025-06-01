@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\CatalogInventory\Model;
 
@@ -14,9 +14,12 @@ use Magento\CatalogInventory\Model\ResourceModel\QtyCounterInterface;
 use Magento\CatalogInventory\Model\Spi\StockRegistryProviderInterface;
 use Magento\Catalog\Api\ProductRepositoryInterface;
 use Magento\CatalogInventory\Model\ResourceModel\Stock as ResourceStock;
+use Magento\Framework\Exception\LocalizedException;
 
 /**
  * Implements a few interfaces for backward compatibility
+ *
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class StockManagement implements StockManagementInterface, RegisterProductSaleInterface, RevertProductSaleInterface
 {
@@ -71,7 +74,7 @@ class StockManagement implements StockManagementInterface, RegisterProductSaleIn
         StockConfigurationInterface $stockConfiguration,
         ProductRepositoryInterface $productRepository,
         QtyCounterInterface $qtyCounter,
-        StockRegistryStorage $stockRegistryStorage = null
+        ?StockRegistryStorage $stockRegistryStorage = null
     ) {
         $this->stockRegistryProvider = $stockRegistryProvider;
         $this->stockState = $stockState;
@@ -85,12 +88,14 @@ class StockManagement implements StockManagementInterface, RegisterProductSaleIn
 
     /**
      * Subtract product qtys from stock.
+     *
      * Return array of items that require full save.
      *
      * @param string[] $items
      * @param int $websiteId
      * @return StockItemInterface[]
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws StockStateException
+     * @throws LocalizedException
      * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function registerProductsSale($items, $websiteId = null)
@@ -117,8 +122,8 @@ class StockManagement implements StockManagementInterface, RegisterProductSaleIn
                 && !$this->stockState->checkQty($productId, $orderedQty, $stockItem->getWebsiteId())
             ) {
                 $this->getResource()->commit();
-                throw new \Magento\Framework\Exception\LocalizedException(
-                    __('Not all of your products are available in the requested quantity.')
+                throw new StockStateException(
+                    __('Some of the products are out of stock.')
                 );
             }
             if ($this->canSubtractQty($stockItem)) {
@@ -136,22 +141,30 @@ class StockManagement implements StockManagementInterface, RegisterProductSaleIn
         }
         $this->qtyCounter->correctItemsQty($registeredItems, $websiteId, '-');
         $this->getResource()->commit();
-        
+
         return $fullSaveItems;
     }
 
     /**
-     * @param string[] $items
-     * @param int $websiteId
-     * @return bool
+     * @inheritdoc
      */
     public function revertProductsSale($items, $websiteId = null)
     {
         //if (!$websiteId) {
         $websiteId = $this->stockConfiguration->getDefaultScopeId();
         //}
-        $this->qtyCounter->correctItemsQty($items, $websiteId, '+');
-        return true;
+        $revertItems = [];
+        foreach ($items as $productId => $qty) {
+            $stockItem = $this->stockRegistryProvider->getStockItem($productId, $websiteId);
+            $canSubtractQty = $stockItem->getItemId() && $this->canSubtractQty($stockItem);
+            if (!$canSubtractQty || !$this->stockConfiguration->isQty($stockItem->getTypeId())) {
+                continue;
+            }
+            $revertItems[$productId] = $qty;
+        }
+        $this->qtyCounter->correctItemsQty($revertItems, $websiteId, '+');
+
+        return $revertItems;
     }
 
     /**
@@ -195,6 +208,8 @@ class StockManagement implements StockManagementInterface, RegisterProductSaleIn
     }
 
     /**
+     * Get stock resource.
+     *
      * @return ResourceStock
      */
     protected function getResource()

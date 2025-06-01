@@ -12,6 +12,8 @@ use Magento\Framework\Api\CustomAttributesDataInterface;
 /**
  * Dummy class for Not EAV attribute.
  * @SuppressWarnings(PHPMD)
+ * @deprecated Elasticsearch is no longer supported by Adobe
+ * @see this class will be responsible for ES only
  */
 class DummyAttribute implements CustomAttributesDataInterface
 {
@@ -58,5 +60,25 @@ class DummyAttribute implements CustomAttributesDataInterface
     public function setCustomAttributes(array $attributes)
     {
         return $this;
+    }
+
+    /**
+     * Get property value that guarantee of using an attribute in sort purposes on the storefront.
+     *
+     * @return bool
+     */
+    public function getUsedForSortBy()
+    {
+        return false;
+    }
+
+    /**
+     * Dummy attribute doesn't have backend type.
+     *
+     * @return null
+     */
+    public function getBackendType()
+    {
+        return null;
     }
 }

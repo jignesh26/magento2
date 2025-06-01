@@ -30,7 +30,7 @@ class DiConfigFilesTest extends \PHPUnit\Framework\TestCase
      */
     protected static $_moduleAreaFiles = [];
 
-    protected function _prepareFiles()
+    protected static function _prepareFiles()
     {
         //init primary configs
         $objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
@@ -85,10 +85,10 @@ class DiConfigFilesTest extends \PHPUnit\Framework\TestCase
         }
     }
 
-    public function linearFilesProvider()
+    public static function linearFilesProvider()
     {
         if (empty(self::$_primaryFiles)) {
-            $this->_prepareFiles();
+            self::_prepareFiles();
         }
 
         $common = array_merge(self::$_primaryFiles->toArray(), self::$_moduleGlobalFiles->toArray());
@@ -113,14 +113,14 @@ class DiConfigFilesTest extends \PHPUnit\Framework\TestCase
     {
         $mapperMock = $this->createMock(\Magento\Framework\ObjectManager\Config\Mapper\Dom::class);
         $fileResolverMock = $this->getMockBuilder(\Magento\Framework\Config\FileResolverInterface::class)
-            ->setMethods(['read'])
+            ->addMethods(['read'])
             ->getMockForAbstractClass();
-        $fileResolverMock->expects($this->any())->method('read')->will($this->returnValue($files));
+        $fileResolverMock->expects($this->any())->method('read')->willReturn($files);
         $validationStateMock = $this->createPartialMock(
             \Magento\Framework\Config\ValidationStateInterface::class,
             ['isValidationRequired']
         );
-        $validationStateMock->expects($this->any())->method('isValidationRequired')->will($this->returnValue(true));
+        $validationStateMock->expects($this->any())->method('isValidationRequired')->willReturn(true);
 
         /** @var \Magento\Framework\ObjectManager\Config\SchemaLocator $schemaLocator */
         $schemaLocator = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->get(
@@ -135,10 +135,10 @@ class DiConfigFilesTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function mixedFilesProvider()
+    public static function mixedFilesProvider()
     {
         if (empty(self::$_primaryFiles)) {
-            $this->_prepareFiles();
+            self::_prepareFiles();
         }
         foreach (self::$_primaryFiles->toArray() as $file) {
             $primaryFiles[] = [[$file]];

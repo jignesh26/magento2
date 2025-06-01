@@ -4,23 +4,27 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Paypal\Test\Unit\Observer;
 
+use Magento\Framework\AuthorizationInterface;
 use Magento\Framework\DataObject;
+use Magento\Framework\Event\Observer;
+use Magento\Paypal\Model\Payment\Method\Billing\AbstractAgreement;
+use Magento\Paypal\Observer\RestrictAdminBillingAgreementUsageObserver;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-/**
- * Class RestrictAdminBillingAgreementUsageObserverTest
- */
-class RestrictAdminBillingAgreementUsageObserverTest extends \PHPUnit\Framework\TestCase
+class RestrictAdminBillingAgreementUsageObserverTest extends TestCase
 {
     /**
-     * @var \Magento\Paypal\Observer\RestrictAdminBillingAgreementUsageObserver
+     * @var RestrictAdminBillingAgreementUsageObserver
      */
     protected $_model;
 
     /**
-     * @var \Magento\Framework\Event\Observer
+     * @var Observer
      */
     protected $_observer;
 
@@ -30,32 +34,32 @@ class RestrictAdminBillingAgreementUsageObserverTest extends \PHPUnit\Framework\
     protected $_event;
 
     /**
-     * @var \Magento\Framework\AuthorizationInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var AuthorizationInterface|MockObject
      */
     protected $_authorization;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->_event = new DataObject();
 
-        $this->_observer = new \Magento\Framework\Event\Observer();
+        $this->_observer = new Observer();
         $this->_observer->setEvent($this->_event);
 
-        $this->_authorization = $this->getMockForAbstractClass(\Magento\Framework\AuthorizationInterface::class);
+        $this->_authorization = $this->getMockForAbstractClass(AuthorizationInterface::class);
 
-        $this->_model = new \Magento\Paypal\Observer\RestrictAdminBillingAgreementUsageObserver($this->_authorization);
+        $this->_model = new RestrictAdminBillingAgreementUsageObserver($this->_authorization);
     }
 
     /**
      * @return array
      */
-    public function restrictAdminBillingAgreementUsageDataProvider()
+    public static function restrictAdminBillingAgreementUsageDataProvider()
     {
         return [
             [new \stdClass(), false, true],
             [
-                $this->getMockForAbstractClass(
-                    \Magento\Paypal\Model\Payment\Method\Billing\AbstractAgreement::class,
+                static fn (self $testCase) => $testCase->getMockForAbstractClass(
+                    AbstractAgreement::class,
                     [],
                     '',
                     false
@@ -64,8 +68,8 @@ class RestrictAdminBillingAgreementUsageObserverTest extends \PHPUnit\Framework\
                 true
             ],
             [
-                $this->getMockForAbstractClass(
-                    \Magento\Paypal\Model\Payment\Method\Billing\AbstractAgreement::class,
+                static fn (self $testCase) => $testCase->getMockForAbstractClass(
+                    AbstractAgreement::class,
                     [],
                     '',
                     false
@@ -84,6 +88,9 @@ class RestrictAdminBillingAgreementUsageObserverTest extends \PHPUnit\Framework\
      */
     public function testExecute($methodInstance, $isAllowed, $isAvailable)
     {
+        if (is_callable($methodInstance)) {
+            $methodInstance = $methodInstance($this);
+        }
         $this->_event->setMethodInstance($methodInstance);
         $this->_authorization->expects(
             $this->any()
@@ -91,8 +98,8 @@ class RestrictAdminBillingAgreementUsageObserverTest extends \PHPUnit\Framework\
             'isAllowed'
         )->with(
             'Magento_Paypal::use'
-        )->will(
-            $this->returnValue($isAllowed)
+        )->willReturn(
+            $isAllowed
         );
         $result = new DataObject();
         $result->setData('is_available', true);

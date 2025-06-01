@@ -1,20 +1,25 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Backend\Test\Unit\Model\Widget\Grid;
 
-class ParserTest extends \PHPUnit\Framework\TestCase
+use Magento\Backend\Model\Widget\Grid\Parser;
+use PHPUnit\Framework\TestCase;
+
+class ParserTest extends TestCase
 {
     /**
-     * @var \Magento\Backend\Model\Widget\Grid\Parser
+     * @var Parser
      */
     protected $_model;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->_model = new \Magento\Backend\Model\Widget\Grid\Parser();
+        $this->_model = new Parser();
     }
 
     /**
@@ -30,7 +35,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function parseExpressionDataProvider()
+    public static function parseExpressionDataProvider()
     {
         return [
             ['1-2', ['1', '2', '-']],
@@ -61,7 +66,7 @@ class ParserTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isOperationDataProvider()
+    public static function isOperationDataProvider()
     {
         return [
             ['+', true],

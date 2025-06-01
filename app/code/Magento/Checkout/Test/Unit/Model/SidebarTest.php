@@ -1,32 +1,40 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\Checkout\Test\Unit\Model;
 
+use Magento\Checkout\Helper\Data;
+use Magento\Checkout\Model\Cart;
 use Magento\Checkout\Model\Sidebar;
+use Magento\Framework\Locale\ResolverInterface;
+use Magento\Quote\Api\Data\CartItemInterface;
+use Magento\Quote\Model\Quote;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class SidebarTest extends \PHPUnit\Framework\TestCase
+class SidebarTest extends TestCase
 {
     /** @var Sidebar */
     protected $sidebar;
 
-    /** @var \Magento\Checkout\Model\Cart|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Cart|MockObject */
     protected $cartMock;
 
-    /** @var \Magento\Checkout\Helper\Data|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Data|MockObject */
     protected $checkoutHelperMock;
 
-    /** @var \Magento\Framework\Locale\ResolverInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ResolverInterface|MockObject */
     protected $resolverMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->cartMock = $this->createMock(\Magento\Checkout\Model\Cart::class);
-        $this->checkoutHelperMock = $this->createMock(\Magento\Checkout\Helper\Data::class);
-        $this->resolverMock = $this->createMock(\Magento\Framework\Locale\ResolverInterface::class);
+        $this->cartMock = $this->createMock(Cart::class);
+        $this->checkoutHelperMock = $this->createMock(Data::class);
+        $this->resolverMock = $this->getMockForAbstractClass(ResolverInterface::class);
 
         $this->sidebar = new Sidebar(
             $this->cartMock,
@@ -49,7 +57,7 @@ class SidebarTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function dataProviderGetResponseData()
+    public static function dataProviderGetResponseData()
     {
         return [
             [
@@ -78,10 +86,10 @@ class SidebarTest extends \PHPUnit\Framework\TestCase
     {
         $itemId = 1;
 
-        $itemMock = $this->getMockBuilder(\Magento\Quote\Api\Data\CartItemInterface::class)
+        $itemMock = $this->getMockBuilder(CartItemInterface::class)
             ->getMock();
 
-        $quoteMock = $this->getMockBuilder(\Magento\Quote\Model\Quote::class)
+        $quoteMock = $this->getMockBuilder(Quote::class)
             ->disableOriginalConstructor()
             ->getMock();
         $quoteMock->expects($this->once())
@@ -96,15 +104,13 @@ class SidebarTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($this->sidebar, $this->sidebar->checkQuoteItem($itemId));
     }
 
-    /**
-     * @expectedException \Magento\Framework\Exception\LocalizedException
-     * @expectedExceptionMessage The quote item isn't found. Verify the item and try again.
-     */
     public function testCheckQuoteItemWithException()
     {
+        $this->expectException('Magento\Framework\Exception\LocalizedException');
+        $this->expectExceptionMessage('The quote item isn\'t found. Verify the item and try again.');
         $itemId = 2;
 
-        $quoteMock = $this->getMockBuilder(\Magento\Quote\Model\Quote::class)
+        $quoteMock = $this->getMockBuilder(Quote::class)
             ->disableOriginalConstructor()
             ->getMock();
         $quoteMock->expects($this->once())
@@ -134,19 +140,29 @@ class SidebarTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($this->sidebar, $this->sidebar->removeQuoteItem($itemId));
     }
 
-    public function testUpdateQuoteItem()
-    {
-        $itemId = 1;
-        $itemQty = 2;
-
+    /**
+     * @param string $locale
+     * @param int|string $itemId
+     * @param int|string|float $expectedItemQty
+     * @param int|string|float $itemQty
+     *
+     * @dataProvider dataProviderUpdateQuoteItem
+     */
+    public function testUpdateQuoteItem(
+        string $locale,
+        int|string $itemId,
+        int|string|float $expectedItemQty,
+        int|string|float $itemQty
+    ) {
         $this->resolverMock->expects($this->once())
             ->method('getLocale')
-            ->willReturn('en');
+            ->willReturn($locale);
 
         $this->cartMock->expects($this->once())
             ->method('updateItems')
-            ->with([$itemId => ['qty' => $itemQty]])
+            ->with([$itemId => ['qty' => $expectedItemQty]])
             ->willReturnSelf();
+
         $this->cartMock->expects($this->once())
             ->method('save')
             ->willReturnSelf();
@@ -171,5 +187,19 @@ class SidebarTest extends \PHPUnit\Framework\TestCase
             ->willReturnSelf();
 
         $this->assertEquals($this->sidebar, $this->sidebar->updateQuoteItem($itemId, $itemQty));
+    }
+
+    /**
+     * @return array
+     */
+    public static function dataProviderUpdateQuoteItem(): array
+    {
+        return [
+            //locale, itemId, expectedItemQty, ItemQty
+            [ 'en_US', 1, 2, 2],
+            [ 'en_US', 1, 0.5, 0.5],
+            [ 'en_US', 1,"0.5","0.5"],
+            [ 'nl_NL', 1,"0.5","0,5"]
+        ];
     }
 }

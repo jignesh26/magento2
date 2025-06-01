@@ -1,9 +1,8 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 
-/*global alert*/
 define([
     'jquery',
     'ko',
@@ -22,6 +21,7 @@ define([
             imageHeight: captchaData.imageHeight,
             refreshUrl: captchaData.refreshUrl,
             isLoading: ko.observable(false),
+            timestamp: null,
 
             /**
              * @return {String}

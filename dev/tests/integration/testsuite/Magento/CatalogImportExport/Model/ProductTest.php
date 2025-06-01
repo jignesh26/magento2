@@ -13,7 +13,7 @@ class ProductTest extends AbstractProductExportImportTestCase
     /**
      * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
-    public function exportImportDataProvider()
+    public static function exportImportDataProvider(): array
     {
         return [
             'product_export_data' => [
@@ -136,11 +136,6 @@ class ProductTest extends AbstractProductExportImportTestCase
         ];
     }
 
-    public function importReplaceDataProvider()
-    {
-        return $this->exportImportDataProvider();
-    }
-
     /**
      * Fixing https://github.com/magento-engcom/import-export-improvements/issues/50 means that during import images
      * can now get renamed for this we need to skip the attribute checking and instead check that the images contain
@@ -150,22 +145,24 @@ class ProductTest extends AbstractProductExportImportTestCase
      * @param \Magento\Catalog\Model\Product $expectedProduct
      * @param \Magento\Catalog\Model\Product $actualProduct
      */
-    protected function assertEqualsSpecificAttributes($expectedProduct, $actualProduct)
-    {
+    protected function assertEqualsSpecificAttributes(
+        \Magento\Catalog\Model\Product $expectedProduct,
+        \Magento\Catalog\Model\Product $actualProduct
+    ): void {
         if (!empty($actualProduct->getImage())
             && !empty($expectedProduct->getImage())
         ) {
-            $this->assertContains('magento_image', $actualProduct->getImage());
+            $this->assertStringContainsString('magento_image', $actualProduct->getImage());
         }
         if (!empty($actualProduct->getSmallImage())
             && !empty($expectedProduct->getSmallImage())
         ) {
-            $this->assertContains('magento_image', $actualProduct->getSmallImage());
+            $this->assertStringContainsString('magento_image', $actualProduct->getSmallImage());
         }
         if (!empty($actualProduct->getThumbnail())
             && !empty($expectedProduct->getThumbnail())
         ) {
-            $this->assertContains('magento_image', $actualProduct->getThumbnail());
+            $this->assertStringContainsString('magento_image', $actualProduct->getThumbnail());
         }
     }
 }

@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 
 /**
@@ -17,6 +17,7 @@ define([
     'mage/translate',
     'uiRegistry',
     'Magento_Checkout/js/model/shipping-address/form-popup-state',
+    'Magento_Checkout/js/model/shipping-service',
     'Magento_Checkout/js/model/quote'
 ], function (
     $,
@@ -28,7 +29,8 @@ define([
     defaultValidator,
     $t,
     uiRegistry,
-    formPopUpState
+    formPopUpState,
+    shippingService
 ) {
     'use strict';
 
@@ -42,6 +44,7 @@ define([
 
     return {
         validateAddressTimeout: 0,
+        validateZipCodeTimeout: 0,
         validateDelay: 2000,
 
         /**
@@ -81,6 +84,11 @@ define([
             $.each(elements, function (index, field) {
                 uiRegistry.async(formPath + '.' + field)(self.doElementBinding.bind(self));
             });
+            let regionId = uiRegistry.async(formPath + '.region_id');
+
+            if (regionId() !== undefined) {
+                this.bindHandler(regionId(), self.validateDelay);
+            }
         },
 
         /**
@@ -133,16 +141,22 @@ define([
                 });
             } else {
                 element.on('value', function () {
+                    clearTimeout(self.validateZipCodeTimeout);
+                    self.validateZipCodeTimeout = setTimeout(function () {
+                        if (element.index === postcodeElementName) {
+                            self.postcodeValidation(element);
+                        } else {
+                            $.each(postcodeElements, function (index, elem) {
+                                self.postcodeValidation(elem);
+                            });
+                        }
+                    }, delay);
+
                     if (!formPopUpState.isVisible()) {
+                        // Prevent shipping methods showing none available whilst we resolve
+                        shippingService.isLoading(true);
                         clearTimeout(self.validateAddressTimeout);
                         self.validateAddressTimeout = setTimeout(function () {
-                            if (element.index === postcodeElementName) {
-                                self.postcodeValidation(element);
-                            } else {
-                                $.each(postcodeElements, function (index, elem) {
-                                    self.postcodeValidation(elem);
-                                });
-                            }
                             self.validateFields();
                         }, delay);
                     }
@@ -184,8 +198,8 @@ define([
          */
         validateFields: function () {
             var addressFlat = addressConverter.formDataProviderToFlatData(
-                this.collectObservedData(),
-                'shippingAddress'
+                    this.collectObservedData(),
+                    'shippingAddress'
                 ),
                 address;
 
@@ -193,6 +207,8 @@ define([
                 addressFlat = uiRegistry.get('checkoutProvider').shippingAddress;
                 address = addressConverter.formAddressDataToQuoteAddress(addressFlat);
                 selectShippingAddress(address);
+            } else {
+                shippingService.isLoading(false);
             }
         },
 

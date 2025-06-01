@@ -24,9 +24,9 @@ class Address extends AbstractModel implements OrderAddressInterface, AddressMod
     /**
      * Possible customer address types
      */
-    const TYPE_BILLING = 'billing';
+    public const TYPE_BILLING = 'billing';
 
-    const TYPE_SHIPPING = 'shipping';
+    public const TYPE_SHIPPING = 'shipping';
 
     /**
      * @var \Magento\Sales\Model\Order
@@ -71,8 +71,8 @@ class Address extends AbstractModel implements OrderAddressInterface, AddressMod
         \Magento\Framework\Api\AttributeValueFactory $customAttributeFactory,
         \Magento\Sales\Model\OrderFactory $orderFactory,
         \Magento\Directory\Model\RegionFactory $regionFactory,
-        \Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
-        \Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
+        ?\Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
+        ?\Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
         array $data = []
     ) {
         $data = $this->implodeStreetField($data);
@@ -142,7 +142,7 @@ class Address extends AbstractModel implements OrderAddressInterface, AddressMod
     {
         $name = '';
         if ($this->getPrefix()) {
-            $name .= $this->getPrefix() . ' ';
+            $name .= __($this->getPrefix()) . ' ';
         }
         $name .= $this->getFirstname();
         if ($this->getMiddlename()) {
@@ -150,7 +150,7 @@ class Address extends AbstractModel implements OrderAddressInterface, AddressMod
         }
         $name .= ' ' . $this->getLastname();
         if ($this->getSuffix()) {
-            $name .= ' ' . $this->getSuffix();
+            $name .= ' ' . __($this->getSuffix());
         }
         return $name;
     }
@@ -174,7 +174,8 @@ class Address extends AbstractModel implements OrderAddressInterface, AddressMod
      *
      * @param array|string $key
      * @param array|string $value
-     * @return $this
+     *
+     * @return \Magento\Framework\DataObject
      */
     public function setData($key, $value = null)
     {
@@ -239,7 +240,7 @@ class Address extends AbstractModel implements OrderAddressInterface, AddressMod
         if (is_array($this->getData(OrderAddressInterface::STREET))) {
             return $this->getData(OrderAddressInterface::STREET);
         }
-        return explode(PHP_EOL, $this->getData(OrderAddressInterface::STREET));
+        return explode(PHP_EOL, $this->getData(OrderAddressInterface::STREET) ?? '');
     }
 
     /**
@@ -251,7 +252,7 @@ class Address extends AbstractModel implements OrderAddressInterface, AddressMod
     public function getStreetLine($number)
     {
         $lines = $this->getStreet();
-        return isset($lines[$number - 1]) ? $lines[$number - 1] : '';
+        return $lines[$number - 1] ?? '';
     }
 
     //@codeCoverageIgnoreStart
@@ -600,7 +601,7 @@ class Address extends AbstractModel implements OrderAddressInterface, AddressMod
      */
     public function setTelephone($telephone)
     {
-        return $this->setData(OrderAddressInterface::TELEPHONE, $telephone);
+        return $this->setData(OrderAddressInterface::TELEPHONE, trim($telephone ?: ''));
     }
 
     /**
@@ -721,11 +722,24 @@ class Address extends AbstractModel implements OrderAddressInterface, AddressMod
      * @inheritdoc
      *
      * @param \Magento\Sales\Api\Data\OrderAddressExtensionInterface $extensionAttributes
+     *
      * @return $this
      */
     public function setExtensionAttributes(\Magento\Sales\Api\Data\OrderAddressExtensionInterface $extensionAttributes)
     {
         return $this->_setExtensionAttributes($extensionAttributes);
+    }
+
+    /**
+     * @inheritdoc
+     * @since 102.0.3
+     */
+    public function beforeSave()
+    {
+        if ($this->getEmail() === null) {
+            $this->setEmail($this->getOrder()->getCustomerEmail());
+        }
+        return parent::beforeSave();
     }
 
     //@codeCoverageIgnoreEnd

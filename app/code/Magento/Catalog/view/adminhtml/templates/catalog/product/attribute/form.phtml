@@ -1,10 +1,8 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
-
-// @codingStandardsIgnoreFile
 
 ?>
 <?php
@@ -12,8 +10,8 @@
  * @var $block \Magento\Backend\Block\Widget\Form\Container
  */
 ?>
-<?= /* @escapeNotVerified */ $block->getFormInitScripts() ?>
-<div data-mage-init='{"floatingHeader": {}}' class="page-actions attribute-popup-actions" <?= /* @escapeNotVerified */ $block->getUiId('content-header') ?>>
+<?= /* @noEscape */ $block->getFormInitScripts() ?>
+<div data-mage-init='{"floatingHeader": {}}' class="page-actions attribute-popup-actions" <?= /* @noEscape */ $block->getUiId('content-header') ?>>
     <?= $block->getButtonsHtml('header') ?>
 </div>
 
@@ -25,9 +23,9 @@
     {
         "#edit_form": {
             "Magento_Catalog/catalog/product/edit/attribute": {
-                "validationUrl": "<?= /* @escapeNotVerified */ $block->getValidationUrl() ?>"
+                "validationUrl": "<?= $block->escapeJs($block->escapeUrl($block->getValidationUrl())) ?>"
             }
         }
     }
 </script>
-<?= /* @escapeNotVerified */ $block->getFormScripts() ?>
+<?= /* @noEscape */ $block->getFormScripts() ?>

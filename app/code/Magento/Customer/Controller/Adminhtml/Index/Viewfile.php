@@ -3,6 +3,8 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Customer\Controller\Adminhtml\Index;
 
 use Magento\Customer\Api\AccountManagementInterface;
@@ -12,12 +14,17 @@ use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Customer\Api\Data\AddressInterfaceFactory;
 use Magento\Customer\Api\Data\CustomerInterfaceFactory;
 use Magento\Customer\Model\Address\Mapper;
+use Magento\Framework\App\ResponseInterface;
+use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Exception\NotFoundException;
 use Magento\Framework\App\Filesystem\DirectoryList;
 use Magento\Framework\DataObjectFactory;
 
 /**
+ * Class Viewfile serves to show file or image by file/image name provided in request parameters.
+ *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @SuppressWarnings(PHPMD.AllPurposeAction)
  */
 class Viewfile extends \Magento\Customer\Controller\Adminhtml\Index
 {
@@ -125,10 +132,8 @@ class Viewfile extends \Magento\Customer\Controller\Adminhtml\Index
     /**
      * Customer view file action
      *
-     * @return \Magento\Framework\Controller\ResultInterface|void
+     * @return ResultInterface|ResponseInterface|void
      * @throws NotFoundException
-     *
-     * @SuppressWarnings(PHPMD.ExitExpression)
      */
     public function execute()
     {
@@ -146,6 +151,7 @@ class Viewfile extends \Magento\Customer\Controller\Adminhtml\Index
         }
 
         if ($plain) {
+            // phpcs:ignore Magento2.Functions.DiscouragedFunction
             $extension = pathinfo($path, PATHINFO_EXTENSION);
             switch (strtolower($extension)) {
                 case 'gif':
@@ -175,8 +181,9 @@ class Viewfile extends \Magento\Customer\Controller\Adminhtml\Index
             $resultRaw->setContents($directory->readFile($fileName));
             return $resultRaw;
         } else {
+            // phpcs:ignore Magento2.Functions.DiscouragedFunction
             $name = pathinfo($path, PATHINFO_BASENAME);
-            $this->_fileFactory->create(
+            return $this->_fileFactory->create(
                 $name,
                 ['type' => 'filename', 'value' => $fileName],
                 DirectoryList::MEDIA
@@ -192,17 +199,16 @@ class Viewfile extends \Magento\Customer\Controller\Adminhtml\Index
      */
     private function getFileParams()
     {
-        $file = null;
         $plain = false;
-        if ($this->getRequest()->getParam('file')) {
+        if ($this->getRequest()->getParam('file', '')) {
             // download file
             $file = $this->urlDecoder->decode(
-                $this->getRequest()->getParam('file')
+                $this->getRequest()->getParam('file', '')
             );
-        } elseif ($this->getRequest()->getParam('image')) {
+        } elseif ($this->getRequest()->getParam('image', '')) {
             // show plain image
             $file = $this->urlDecoder->decode(
-                $this->getRequest()->getParam('image')
+                $this->getRequest()->getParam('image', '')
             );
             $plain = true;
         } else {

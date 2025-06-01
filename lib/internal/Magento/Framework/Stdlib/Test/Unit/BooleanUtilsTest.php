@@ -3,18 +3,21 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Stdlib\Test\Unit;
 
-use \Magento\Framework\Stdlib\BooleanUtils;
+use Magento\Framework\Stdlib\BooleanUtils;
+use PHPUnit\Framework\TestCase;
 
-class BooleanUtilsTest extends \PHPUnit\Framework\TestCase
+class BooleanUtilsTest extends TestCase
 {
     /**
      * @var BooleanUtils
      */
     protected $object;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->object = new BooleanUtils();
     }
@@ -41,7 +44,7 @@ class BooleanUtilsTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function toBooleanDataProvider()
+    public static function toBooleanDataProvider()
     {
         return [
             'boolean "true"' => [true, true],
@@ -59,18 +62,18 @@ class BooleanUtilsTest extends \PHPUnit\Framework\TestCase
      * @param mixed $input
      *
      * @dataProvider toBooleanExceptionDataProvider
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Boolean value is expected
      */
     public function testToBooleanException($input)
     {
+        $this->expectException('InvalidArgumentException');
+        $this->expectExceptionMessage('Boolean value is expected');
         $this->object->toBoolean($input);
     }
 
     /**
      * @return array
      */
-    public function toBooleanExceptionDataProvider()
+    public static function toBooleanExceptionDataProvider()
     {
         return [
             'boolean string "on"' => ['on'],

@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Model\Product\Website;
 
@@ -9,6 +9,9 @@ use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\Catalog\Model\ResourceModel\Product\Website\Link as ProductWebsiteLink;
 use Magento\Framework\EntityManager\Operation\ExtensionInterface;
 
+/**
+ * Add websites ids to product extension attributes.
+ */
 class ReadHandler implements ExtensionInterface
 {
     /**
@@ -18,7 +21,7 @@ class ReadHandler implements ExtensionInterface
 
     /**
      * ReadHandler constructor.
-     * @param ProductWebsiteLink $resourceModel
+     * @param ProductWebsiteLink $productWebsiteLink
      */
     public function __construct(
         ProductWebsiteLink $productWebsiteLink
@@ -27,6 +30,8 @@ class ReadHandler implements ExtensionInterface
     }
 
     /**
+     * Add website ids to product extension attributes, if no set.
+     *
      * @param ProductInterface $product
      * @param array $arguments
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)

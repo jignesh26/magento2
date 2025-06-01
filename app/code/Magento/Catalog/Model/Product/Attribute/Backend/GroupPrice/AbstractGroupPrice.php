@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Catalog\Model\Product\Attribute\Backend\GroupPrice;
@@ -10,13 +10,14 @@ use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\Catalog\Model\Attribute\ScopeOverriddenValue;
 use Magento\Catalog\Model\Product\Attribute\Backend\Price;
 use Magento\Customer\Api\GroupManagementInterface;
+use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
 
 /**
  * Catalog product abstract group price backend attribute model
  *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-abstract class AbstractGroupPrice extends Price
+abstract class AbstractGroupPrice extends Price implements ResetAfterRequestInterface
 {
     /**
      * @var \Magento\Framework\EntityManager\MetadataPool
@@ -26,7 +27,7 @@ abstract class AbstractGroupPrice extends Price
     /**
      * Website currency codes and rates
      *
-     * @var array
+     * @var array|null
      */
     protected $_rates;
 
@@ -39,8 +40,6 @@ abstract class AbstractGroupPrice extends Price
     abstract protected function _getDuplicateErrorMessage();
 
     /**
-     * Catalog product type
-     *
      * @var \Magento\Catalog\Model\Product\Type
      */
     protected $_catalogProductType;
@@ -68,7 +67,7 @@ abstract class AbstractGroupPrice extends Price
         \Magento\Framework\Locale\FormatInterface $localeFormat,
         \Magento\Catalog\Model\Product\Type $catalogProductType,
         GroupManagementInterface $groupManagement,
-        ScopeOverriddenValue $scopeOverriddenValue = null
+        ?ScopeOverriddenValue $scopeOverriddenValue = null
     ) {
         $this->_catalogProductType = $catalogProductType;
         $this->_groupManagement = $groupManagement;
@@ -80,6 +79,14 @@ abstract class AbstractGroupPrice extends Price
             $localeFormat,
             $scopeOverriddenValue
         );
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function _resetState() : void
+    {
+        $this->_rates = null;
     }
 
     /**
@@ -97,17 +104,16 @@ abstract class AbstractGroupPrice extends Price
             );
             foreach ($this->_storeManager->getWebsites() as $website) {
                 /* @var $website \Magento\Store\Model\Website */
-                if ($website->getBaseCurrencyCode() != $baseCurrency) {
+                $websiteBaseCurrency = $website->getBaseCurrencyCode();
+                if ($websiteBaseCurrency !== $baseCurrency) {
                     $rate = $this->_currencyFactory->create()->load(
                         $baseCurrency
-                    )->getRate(
-                        $website->getBaseCurrencyCode()
-                    );
+                    )->getRate($websiteBaseCurrency);
                     if (!$rate) {
                         $rate = 1;
                     }
                     $this->_rates[$website->getId()] = [
-                        'code' => $website->getBaseCurrencyCode(),
+                        'code' => $websiteBaseCurrency,
                         'rate' => $rate,
                     ];
                 } else {
@@ -187,6 +193,7 @@ abstract class AbstractGroupPrice extends Price
             }
             $compare = implode(
                 '-',
+                // phpcs:ignore Magento2.Performance.ForeachArrayMerge
                 array_merge(
                     [$priceRow['website_id'], $priceRow['cust_group']],
                     $this->_getAdditionalUniqueFields($priceRow)
@@ -210,6 +217,7 @@ abstract class AbstractGroupPrice extends Price
                     if ($price['website_id'] == 0) {
                         $compare = implode(
                             '-',
+                            // phpcs:ignore Magento2.Performance.ForeachArrayMerge
                             array_merge(
                                 [$price['website_id'], $price['cust_group']],
                                 $this->_getAdditionalUniqueFields($price)
@@ -234,6 +242,7 @@ abstract class AbstractGroupPrice extends Price
 
             $globalCompare = implode(
                 '-',
+                // phpcs:ignore Magento2.Performance.ForeachArrayMerge
                 array_merge([0, $priceRow['cust_group']], $this->_getAdditionalUniqueFields($priceRow))
             );
             $websiteCurrency = $rates[$priceRow['website_id']]['code'];
@@ -279,6 +288,7 @@ abstract class AbstractGroupPrice extends Price
             if (!array_filter($v)) {
                 continue;
             }
+            // phpcs:ignore Magento2.Performance.ForeachArrayMerge
             $key = implode('-', array_merge([$v['cust_group']], $this->_getAdditionalUniqueFields($v)));
             if ($v['website_id'] == $websiteId) {
                 $data[$key] = $v;
@@ -286,7 +296,9 @@ abstract class AbstractGroupPrice extends Price
             } elseif ($v['website_id'] == 0 && !isset($data[$key])) {
                 $data[$key] = $v;
                 $data[$key]['website_id'] = $websiteId;
-                if ($this->_isPriceFixed($price)) {
+                if ($this->_isPriceFixed($price) &&
+                    $this->isPercentageValue($data[$key])
+                ) {
                     $data[$key]['price'] = $v['price'] * $rates[$websiteId]['rate'];
                     $data[$key]['website_price'] = $v['price'] * $rates[$websiteId]['rate'];
                 }
@@ -455,5 +467,16 @@ abstract class AbstractGroupPrice extends Price
                 ->get(\Magento\Framework\EntityManager\MetadataPool::class);
         }
         return $this->metadataPool;
+    }
+
+    /**
+     * Check if data consists of percentage value
+     *
+     * @param array $data
+     * @return bool
+     */
+    private function isPercentageValue(array $data): bool
+    {
+        return (array_key_exists('percentage_value', $data) && $data['percentage_value'] === null);
     }
 }

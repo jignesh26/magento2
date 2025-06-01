@@ -28,7 +28,7 @@ class RulePoolTest extends \PHPUnit\Framework\TestCase
      */
     protected $defaultParams;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $objectManager = Bootstrap::getObjectManager();
         /** @var \Magento\Theme\Model\Theme\Registration $registration */
@@ -50,18 +50,17 @@ class RulePoolTest extends \PHPUnit\Framework\TestCase
         ];
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         $this->model = null;
         $this->defaultParams = [];
     }
 
-    /**
-     * @expectedException \InvalidArgumentException
-     * @expectedException Fallback rule 'unsupported_type' is not supported
-     */
     public function testGetRuleUnsupportedType()
     {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Fallback rule \'unsupported_type\' is not supported');
+
         $this->model->getRule('unsupported_type');
     }
 
@@ -83,7 +82,7 @@ class RulePoolTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getPatternDirsExceptionDataProvider()
+    public static function getPatternDirsExceptionDataProvider()
     {
         $exceptions = [
             'no theme' => [
@@ -139,7 +138,7 @@ class RulePoolTest extends \PHPUnit\Framework\TestCase
      *
      * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
-    public function getPatternDirsDataProvider()
+    public static function getPatternDirsDataProvider()
     {
         $objectManager = Bootstrap::getObjectManager();
         /** @var \Magento\Framework\Component\ComponentRegistrarInterface $componentRegistrar */

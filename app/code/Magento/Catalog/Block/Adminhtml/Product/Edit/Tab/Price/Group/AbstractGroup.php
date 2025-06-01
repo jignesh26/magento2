@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Block\Adminhtml\Product\Edit\Tab\Price\Group;
 
@@ -212,7 +212,7 @@ abstract class AbstractGroup extends Widget implements RendererInterface
         }
 
         if ($groupId !== null) {
-            return isset($this->_customerGroups[$groupId]) ? $this->_customerGroups[$groupId] : [];
+            return $this->_customerGroups[$groupId] ?? [];
         }
 
         return $this->_customerGroups;

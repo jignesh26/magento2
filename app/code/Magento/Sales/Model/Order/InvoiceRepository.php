@@ -48,7 +48,7 @@ class InvoiceRepository implements InvoiceRepositoryInterface
     public function __construct(
         Metadata $invoiceMetadata,
         SearchResultFactory $searchResultFactory,
-        CollectionProcessorInterface $collectionProcessor = null
+        ?CollectionProcessorInterface $collectionProcessor = null
     ) {
         $this->metadata = $invoiceMetadata;
         $this->searchResultFactory = $searchResultFactory;
@@ -145,7 +145,7 @@ class InvoiceRepository implements InvoiceRepositoryInterface
     /**
      * Retrieve collection processor
      *
-     * @deprecated 100.2.0
+     * @deprecated 101.0.0
      * @return CollectionProcessorInterface
      */
     private function getCollectionProcessor()

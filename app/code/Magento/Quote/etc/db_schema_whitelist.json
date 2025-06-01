@@ -53,7 +53,8 @@
         },
         "index": {
             "QUOTE_CUSTOMER_ID_STORE_ID_IS_ACTIVE": true,
-            "QUOTE_STORE_ID": true
+            "QUOTE_STORE_ID": true,
+            "QUOTE_STORE_ID_UPDATED_AT": true
         },
         "constraint": {
             "PRIMARY": true,
@@ -121,7 +122,9 @@
             "vat_is_valid": true,
             "vat_request_id": true,
             "vat_request_date": true,
-            "vat_request_success": true
+            "vat_request_success": true,
+            "validated_country_code": true,
+            "validated_vat_number": true
         },
         "index": {
             "QUOTE_ADDRESS_QUOTE_ID": true
@@ -212,6 +215,7 @@
             "product_id": true,
             "super_product_id": true,
             "parent_product_id": true,
+            "store_id": true,
             "sku": true,
             "image": true,
             "name": true,
@@ -233,7 +237,8 @@
         "index": {
             "QUOTE_ADDRESS_ITEM_QUOTE_ADDRESS_ID": true,
             "QUOTE_ADDRESS_ITEM_PARENT_ITEM_ID": true,
-            "QUOTE_ADDRESS_ITEM_QUOTE_ITEM_ID": true
+            "QUOTE_ADDRESS_ITEM_QUOTE_ITEM_ID": true,
+            "QUOTE_ADDRESS_ITEM_STORE_ID": true
         },
         "constraint": {
             "PRIMARY": true,

@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\CatalogSearch\Model\Indexer;
 
@@ -9,6 +9,9 @@ use Magento\Framework\Indexer\IndexStructureInterface;
 
 /**
  * Catalog search index structure proxy.
+ *
+ * @deprecated mysql search engine has been removed
+ * @see \Magento\Elasticsearch
  */
 class IndexStructureProxy implements IndexStructureInterface
 {

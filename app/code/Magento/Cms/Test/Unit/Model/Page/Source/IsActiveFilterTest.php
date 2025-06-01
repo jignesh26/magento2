@@ -1,9 +1,13 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Cms\Test\Unit\Model\Page\Source;
+
+use Magento\Cms\Model\Page\Source\IsActiveFilter;
 
 class IsActiveFilterTest extends IsActiveTest
 {
@@ -12,13 +16,13 @@ class IsActiveFilterTest extends IsActiveTest
      */
     protected function getSourceClassName()
     {
-        return \Magento\Cms\Model\Page\Source\IsActiveFilter::class;
+        return IsActiveFilter::class;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getAvailableStatusesDataProvider()
+    public static function getAvailableStatusesDataProvider()
     {
         return [
             [

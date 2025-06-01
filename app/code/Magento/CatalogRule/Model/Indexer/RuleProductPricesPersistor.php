@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\CatalogRule\Model\Indexer;
@@ -45,7 +45,7 @@ class RuleProductPricesPersistor
         \Magento\Framework\Stdlib\DateTime $dateFormat,
         \Magento\Framework\App\ResourceConnection $resource,
         ActiveTableSwitcher $activeTableSwitcher,
-        TableSwapper $tableSwapper = null
+        ?TableSwapper $tableSwapper = null
     ) {
         $this->dateFormat = $dateFormat;
         $this->resource = $resource;
@@ -76,25 +76,19 @@ class RuleProductPricesPersistor
             );
         }
 
-        $productIds = [];
-
-        try {
-            foreach ($priceData as $key => $data) {
-                $productIds['product_id'] = $data['product_id'];
-                $priceData[$key]['rule_date'] = $this->dateFormat->formatDate($data['rule_date'], false);
-                $priceData[$key]['latest_start_date'] = $this->dateFormat->formatDate(
-                    $data['latest_start_date'],
-                    false
-                );
-                $priceData[$key]['earliest_end_date'] = $this->dateFormat->formatDate(
-                    $data['earliest_end_date'],
-                    false
-                );
-            }
-            $connection->insertOnDuplicate($indexTable, $priceData);
-        } catch (\Exception $e) {
-            throw $e;
+        foreach ($priceData as $key => $data) {
+            $priceData[$key]['rule_date'] = $this->dateFormat->formatDate($data['rule_date'], false);
+            $priceData[$key]['latest_start_date'] = $this->dateFormat->formatDate(
+                $data['latest_start_date'],
+                false
+            );
+            $priceData[$key]['earliest_end_date'] = $this->dateFormat->formatDate(
+                $data['earliest_end_date'],
+                false
+            );
         }
+        $connection->insertOnDuplicate($indexTable, $priceData);
+
         return true;
     }
 }

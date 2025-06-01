@@ -1,36 +1,55 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\Sales\Test\Unit\Model\Order\Shipment\Comment;
 
-/**
- * Class ValidatorTest
- */
-class ValidatorTest extends \PHPUnit\Framework\TestCase
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Sales\Model\Order\Shipment\Comment;
+use Magento\Sales\Model\Order\Shipment\Comment\Validator;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+use Magento\Sales\Helper\SalesEntityCommentValidator;
+
+class ValidatorTest extends TestCase
 {
     /**
-     * @var \Magento\Sales\Model\Order\Shipment\Comment\Validator
+     * @var Validator
      */
     protected $validator;
 
     /**
-     * @var \Magento\Sales\Model\Order\Shipment\Comment|\PHPUnit_Framework_MockObject_MockObject
+     * @var Comment|MockObject
      */
     protected $commentModelMock;
 
     /**
+     * @var SalesEntityCommentValidator|MockObject
+     */
+    private $salesEntityCommentValidator;
+
+    /**
      * Set up
      */
-    protected function setUp()
+    protected function setUp(): void
     {
+        $this->salesEntityCommentValidator = $this->getMockBuilder(SalesEntityCommentValidator::class)
+            ->disableOriginalConstructor()->getMock();
+
         $this->commentModelMock = $this->createPartialMock(
-            \Magento\Sales\Model\Order\Shipment\Comment::class,
-            ['hasData', 'getData', '__wakeup']
+            Comment::class,
+            ['hasData', 'getData']
         );
-        $this->validator = new \Magento\Sales\Model\Order\Shipment\Comment\Validator();
+        $objectManager = new ObjectManager($this);
+        $this->validator = $objectManager->getObject(
+            Validator::class,
+            [
+                'salesEntityCommentValidator' => $this->salesEntityCommentValidator
+            ]
+        );
     }
 
     /**
@@ -45,10 +64,10 @@ class ValidatorTest extends \PHPUnit\Framework\TestCase
     {
         $this->commentModelMock->expects($this->any())
             ->method('hasData')
-            ->will($this->returnValueMap($commentDataMap));
+            ->willReturnMap($commentDataMap);
         $this->commentModelMock->expects($this->once())
             ->method('getData')
-            ->will($this->returnValue($commentData));
+            ->willReturn($commentData);
         $actualWarnings = $this->validator->validate($this->commentModelMock);
         $this->assertEquals($expectedWarnings, $actualWarnings);
     }
@@ -58,7 +77,7 @@ class ValidatorTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function providerCommentData()
+    public static function providerCommentData()
     {
         return [
             [
@@ -70,7 +89,9 @@ class ValidatorTest extends \PHPUnit\Framework\TestCase
                     'parent_id' => 25,
                     'comment' => 'Hello world!'
                 ],
-                [],
+                [
+                    'comment' => 'User is not authorized to edit comment.'
+                ],
             ],
             [
                 [

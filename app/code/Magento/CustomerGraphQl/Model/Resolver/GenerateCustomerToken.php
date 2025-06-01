@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace Magento\CustomerGraphQl\Model\Resolver;
 
 use Magento\Framework\Exception\AuthenticationException;
+use Magento\Framework\Exception\EmailNotConfirmedException;
 use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Exception\GraphQlAuthenticationException;
 use Magento\Framework\GraphQl\Exception\GraphQlInputException;
@@ -41,22 +42,22 @@ class GenerateCustomerToken implements ResolverInterface
         Field $field,
         $context,
         ResolveInfo $info,
-        array $value = null,
-        array $args = null
+        ?array $value = null,
+        ?array $args = null
     ) {
-        if (!isset($args['email'])) {
+        if (empty($args['email'])) {
             throw new GraphQlInputException(__('Specify the "email" value.'));
         }
 
-        if (!isset($args['password'])) {
+        if (empty($args['password'])) {
             throw new GraphQlInputException(__('Specify the "password" value.'));
         }
 
         try {
             $token = $this->customerTokenService->createCustomerAccessToken($args['email'], $args['password']);
             return ['token' => $token];
-        } catch (AuthenticationException $e) {
-            throw new GraphQlAuthenticationException(__($e->getMessage()), $e);
+        } catch (EmailNotConfirmedException|AuthenticationException $e) {
+            throw new GraphQlAuthenticationException(__($e->getRawMessage()), $e);
         }
     }
 }

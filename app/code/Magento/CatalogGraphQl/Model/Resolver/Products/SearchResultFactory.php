@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 declare(strict_types=1);
 
@@ -30,15 +30,15 @@ class SearchResultFactory
     /**
      * Instantiate SearchResult
      *
-     * @param int $totalCount
-     * @param array $productsSearchResult
+     * @param array $data
      * @return SearchResult
      */
-    public function create(int $totalCount, array $productsSearchResult) : SearchResult
-    {
+    public function create(
+        array $data
+    ): SearchResult {
         return $this->objectManager->create(
             SearchResult::class,
-            ['totalCount' => $totalCount, 'productsSearchResult' => $productsSearchResult]
+            ['data' => $data]
         );
     }
 }

@@ -3,14 +3,18 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Setup\Test\Unit\Model\ConfigOptionsList;
 
-use Magento\Setup\Model\ConfigOptionsList\Session as SessionConfigOptionsList;
-use Magento\Framework\Setup\Option\TextConfigOption;
+use Magento\Framework\App\DeploymentConfig;
+use Magento\Framework\Config\Data\ConfigData;
 use Magento\Framework\Setup\Option\SelectConfigOption;
+use Magento\Framework\Setup\Option\TextConfigOption;
+use Magento\Setup\Model\ConfigOptionsList\Session as SessionConfigOptionsList;
+use PHPUnit\Framework\TestCase;
 
-class SessionTest extends \PHPUnit\Framework\TestCase
+class SessionTest extends TestCase
 {
     /**
      * @var \Magento\Setup\Model\ConfigOptionsList\Session
@@ -18,21 +22,21 @@ class SessionTest extends \PHPUnit\Framework\TestCase
     private $configList;
 
     /**
-     * @var \Magento\Framework\App\DeploymentConfig
+     * @var DeploymentConfig
      */
     private $deploymentConfigMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->configList = new SessionConfigOptionsList();
 
-        $this->deploymentConfigMock = $this->createMock(\Magento\Framework\App\DeploymentConfig::class);
+        $this->deploymentConfigMock = $this->createMock(DeploymentConfig::class);
     }
 
     public function testGetOptions()
     {
         $options = $this->configList->getOptions();
-        $this->assertCount(23, $options);
+        $this->assertCount(24, $options);
 
         $this->assertArrayHasKey(0, $options);
         $this->assertInstanceOf(SelectConfigOption::class, $options[0]);
@@ -56,65 +60,69 @@ class SessionTest extends \PHPUnit\Framework\TestCase
 
         $this->assertArrayHasKey(5, $options);
         $this->assertInstanceOf(TextConfigOption::class, $options[5]);
-        $this->assertEquals('session-save-redis-persistent-id', $options[5]->getName());
+        $this->assertEquals('session-save-redis-retries', $options[5]->getName());
 
         $this->assertArrayHasKey(6, $options);
         $this->assertInstanceOf(TextConfigOption::class, $options[6]);
-        $this->assertEquals('session-save-redis-db', $options[6]->getName());
+        $this->assertEquals('session-save-redis-persistent-id', $options[6]->getName());
 
         $this->assertArrayHasKey(7, $options);
         $this->assertInstanceOf(TextConfigOption::class, $options[7]);
-        $this->assertEquals('session-save-redis-compression-threshold', $options[7]->getName());
+        $this->assertEquals('session-save-redis-db', $options[7]->getName());
 
         $this->assertArrayHasKey(8, $options);
         $this->assertInstanceOf(TextConfigOption::class, $options[8]);
-        $this->assertEquals('session-save-redis-compression-lib', $options[8]->getName());
+        $this->assertEquals('session-save-redis-compression-threshold', $options[8]->getName());
 
         $this->assertArrayHasKey(9, $options);
         $this->assertInstanceOf(TextConfigOption::class, $options[9]);
-        $this->assertEquals('session-save-redis-log-level', $options[9]->getName());
+        $this->assertEquals('session-save-redis-compression-lib', $options[9]->getName());
 
         $this->assertArrayHasKey(10, $options);
         $this->assertInstanceOf(TextConfigOption::class, $options[10]);
-        $this->assertEquals('session-save-redis-max-concurrency', $options[10]->getName());
+        $this->assertEquals('session-save-redis-log-level', $options[10]->getName());
 
         $this->assertArrayHasKey(11, $options);
         $this->assertInstanceOf(TextConfigOption::class, $options[11]);
-        $this->assertEquals('session-save-redis-break-after-frontend', $options[11]->getName());
+        $this->assertEquals('session-save-redis-max-concurrency', $options[11]->getName());
 
         $this->assertArrayHasKey(12, $options);
         $this->assertInstanceOf(TextConfigOption::class, $options[12]);
-        $this->assertEquals('session-save-redis-break-after-adminhtml', $options[12]->getName());
+        $this->assertEquals('session-save-redis-break-after-frontend', $options[12]->getName());
 
         $this->assertArrayHasKey(13, $options);
         $this->assertInstanceOf(TextConfigOption::class, $options[13]);
-        $this->assertEquals('session-save-redis-first-lifetime', $options[13]->getName());
+        $this->assertEquals('session-save-redis-break-after-adminhtml', $options[13]->getName());
 
         $this->assertArrayHasKey(14, $options);
         $this->assertInstanceOf(TextConfigOption::class, $options[14]);
-        $this->assertEquals('session-save-redis-bot-first-lifetime', $options[14]->getName());
+        $this->assertEquals('session-save-redis-first-lifetime', $options[14]->getName());
 
         $this->assertArrayHasKey(15, $options);
         $this->assertInstanceOf(TextConfigOption::class, $options[15]);
-        $this->assertEquals('session-save-redis-bot-lifetime', $options[15]->getName());
+        $this->assertEquals('session-save-redis-bot-first-lifetime', $options[15]->getName());
 
         $this->assertArrayHasKey(16, $options);
         $this->assertInstanceOf(TextConfigOption::class, $options[16]);
-        $this->assertEquals('session-save-redis-disable-locking', $options[16]->getName());
+        $this->assertEquals('session-save-redis-bot-lifetime', $options[16]->getName());
 
         $this->assertArrayHasKey(17, $options);
         $this->assertInstanceOf(TextConfigOption::class, $options[17]);
-        $this->assertEquals('session-save-redis-min-lifetime', $options[17]->getName());
+        $this->assertEquals('session-save-redis-disable-locking', $options[17]->getName());
 
         $this->assertArrayHasKey(18, $options);
         $this->assertInstanceOf(TextConfigOption::class, $options[18]);
-        $this->assertEquals('session-save-redis-max-lifetime', $options[18]->getName());
+        $this->assertEquals('session-save-redis-min-lifetime', $options[18]->getName());
+
+        $this->assertArrayHasKey(19, $options);
+        $this->assertInstanceOf(TextConfigOption::class, $options[19]);
+        $this->assertEquals('session-save-redis-max-lifetime', $options[19]->getName());
     }
 
     public function testCreateConfig()
     {
         $configData = $this->configList->createConfig([], $this->deploymentConfigMock);
-        $this->assertInstanceOf(\Magento\Framework\Config\Data\ConfigData::class, $configData);
+        $this->assertInstanceOf(ConfigData::class, $configData);
     }
 
     public function testCreateConfigWithSessionSaveFiles()
@@ -143,6 +151,7 @@ class SessionTest extends \PHPUnit\Framework\TestCase
                     'port' => '',
                     'password' => '',
                     'timeout' => '',
+                    'retries' => '',
                     'persistent_identifier' => '',
                     'database' => '',
                     'compression_threshold' => '',
@@ -200,6 +209,7 @@ class SessionTest extends \PHPUnit\Framework\TestCase
                     'port' => '',
                     'password' => '',
                     'timeout' => '',
+                    'retries' => '',
                     'persistent_identifier' => '',
                     'database' => '',
                     'compression_threshold' => '',
@@ -273,7 +283,7 @@ class SessionTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function redisOptionProvider()
+    public static function redisOptionProvider()
     {
         return [
             ['session-save-redis-host', 'host', 'google'],
@@ -300,7 +310,7 @@ class SessionTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function invalidOptionsProvider()
+    public static function invalidOptionsProvider()
     {
         return [
             ['session-save', 'clay-tablet', 'Invalid session handler \'clay-tablet\''],

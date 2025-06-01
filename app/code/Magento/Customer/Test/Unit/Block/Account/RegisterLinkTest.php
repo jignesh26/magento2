@@ -3,23 +3,43 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Customer\Test\Unit\Block\Account;
 
+use Magento\Customer\Block\Account\RegisterLink;
 use Magento\Customer\Model\Context;
+use Magento\Customer\Model\Registration;
+use Magento\Customer\Model\Url;
+use Magento\Framework\Math\Random;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Framework\View\Helper\SecureHtmlRenderer;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Test class for \Magento\Customer\Block\Account\RegisterLink
  */
-class RegisterLinkTest extends \PHPUnit\Framework\TestCase
+class RegisterLinkTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\TestFramework\Unit\Helper\ObjectManager
+     * @var ObjectManager
      */
     protected $_objectManager;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->_objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $this->_objectManager = new ObjectManager($this);
+        $objects = [
+            [
+                SecureHtmlRenderer::class,
+                $this->createMock(SecureHtmlRenderer::class)
+            ],
+            [
+                Random::class,
+                $this->createMock(Random::class)
+            ]
+        ];
+        $this->_objectManager->prepareObjectManager($objects);
     }
 
     /**
@@ -35,24 +55,24 @@ class RegisterLinkTest extends \PHPUnit\Framework\TestCase
 
         $httpContext = $this->getMockBuilder(\Magento\Framework\App\Http\Context::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getValue'])
+            ->onlyMethods(['getValue'])
             ->getMock();
         $httpContext->expects($this->any())
             ->method('getValue')
             ->with(Context::CONTEXT_AUTH)
-            ->will($this->returnValue($isAuthenticated));
+            ->willReturn($isAuthenticated);
 
-        $registrationMock = $this->getMockBuilder(\Magento\Customer\Model\Registration::class)
+        $registrationMock = $this->getMockBuilder(Registration::class)
             ->disableOriginalConstructor()
-            ->setMethods(['isAllowed'])
+            ->onlyMethods(['isAllowed'])
             ->getMock();
         $registrationMock->expects($this->any())
             ->method('isAllowed')
-            ->will($this->returnValue($isRegistrationAllowed));
+            ->willReturn($isRegistrationAllowed);
 
-        /** @var \Magento\Customer\Block\Account\RegisterLink $link */
+        /** @var RegisterLink $link */
         $link = $this->_objectManager->getObject(
-            \Magento\Customer\Block\Account\RegisterLink::class,
+            RegisterLink::class,
             [
                 'context' => $context,
                 'httpContext' => $httpContext,
@@ -66,7 +86,7 @@ class RegisterLinkTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function dataProviderToHtml()
+    public static function dataProviderToHtml()
     {
         return [
             [true, true, true],
@@ -78,19 +98,20 @@ class RegisterLinkTest extends \PHPUnit\Framework\TestCase
 
     public function testGetHref()
     {
-        $this->_objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $this->_objectManager = new ObjectManager($this);
         $helper = $this->getMockBuilder(
-            \Magento\Customer\Model\Url::class
-        )->disableOriginalConstructor()->setMethods(
-            ['getRegisterUrl']
-        )->getMock();
+            Url::class
+        )->disableOriginalConstructor()
+            ->onlyMethods(
+                ['getRegisterUrl']
+            )->getMock();
 
-        $helper->expects($this->any())->method('getRegisterUrl')->will($this->returnValue('register url'));
+        $helper->expects($this->any())->method('getRegisterUrl')->willReturn('register url');
 
         $context = $this->_objectManager->getObject(\Magento\Framework\View\Element\Template\Context::class);
 
         $block = $this->_objectManager->getObject(
-            \Magento\Customer\Block\Account\RegisterLink::class,
+            RegisterLink::class,
             ['context' => $context, 'customerUrl' => $helper]
         );
         $this->assertEquals('register url', $block->getHref());

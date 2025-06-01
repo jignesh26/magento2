@@ -29,7 +29,7 @@ class DeclarativeInstallerTest extends SetupTestCase
     /**
      * @var CliCommand
      */
-    private $cliCommad;
+    private $cliCommand;
 
     /**
      * @var SchemaDiff
@@ -51,11 +51,14 @@ class DeclarativeInstallerTest extends SetupTestCase
      */
     private $describeTable;
 
-    public function setUp()
+    /**
+     * @inheritdoc
+     */
+    protected function setUp(): void
     {
         $objectManager = Bootstrap::getObjectManager();
         $this->moduleManager = $objectManager->get(TestModuleManager::class);
-        $this->cliCommad = $objectManager->get(CliCommand::class);
+        $this->cliCommand = $objectManager->get(CliCommand::class);
         $this->describeTable = $objectManager->get(DescribeTable::class);
         $this->schemaDiff = $objectManager->get(SchemaDiff::class);
         $this->schemaConfig = $objectManager->get(SchemaConfigInterface::class);
@@ -68,7 +71,7 @@ class DeclarativeInstallerTest extends SetupTestCase
      */
     public function testInstallation()
     {
-        $this->cliCommad->install(
+        $this->cliCommand->install(
             ['Magento_TestSetupDeclarationModule1']
         );
 
@@ -104,10 +107,11 @@ class DeclarativeInstallerTest extends SetupTestCase
     /**
      * @moduleName Magento_TestSetupDeclarationModule1
      * @dataProviderFromFile Magento/TestSetupDeclarationModule1/fixture/declarative_installer/column_modification.php
+     * @throws \Exception
      */
     public function testInstallationWithColumnsModification()
     {
-        $this->cliCommad->install(
+        $this->cliCommand->install(
             ['Magento_TestSetupDeclarationModule1']
         );
 
@@ -119,7 +123,7 @@ class DeclarativeInstallerTest extends SetupTestCase
             'etc'
         );
 
-        $this->cliCommad->install(
+        $this->cliCommand->install(
             ['Magento_TestSetupDeclarationModule1']
         );
 
@@ -157,14 +161,15 @@ class DeclarativeInstallerTest extends SetupTestCase
     /**
      * @moduleName Magento_TestSetupDeclarationModule1
      * @dataProviderFromFile Magento/TestSetupDeclarationModule1/fixture/declarative_installer/column_removal.php
+     * @throws \Exception
      */
     public function testInstallationWithColumnsRemoval()
     {
-        $this->cliCommad->install(
+        $this->cliCommand->install(
             ['Magento_TestSetupDeclarationModule1']
         );
         $this->updateDbSchemaRevision('column_removals');
-        $this->cliCommad->install(
+        $this->cliCommand->install(
             ['Magento_TestSetupDeclarationModule1']
         );
 
@@ -195,14 +200,15 @@ class DeclarativeInstallerTest extends SetupTestCase
     /**
      * @moduleName Magento_TestSetupDeclarationModule1
      * @dataProviderFromFile Magento/TestSetupDeclarationModule1/fixture/declarative_installer/constraint_modification.php
+     * @throws \Exception
      */
     public function testInstallationWithConstraintsModification()
     {
-        $this->cliCommad->install(
+        $this->cliCommand->install(
             ['Magento_TestSetupDeclarationModule1']
         );
         $this->updateDbSchemaRevision('constraint_modifications');
-        $this->cliCommad->upgrade();
+        $this->cliCommand->upgrade();
 
         $diff = $this->schemaDiff->diff(
             $this->schemaConfig->getDeclarationConfig(),
@@ -210,16 +216,17 @@ class DeclarativeInstallerTest extends SetupTestCase
         );
         self::assertNull($diff->getAll());
         $shardData = $this->describeTable->describeShard(Sharding::DEFAULT_CONNECTION);
-        self::assertEquals($this->getTrimmedData(), $shardData);
+        $this->assertTableCreationStatements($this->getTrimmedData(), $shardData);
     }
 
     /**
      * @moduleName Magento_TestSetupDeclarationModule1
      * @dataProviderFromFile Magento/TestSetupDeclarationModule1/fixture/declarative_installer/table_removal.php
+     * @throws \Exception
      */
     public function testInstallationWithDroppingTables()
     {
-        $this->cliCommad->install(
+        $this->cliCommand->install(
             ['Magento_TestSetupDeclarationModule1']
         );
 
@@ -231,7 +238,7 @@ class DeclarativeInstallerTest extends SetupTestCase
             'etc'
         );
 
-        $this->cliCommad->upgrade();
+        $this->cliCommand->upgrade();
 
         $diff = $this->schemaDiff->diff(
             $this->schemaConfig->getDeclarationConfig(),
@@ -239,12 +246,52 @@ class DeclarativeInstallerTest extends SetupTestCase
         );
         self::assertNull($diff->getAll());
         $shardData = $this->describeTable->describeShard(Sharding::DEFAULT_CONNECTION);
-        self::assertEquals($this->getData(), $shardData);
+        $this->assertTableCreationStatements($this->getData(), $shardData);
+    }
+
+    /**
+     * @moduleName Magento_TestSetupDeclarationModule1
+     * @moduleName Magento_TestSetupDeclarationModule3
+     */
+    public function testInstallationWithDroppingTablesFromSecondaryModule()
+    {
+        $modules = [
+            'Magento_TestSetupDeclarationModule1',
+            'Magento_TestSetupDeclarationModule3',
+        ];
+
+        $this->moduleManager->updateRevision(
+            'Magento_TestSetupDeclarationModule3',
+            'drop_table_with_external_dependency',
+            'db_schema.xml',
+            'etc'
+        );
+
+        foreach ($modules as $moduleName) {
+            $this->moduleManager->updateRevision(
+                $moduleName,
+                'without_setup_version',
+                'module.xml',
+                'etc'
+            );
+        }
+
+        try {
+            $this->cliCommand->install($modules);
+        } catch (\Exception $e) {
+            $installException = $e->getPrevious();
+            self::assertSame(1, $installException->getCode());
+            self::assertStringContainsString(
+                'The reference table named "reference_table" is disabled',
+                $installException->getMessage()
+            );
+        }
     }
 
     /**
      * @moduleName Magento_TestSetupDeclarationModule1
      * @dataProviderFromFile Magento/TestSetupDeclarationModule1/fixture/declarative_installer/rollback.php
+     * @throws \Exception
      */
     public function testInstallWithCodeBaseRollback()
     {
@@ -255,9 +302,13 @@ class DeclarativeInstallerTest extends SetupTestCase
             'db_schema.xml',
             'etc'
         );
-        $this->cliCommad->install(
+        $this->cliCommand->install(
             ['Magento_TestSetupDeclarationModule1']
         );
+
+        if ($this->isUsingAuroraDb()) {
+            $this->markTestSkipped('Test skipped in AWS Aurora');
+        }
         $beforeRollback = $this->describeTable->describeShard('default');
         self::assertEquals($this->getTrimmedData()['before'], $beforeRollback);
         //Move db_schema.xml file and tried to install
@@ -268,7 +319,7 @@ class DeclarativeInstallerTest extends SetupTestCase
             'etc'
         );
 
-        $this->cliCommad->upgrade();
+        $this->cliCommand->upgrade();
         $afterRollback = $this->describeTable->describeShard('default');
         self::assertEquals($this->getData()['after'], $afterRollback);
     }
@@ -276,6 +327,7 @@ class DeclarativeInstallerTest extends SetupTestCase
     /**
      * @moduleName Magento_TestSetupDeclarationModule1
      * @dataProviderFromFile Magento/TestSetupDeclarationModule1/fixture/declarative_installer/table_rename.php
+     * @throws \Exception
      */
     public function testTableRename()
     {
@@ -287,7 +339,7 @@ class DeclarativeInstallerTest extends SetupTestCase
             'db_schema.xml',
             'etc'
         );
-        $this->cliCommad->install(
+        $this->cliCommand->install(
             ['Magento_TestSetupDeclarationModule1']
         );
         $before = $this->describeTable->describeShard('default');
@@ -296,7 +348,9 @@ class DeclarativeInstallerTest extends SetupTestCase
             $this->resourceConnection->getTableName('some_table'),
             $dataToMigrate
         );
-        self::assertEquals($this->getData()['before'], $before['some_table']);
+        $this->isUsingAuroraDb() ?
+            $this->assertStringContainsString($before['some_table'], $this->getTrimmedData()['before']) :
+            $this->assertEquals($this->getData()['before'], $before['some_table']);
         //Move db_schema.xml file and tried to install
         $this->moduleManager->updateRevision(
             'Magento_TestSetupDeclarationModule1',
@@ -305,9 +359,11 @@ class DeclarativeInstallerTest extends SetupTestCase
             'etc'
         );
 
-        $this->cliCommad->upgrade();
+        $this->cliCommand->upgrade();
         $after = $this->describeTable->describeShard('default');
-        self::assertEquals($this->getData()['after'], $after['some_table_renamed']);
+        $this->isUsingAuroraDb() ?
+            $this->assertStringContainsString($after['some_table_renamed'], $this->getTrimmedData()['after']) :
+            $this->assertEquals($this->getData()['after'], $after['some_table_renamed']);
         $select = $adapter->select()
             ->from($this->resourceConnection->getTableName('some_table_renamed'));
         self::assertEquals([$dataToMigrate], $adapter->fetchAll($select));
@@ -315,10 +371,11 @@ class DeclarativeInstallerTest extends SetupTestCase
 
     /**
      * @moduleName Magento_TestSetupDeclarationModule8
+     * @throws \Exception
      */
     public function testForeignKeyReferenceId()
     {
-        $this->cliCommad->install(
+        $this->cliCommand->install(
             ['Magento_TestSetupDeclarationModule8']
         );
         $this->moduleManager->updateRevision(
@@ -327,20 +384,24 @@ class DeclarativeInstallerTest extends SetupTestCase
             'db_schema.xml',
             'etc'
         );
-        $this->cliCommad->upgrade();
+        $this->cliCommand->upgrade();
         $tableStatements = $this->describeTable->describeShard('default');
         $tableSql = $tableStatements['dependent'];
-        $this->assertRegExp('/CONSTRAINT\s`DEPENDENT_PAGE_ID_ON_TEST_TABLE_PAGE_ID`/', $tableSql);
-        $this->assertRegExp('/CONSTRAINT\s`DEPENDENT_SCOPE_ID_ON_TEST_SCOPE_TABLE_SCOPE_ID`/', $tableSql);
+        $this->assertMatchesRegularExpression('/CONSTRAINT\s`DEPENDENT_PAGE_ID_ON_TEST_TABLE_PAGE_ID`/', $tableSql);
+        $this->assertMatchesRegularExpression(
+            '/CONSTRAINT\s`DEPENDENT_SCOPE_ID_ON_TEST_SCOPE_TABLE_SCOPE_ID`/',
+            $tableSql
+        );
     }
 
     /**
      * @moduleName Magento_TestSetupDeclarationModule1
      * @moduleName Magento_TestSetupDeclarationModule8
+     * @throws \Exception
      */
     public function testDisableIndexByExternalModule()
     {
-        $this->cliCommad->install(
+        $this->cliCommand->install(
             ['Magento_TestSetupDeclarationModule1', 'Magento_TestSetupDeclarationModule8']
         );
         $this->moduleManager->updateRevision(
@@ -367,13 +428,65 @@ class DeclarativeInstallerTest extends SetupTestCase
             'module.xml',
             'etc'
         );
-        $this->cliCommad->upgrade();
+        $this->cliCommand->upgrade();
         $tableStatements = $this->describeTable->describeShard('default');
         $tableSql = $tableStatements['test_table'];
-        $this->assertNotRegExp(
+        $this->assertDoesNotMatchRegularExpression(
             '/KEY\s+`TEST_TABLE_VARCHAR`\s+\(`varchar`\)/',
             $tableSql,
             'Index is not being disabled by external module'
         );
+    }
+
+    /**
+     * @moduleName Magento_TestSetupDeclarationModule8
+     * @moduleName Magento_TestSetupDeclarationModule9
+     * @dataProviderFromFile Magento/TestSetupDeclarationModule9/fixture/declarative_installer/disabling_tables.php
+     * @throws \Exception
+     */
+    public function testInstallationWithDisablingTables()
+    {
+        $modules = [
+            'Magento_TestSetupDeclarationModule8',
+            'Magento_TestSetupDeclarationModule9',
+        ];
+
+        foreach ($modules as $moduleName) {
+            $this->moduleManager->updateRevision(
+                $moduleName,
+                'disabling_tables',
+                'db_schema.xml',
+                'etc'
+            );
+        }
+        $this->cliCommand->install($modules);
+
+        $diff = $this->schemaDiff->diff(
+            $this->schemaConfig->getDeclarationConfig(),
+            $this->schemaConfig->getDbConfig()
+        );
+        self::assertNull($diff->getAll());
+        $shardData = $this->describeTable->describeShard(Sharding::DEFAULT_CONNECTION);
+        $this->assertTableCreationStatements($this->getData(), $shardData);
+    }
+
+    /**
+     * Assert table creation statements
+     *
+     * @param array $expectedData
+     * @param array $actualData
+     */
+    private function assertTableCreationStatements(array $expectedData, array $actualData): void
+    {
+        if (!$this->isUsingAuroraDb()) {
+            $this->assertEquals($expectedData, $actualData);
+        } else {
+            ksort($expectedData);
+            ksort($actualData);
+            $this->assertSameSize($expectedData, $actualData);
+            foreach ($expectedData as $key => $value) {
+                $this->assertStringContainsString($actualData[$key], $value);
+            }
+        }
     }
 }

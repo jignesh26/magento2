@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 
 define([
@@ -28,9 +28,20 @@ define([
          * @return {String}
          */
         getShippingMethodTitle: function () {
-            var shippingMethod = quote.shippingMethod();
+            var shippingMethod = quote.shippingMethod(),
+                shippingMethodTitle = '';
 
-            return shippingMethod ? shippingMethod['carrier_title'] + ' - ' + shippingMethod['method_title'] : '';
+            if (!shippingMethod) {
+                return '';
+            }
+
+            shippingMethodTitle = shippingMethod['carrier_title'];
+
+            if (typeof shippingMethod['method_title'] !== 'undefined') {
+                shippingMethodTitle += ' - ' + shippingMethod['method_title'];
+            }
+
+            return shippingMethodTitle;
         },
 
         /**

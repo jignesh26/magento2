@@ -20,6 +20,16 @@ define(['squire', 'ko', 'jquery', 'jquery/validate'], function (Squire, ko, $) {
             openModal: jasmine.createSpy(),
             closeModal: jasmine.createSpy()
         },
+        country = {
+            /** Stub */
+            on: function () {},
+
+            /** Stub */
+            get: function () {},
+
+            /** Stub */
+            set: function () {}
+        },
         mocks = {
             'Magento_Customer/js/model/customer': {
                 isLoggedIn: ko.observable()
@@ -50,9 +60,25 @@ define(['squire', 'ko', 'jquery', 'jquery/validate'], function (Squire, ko, $) {
             ),
             'Magento_Checkout/js/checkout-data': jasmine.createSpyObj(
                 'checkoutData',
-                ['setSelectedShippingAddress', 'setNewCustomerShippingAddress', 'setSelectedShippingRate']
+                [
+                    'setSelectedShippingAddress',
+                    'setNewCustomerShippingAddress',
+                    'setSelectedShippingRate',
+                    'getSelectedShippingRate'
+                ]
             ),
-            'uiRegistry': jasmine.createSpy(),
+            'Magento_Ui/js/lib/registry/registry': {
+                async: jasmine.createSpy().and.returnValue(function () {}),
+                create: jasmine.createSpy(),
+                set: jasmine.createSpy(),
+                get: jasmine.createSpy().and.callFake(function (query) {
+                    if (query === 'test.shippingAddress.shipping-address-fieldset.country_id') {
+                        return country;
+                    } else if (query === 'checkout.errors') {
+                        return {};
+                    }
+                })
+            },
             'Magento_Checkout/js/model/shipping-rate-service': jasmine.createSpy()
         },
         obj;
@@ -156,6 +182,7 @@ define(['squire', 'ko', 'jquery', 'jquery/validate'], function (Squire, ko, $) {
 
         describe('"setShippingInformation" method', function () {
             it('Check method call.', function () {
+                spyOn(obj, 'validateShippingInformation').and.returnValue(false);
                 expect(obj.setShippingInformation()).toBeUndefined();
             });
         });
@@ -180,6 +207,7 @@ define(['squire', 'ko', 'jquery', 'jquery/validate'], function (Squire, ko, $) {
                 $('body').append('<form data-role="email-with-possible-login">' +
                     '<input type="text" name="username" />' +
                     '</form>');
+
                 obj.source = {
                     get: jasmine.createSpy().and.returnValue(true),
                     set: jasmine.createSpy(),

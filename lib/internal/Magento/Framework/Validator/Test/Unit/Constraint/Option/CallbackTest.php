@@ -3,16 +3,18 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Framework\Validator\Test\Unit\Constraint\Option;
 
 use Magento\Framework\Validator\Constraint\Option\Callback;
 use Magento\Framework\Validator\Test\Unit\Test\Callback as TestCallback;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Test case for \Magento\Framework\Validator\Constraint\Option\Callback
  */
-class CallbackTest extends \PHPUnit\Framework\TestCase
+class CallbackTest extends TestCase
 {
     /**
      * Value for test
@@ -31,6 +33,9 @@ class CallbackTest extends \PHPUnit\Framework\TestCase
      */
     public function testGetValue($callback, $expectedResult, $arguments = null, $createInstance = false)
     {
+        if (is_array($callback) && is_callable($callback[0])) {
+            $callback[0] = $callback[0]($this);
+        }
         $option = new Callback($callback, $arguments, $createInstance);
         $this->assertEquals($expectedResult, $option->getValue());
     }
@@ -38,18 +43,11 @@ class CallbackTest extends \PHPUnit\Framework\TestCase
     /**
      * Data provider for testGetValue
      */
-    public function getConfigDataProvider()
+    public static function getConfigDataProvider()
     {
         $closure = function () {
             return 'Value from closure';
         };
-
-        $mock = $this->getMockBuilder('Foo')
-            ->setMethods(['getValue'])
-            ->getMock();
-        $mock->method('getValue')
-            ->with('arg1', 'arg2')
-            ->willReturn('Value from mock');
 
         return [
             [
@@ -57,7 +55,10 @@ class CallbackTest extends \PHPUnit\Framework\TestCase
                 'Value from closure'
             ],
             [
-                [$this, 'getTestValue'],
+                [
+                    static fn (self $testCase) => $testCase->getClassObjectMock()['classObject'],
+                    'getTestValue'
+                ],
                 self::TEST_VALUE
             ],
             [
@@ -65,15 +66,36 @@ class CallbackTest extends \PHPUnit\Framework\TestCase
                 self::TEST_VALUE
             ],
             [
-                [$mock, 'getValue'],
+                [
+                    static fn (self $testCase) => $testCase->getClassObjectMock()['mock'],
+                    'getValue'
+                ],
                 'Value from mock', ['arg1', 'arg2']
             ],
             [
-                [TestCallback::class, 'getId'],
+                [
+                    TestCallback::class,
+                    'getId'
+                ],
                 TestCallback::ID,
                 null,
                 true
             ]
+        ];
+    }
+
+    public function getClassObjectMock()
+    {
+        $classObject = $this;
+        $mock = $this->getMockBuilder(\stdClass::class)
+            ->addMethods(['getValue'])
+            ->getMock();
+        $mock->method('getValue')
+            ->with('arg1', 'arg2')
+            ->willReturn('Value from mock');
+        return [
+            'classObject' => $classObject,
+            'mock' => $mock
         ];
     }
 
@@ -103,6 +125,7 @@ class CallbackTest extends \PHPUnit\Framework\TestCase
      */
     public function testSetArguments($value, $expectedValue)
     {
+        $this->markTestSkipped('Skipped in #27500 due to testing protected/private methods and properties');
         $option = new Callback(function () {
         });
         $option->setArguments($value);
@@ -112,7 +135,7 @@ class CallbackTest extends \PHPUnit\Framework\TestCase
     /**
      * Data provider for testGetValue
      */
-    public function setArgumentsDataProvider()
+    public static function setArgumentsDataProvider()
     {
         return [
             ['baz', ['baz']],
@@ -131,10 +154,21 @@ class CallbackTest extends \PHPUnit\Framework\TestCase
      * @param mixed $callback
      * @param string $expectedMessage
      * @param bool $createInstance
-     * @expectedException \InvalidArgumentException
      */
     public function testGetValueException($callback, $expectedMessage, $createInstance = false)
     {
+        if (is_array($callback)) {
+            foreach ($callback as $key => $value) {
+                if (is_callable($value)) {
+                    $callback[$key] = $value($this);
+                }
+            }
+        } else {
+            if (is_callable($callback)) {
+                $callback = $callback($this);
+            }
+        }
+        $this->expectException('InvalidArgumentException');
         $option = new Callback($callback, null, $createInstance);
         $this->expectException('InvalidArgumentException');
         $this->expectExceptionMessage($expectedMessage);
@@ -146,19 +180,20 @@ class CallbackTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function getValueExceptionDataProvider()
+    public static function getValueExceptionDataProvider()
     {
+        $testObject = static fn (self $testCase) => $testCase->getCallBackTestObject();
         return [
             [
                 ['Not_Existing_Callback_Class', 'someMethod'],
                 'Class "Not_Existing_Callback_Class" was not found',
             ],
             [
-                [$this, 'notExistingMethod'],
+                [$testObject, 'notExistingMethod'],
                 'Callback does not callable'
             ],
             [
-                ['object' => $this, 'method' => 'getTestValue'],
+                ['object' => $testObject, 'method' => 'getTestValue'],
                 'Callback does not callable'
             ],
             [
@@ -170,10 +205,15 @@ class CallbackTest extends \PHPUnit\Framework\TestCase
                 'Callback does not callable'
             ],
             [
-                [$this, 'getTestValue'],
+                [$testObject, 'getTestValue'],
                 'Callable expected to be an array with class name as first element',
                 true
             ]
         ];
+    }
+
+    public function getCallBackTestObject()
+    {
+        return $this;
     }
 }

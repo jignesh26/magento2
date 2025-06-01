@@ -7,6 +7,8 @@ declare(strict_types=1);
 
 namespace Magento\Sales\Helper;
 
+use Magento\Framework\App\ObjectManager;
+
 /**
  * Sales admin helper.
  */
@@ -33,23 +35,32 @@ class Admin extends \Magento\Framework\App\Helper\AbstractHelper
     protected $escaper;
 
     /**
+     * @var \DOMDocumentFactory
+     */
+    private $domDocumentFactory;
+
+    /**
      * @param \Magento\Framework\App\Helper\Context $context
      * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Sales\Model\Config $salesConfig
      * @param \Magento\Framework\Pricing\PriceCurrencyInterface $priceCurrency
      * @param \Magento\Framework\Escaper $escaper
+     * @param \DOMDocumentFactory|null $domDocumentFactory
      */
     public function __construct(
         \Magento\Framework\App\Helper\Context $context,
         \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Sales\Model\Config $salesConfig,
         \Magento\Framework\Pricing\PriceCurrencyInterface $priceCurrency,
-        \Magento\Framework\Escaper $escaper
+        \Magento\Framework\Escaper $escaper,
+        ?\DOMDocumentFactory $domDocumentFactory = null
     ) {
         $this->priceCurrency = $priceCurrency;
         $this->_storeManager = $storeManager;
         $this->_salesConfig = $salesConfig;
         $this->escaper = $escaper;
+        $this->domDocumentFactory = $domDocumentFactory
+            ?: ObjectManager::getInstance()->get(\DOMDocumentFactory::class);
         parent::__construct($context);
     }
 
@@ -149,56 +160,6 @@ class Admin extends \Magento\Framework\App\Helper\AbstractHelper
      */
     public function escapeHtmlWithLinks($data, $allowedTags = null)
     {
-        if (!empty($data) && is_array($allowedTags) && in_array('a', $allowedTags)) {
-            $links = [];
-            $i = 1;
-            $data = str_replace('%', '%%', $data);
-            $regexp = "#(?J)<a"
-                ."(?:(?:\s+(?:(?:href\s*=\s*(['\"])(?<link>.*?)\\1\s*)|(?:\S+\s*=\s*(['\"])(.*?)\\3)\s*)*)|>)"
-                .">?(?:(?:(?<text>.*?)(?:<\/a\s*>?|(?=<\w))|(?<text>.*)))#si";
-            while (preg_match($regexp, $data, $matches)) {
-                $text = '';
-                if (!empty($matches['text'])) {
-                    $text = str_replace('%%', '%', $matches['text']);
-                }
-                $url = $this->filterUrl($matches['link'] ?? '');
-                //Recreate a minimalistic secure a tag
-                $links[] = sprintf(
-                    '<a href="%s">%s</a>',
-                    htmlspecialchars($url, ENT_QUOTES, 'UTF-8', false),
-                    $this->escaper->escapeHtml($text)
-                );
-                $data = str_replace($matches[0], '%' . $i . '$s', $data);
-                ++$i;
-            }
-            $data = $this->escaper->escapeHtml($data, $allowedTags);
-            return vsprintf($data, $links);
-        }
         return $this->escaper->escapeHtml($data, $allowedTags);
-    }
-
-    /**
-     * Filter the URL for allowed protocols.
-     *
-     * @param string $url
-     * @return string
-     */
-    private function filterUrl(string $url): string
-    {
-        if ($url) {
-            //Revert the sprintf escaping
-            $url = str_replace('%%', '%', $url);
-            $urlScheme = parse_url($url, PHP_URL_SCHEME);
-            $urlScheme = $urlScheme ? strtolower($urlScheme) : '';
-            if ($urlScheme !== 'http' && $urlScheme !== 'https') {
-                $url = null;
-            }
-        }
-
-        if (!$url) {
-            $url = '#';
-        }
-
-        return $url;
     }
 }

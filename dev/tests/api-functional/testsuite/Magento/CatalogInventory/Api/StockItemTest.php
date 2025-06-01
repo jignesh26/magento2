@@ -40,7 +40,7 @@ class StockItemTest extends WebapiAbstract
     /**
      * Execute per test initialization
      */
-    public function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = Bootstrap::getObjectManager();
     }
@@ -127,7 +127,7 @@ class StockItemTest extends WebapiAbstract
     /**
      * @return array
      */
-    public function saveStockItemBySkuWithWrongInputDataProvider()
+    public static function saveStockItemBySkuWithWrongInputDataProvider()
     {
         return [
             [

@@ -12,7 +12,7 @@ class AddressFormatsFilesTest extends \PHPUnit\Framework\TestCase
      */
     protected $_schemaFile;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         /** @var \Magento\Customer\Model\Address\Config\SchemaLocator $schemaLocator */
         $schemaLocator = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->get(
@@ -38,7 +38,7 @@ class AddressFormatsFilesTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function fileFormatDataProvider()
+    public static function fileFormatDataProvider()
     {
         return \Magento\Framework\App\Utility\Files::init()->getConfigFiles(
             '{*/address_formats.xml,address_formats.xml}'

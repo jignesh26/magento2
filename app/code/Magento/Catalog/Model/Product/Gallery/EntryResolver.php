@@ -1,14 +1,15 @@
 <?php
 /**
- * Product Media Gallery Entry Resolver
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Model\Product\Gallery;
 
 use Magento\Catalog\Model\Product;
 
+/**
+ * Manage entryes
+ */
 class EntryResolver
 {
     /**
@@ -27,7 +28,7 @@ class EntryResolver
 
         foreach ($mediaGalleryData['images'] as $image) {
             if (isset($image['value_id']) && $image['value_id'] == $entryId) {
-                return isset($image['file']) ? $image['file'] : null;
+                return $image['file'] ?? null;
             }
         }
         return null;
@@ -49,7 +50,7 @@ class EntryResolver
 
         foreach ($mediaGalleryData['images'] as $image) {
             if (isset($image['file']) && $image['file'] == $filePath) {
-                return isset($image['value_id']) ? $image['value_id'] : null;
+                return $image['value_id'] ?? null;
             }
         }
         return null;

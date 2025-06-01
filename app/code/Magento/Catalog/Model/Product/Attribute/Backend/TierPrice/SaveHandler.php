@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 declare(strict_types=1);
 
@@ -18,7 +18,7 @@ use Magento\Catalog\Model\ResourceModel\Product\Attribute\Backend\Tierprice;
 /**
  * Process tier price data for handled new product
  */
-class SaveHandler implements ExtensionInterface
+class SaveHandler extends AbstractHandler
 {
     /**
      * @var \Magento\Store\Model\StoreManagerInterface
@@ -29,11 +29,6 @@ class SaveHandler implements ExtensionInterface
      * @var \Magento\Catalog\Api\ProductAttributeRepositoryInterface
      */
     private $attributeRepository;
-
-    /**
-     * @var \Magento\Customer\Api\GroupManagementInterface
-     */
-    private $groupManagement;
 
     /**
      * @var \Magento\Framework\EntityManager\MetadataPool
@@ -59,9 +54,10 @@ class SaveHandler implements ExtensionInterface
         MetadataPool $metadataPool,
         Tierprice $tierPriceResource
     ) {
+        parent::__construct($groupManagement);
+
         $this->storeManager = $storeManager;
         $this->attributeRepository = $attributeRepository;
-        $this->groupManagement = $groupManagement;
         $this->metadataPoll = $metadataPool;
         $this->tierPriceResource = $tierPriceResource;
     }
@@ -72,8 +68,6 @@ class SaveHandler implements ExtensionInterface
      * @param \Magento\Catalog\Api\Data\ProductInterface|object $entity
      * @param array $arguments
      * @return \Magento\Catalog\Api\Data\ProductInterface|object
-     * @throws \Magento\Framework\Exception\NoSuchEntityException
-     * @throws \Magento\Framework\Exception\LocalizedException
      * @throws \Magento\Framework\Exception\InputException
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
@@ -92,9 +86,11 @@ class SaveHandler implements ExtensionInterface
             $identifierField = $this->metadataPoll->getMetadata(ProductInterface::class)->getLinkField();
             $priceRows = array_filter($priceRows);
             $productId = (int) $entity->getData($identifierField);
+            $pricesStored = $this->getPricesStored($priceRows);
+            $pricesMerged = $this->mergePrices($priceRows, $pricesStored);
 
             // prepare and save data
-            foreach ($priceRows as $data) {
+            foreach ($pricesMerged as $data) {
                 $isPriceWebsiteGlobal = (int)$data['website_id'] === 0;
                 if ($isGlobal === $isPriceWebsiteGlobal
                     || !empty($data['price_qty'])
@@ -117,55 +113,49 @@ class SaveHandler implements ExtensionInterface
     }
 
     /**
-     * Get additional tier price fields
+     * Merge prices
      *
-     * @param array $objectArray
+     * @param array $prices
+     * @param array $pricesStored
      * @return array
      */
-    private function getAdditionalFields(array $objectArray): array
+    private function mergePrices(array $prices, array $pricesStored): array
     {
-        $percentageValue = $this->getPercentage($objectArray);
-        return [
-            'value' => $percentageValue ? null : $objectArray['price'],
-            'percentage_value' => $percentageValue ?: null,
-        ];
+        if (!$pricesStored) {
+            return $prices;
+        }
+        $pricesId = [];
+        $pricesStoredId = [];
+        foreach ($prices as $price) {
+            if (isset($price['price_id'])) {
+                $pricesId[$price['price_id']] = $price;
+            }
+        }
+        foreach ($pricesStored as $price) {
+            if (isset($price['price_id'])) {
+                $pricesStoredId[$price['price_id']] = $price;
+            }
+        }
+        $pricesAdd = array_diff_key($pricesStoredId, $pricesId);
+        foreach ($pricesAdd as $price) {
+            $prices[] = $price;
+        }
+        return $prices;
     }
 
     /**
-     * Check whether price has percentage value.
+     * Get stored prices
      *
-     * @param array $priceRow
-     * @return int|null
-     */
-    private function getPercentage(array $priceRow): ?int
-    {
-        return isset($priceRow['percentage_value']) && is_numeric($priceRow['percentage_value'])
-            ? (int)$priceRow['percentage_value']
-            : null;
-    }
-
-    /**
-     * Prepare tier price data by provided price row data
-     *
-     * @param array $data
+     * @param array $prices
      * @return array
-     * @throws \Magento\Framework\Exception\LocalizedException
      */
-    private function prepareTierPrice(array $data): array
+    private function getPricesStored(array $prices): array
     {
-        $useForAllGroups = (int)$data['cust_group'] === $this->groupManagement->getAllCustomersGroup()->getId();
-        $customerGroupId = $useForAllGroups ? 0 : $data['cust_group'];
-        $tierPrice = array_merge(
-            $this->getAdditionalFields($data),
-            [
-                'website_id' => $data['website_id'],
-                'all_groups' => (int)$useForAllGroups,
-                'customer_group_id' => $customerGroupId,
-                'value' => $data['price'] ?? null,
-                'qty' => (int)$data['price_qty']
-            ]
-        );
-
-        return $tierPrice;
+        $pricesStored = [];
+        $price = reset($prices);
+        if (isset($price['product_id']) && $price['product_id']) {
+            $pricesStored = $this->tierPriceResource->loadPriceData($price['product_id']);
+        }
+        return $pricesStored;
     }
 }

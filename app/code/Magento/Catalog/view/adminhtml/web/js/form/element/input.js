@@ -1,14 +1,14 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
 define([
     'underscore',
     'Magento_Ui/js/form/element/abstract'
-], function (_, Acstract) {
+], function (_, Abstract) {
     'use strict';
 
-    return Acstract.extend({
+    return Abstract.extend({
         defaults: {
             prefixName: '',
             prefixElementName: '',
@@ -57,13 +57,6 @@ define([
 
             this.exportDataLink = 'data.' + this.prefixName + '.' + this.elementName + suffixName;
             this.exports.value = this.provider + ':' + this.exportDataLink;
-        },
-
-        /** @inheritdoc */
-        destroy: function () {
-            this._super();
-
-            this.source.remove(this.exportDataLink);
         },
 
         /**

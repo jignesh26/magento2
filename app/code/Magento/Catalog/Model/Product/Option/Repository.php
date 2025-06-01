@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Catalog\Model\Product\Option;
@@ -14,6 +14,8 @@ use Magento\Framework\EntityManager\HydratorPool;
 use Magento\Framework\App\ObjectManager;
 
 /**
+ * Product custom options repository
+ *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class Repository implements \Magento\Catalog\Api\ProductCustomOptionRepositoryInterface
@@ -67,9 +69,9 @@ class Repository implements \Magento\Catalog\Api\ProductCustomOptionRepositoryIn
         \Magento\Catalog\Api\ProductRepositoryInterface $productRepository,
         \Magento\Catalog\Model\ResourceModel\Product\Option $optionResource,
         \Magento\Catalog\Model\Product\Option\Converter $converter,
-        \Magento\Catalog\Model\ResourceModel\Product\Option\CollectionFactory $collectionFactory = null,
-        \Magento\Catalog\Model\Product\OptionFactory $optionFactory = null,
-        \Magento\Framework\EntityManager\MetadataPool $metadataPool = null
+        ?\Magento\Catalog\Model\ResourceModel\Product\Option\CollectionFactory $collectionFactory = null,
+        ?\Magento\Catalog\Model\Product\OptionFactory $optionFactory = null,
+        ?\Magento\Framework\EntityManager\MetadataPool $metadataPool = null
     ) {
         $this->productRepository = $productRepository;
         $this->optionResource = $optionResource;
@@ -83,7 +85,7 @@ class Repository implements \Magento\Catalog\Api\ProductCustomOptionRepositoryIn
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function getList($sku)
     {
@@ -92,7 +94,7 @@ class Repository implements \Magento\Catalog\Api\ProductCustomOptionRepositoryIn
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function getProductOptions(ProductInterface $product, $requiredOnly = false)
     {
@@ -104,7 +106,7 @@ class Repository implements \Magento\Catalog\Api\ProductCustomOptionRepositoryIn
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function get($sku, $optionId)
     {
@@ -117,7 +119,7 @@ class Repository implements \Magento\Catalog\Api\ProductCustomOptionRepositoryIn
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function delete(\Magento\Catalog\Api\Data\ProductCustomOptionInterface $entity)
     {
@@ -126,7 +128,7 @@ class Repository implements \Magento\Catalog\Api\ProductCustomOptionRepositoryIn
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function duplicate(
         \Magento\Catalog\Api\Data\ProductInterface $product,
@@ -142,7 +144,7 @@ class Repository implements \Magento\Catalog\Api\ProductCustomOptionRepositoryIn
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function save(\Magento\Catalog\Api\Data\ProductCustomOptionInterface $option)
     {
@@ -156,6 +158,7 @@ class Repository implements \Magento\Catalog\Api\ProductCustomOptionRepositoryIn
         $option->setData('product_id', $product->getData($metadata->getLinkField()));
         $option->setData('store_id', $product->getStoreId());
 
+        $backedOptions = $option->getValues();
         if ($option->getOptionId()) {
             $options = $product->getOptions();
             if (!$options) {
@@ -172,6 +175,9 @@ class Repository implements \Magento\Catalog\Api\ProductCustomOptionRepositoryIn
             }
             $originalValues = $persistedOption->getValues();
             $newValues = $option->getData('values');
+            if (!$newValues) {
+                $newValues = $this->getOptionValues($option);
+            }
             if ($newValues) {
                 if (isset($originalValues)) {
                     $newValues = $this->markRemovedValues($newValues, $originalValues);
@@ -180,11 +186,13 @@ class Repository implements \Magento\Catalog\Api\ProductCustomOptionRepositoryIn
             }
         }
         $option->save();
+        // Required for API response data consistency
+        $option->setValues($backedOptions);
         return $option;
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function deleteByIdentifier($sku, $optionId)
     {
@@ -209,8 +217,8 @@ class Repository implements \Magento\Catalog\Api\ProductCustomOptionRepositoryIn
     /**
      * Mark original values for removal if they are absent among new values
      *
-     * @param $newValues array
-     * @param $originalValues \Magento\Catalog\Model\Product\Option\Value[]
+     * @param array $newValues
+     * @param \Magento\Catalog\Model\Product\Option\Value[] $originalValues
      * @return array
      */
     protected function markRemovedValues($newValues, $originalValues)
@@ -234,8 +242,11 @@ class Repository implements \Magento\Catalog\Api\ProductCustomOptionRepositoryIn
     }
 
     /**
+     * Get hydrator pool
+     *
      * @return \Magento\Framework\EntityManager\HydratorPool
      * @deprecated 101.0.0
+     * @see MAGETWO-71174
      */
     private function getHydratorPool()
     {
@@ -244,5 +255,29 @@ class Repository implements \Magento\Catalog\Api\ProductCustomOptionRepositoryIn
                 ->get(\Magento\Framework\EntityManager\HydratorPool::class);
         }
         return $this->hydratorPool;
+    }
+
+    /**
+     * Get Option values from property
+     *
+     * Gets Option values stored in property, modifies for needed format and clears the property
+     *
+     * @param \Magento\Catalog\Api\Data\ProductCustomOptionInterface $option
+     * @return array|null
+     */
+    private function getOptionValues(\Magento\Catalog\Api\Data\ProductCustomOptionInterface $option): ?array
+    {
+        if ($option->getValues() === null) {
+            return null;
+        }
+
+        $optionValues = [];
+
+        foreach ($option->getValues() as $optionValue) {
+            $optionValues[] = $optionValue->getData();
+        }
+        $option->setValues(null);
+
+        return $optionValues;
     }
 }

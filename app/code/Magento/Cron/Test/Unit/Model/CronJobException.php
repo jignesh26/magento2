@@ -3,6 +3,7 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 /**
  * Class CronJobException used to check that cron handles execution exception
@@ -20,7 +21,7 @@ class CronJobException
     /**
      * @param \Throwable|null $exception
      */
-    public function __construct(\Throwable $exception = null)
+    public function __construct(?\Throwable $exception = null)
     {
         $this->exception = $exception;
     }

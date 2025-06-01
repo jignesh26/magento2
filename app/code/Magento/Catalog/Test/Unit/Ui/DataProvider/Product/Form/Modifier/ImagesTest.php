@@ -1,23 +1,25 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Catalog\Test\Unit\Ui\DataProvider\Product\Form\Modifier;
 
-use Magento\Catalog\Model\Product\Type;
+use Magento\Catalog\Ui\DataProvider\Product\Form\Modifier\Images;
 
 /**
  * @method \Magento\Catalog\Ui\DataProvider\Product\Form\Modifier\Images getModel
  */
-class ImagesTest extends AbstractModifierTest
+class ImagesTest extends AbstractModifierTestCase
 {
     /**
      * {@inheritdoc}
      */
     protected function createModel()
     {
-        return $this->objectManager->getObject(\Magento\Catalog\Ui\DataProvider\Product\Form\Modifier\Images::class, [
+        return $this->objectManager->getObject(Images::class, [
             'locator' => $this->locatorMock,
         ]);
     }
@@ -32,7 +34,7 @@ class ImagesTest extends AbstractModifierTest
     public function testModifyMeta()
     {
         $meta = [
-            \Magento\Catalog\Ui\DataProvider\Product\Form\Modifier\Images::CODE_IMAGE_MANAGEMENT_GROUP => [
+            Images::CODE_IMAGE_MANAGEMENT_GROUP => [
                 'children' => [],
                 'label' => __('Images'),
                 'sortOrder' => '20',

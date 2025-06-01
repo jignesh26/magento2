@@ -27,7 +27,7 @@ abstract class GraphQlAbstract extends WebapiAbstract
     private $appCache;
 
     /**
-     * Perform GraphQL call to the system under test.
+     * Perform GraphQL query call via GET to the system under test.
      *
      * @see \Magento\TestFramework\TestCase\GraphQl\Client::call()
      * @param string $query
@@ -43,7 +43,78 @@ abstract class GraphQlAbstract extends WebapiAbstract
         string $operationName = '',
         array $headers = []
     ) {
-        return $this->getGraphQlClient()->postQuery(
+        return $this->getGraphQlClient()->get(
+            $query,
+            $variables,
+            $operationName,
+            $this->composeHeaders($headers)
+        );
+    }
+
+    /**
+     * Perform GraphQL mutations call via POST to the system under test.
+     *
+     * @see \Magento\TestFramework\TestCase\GraphQl\Client::call()
+     * @param string $query
+     * @param array $variables
+     * @param string $operationName
+     * @param array $headers
+     * @return array|int|string|float|bool GraphQL call results
+     * @throws \Exception
+     */
+    public function graphQlMutation(
+        string $query,
+        array $variables = [],
+        string $operationName = '',
+        array $headers = []
+    ) {
+        return $this->getGraphQlClient()->post(
+            $query,
+            $variables,
+            $operationName,
+            $this->composeHeaders($headers)
+        );
+    }
+
+    /**
+     * Perform GraphQL query via GET and returns only the response headers
+     *
+     * @param string $query
+     * @param array $variables
+     * @param string $operationName
+     * @param array $headers
+     * @return array
+     */
+    public function graphQlQueryWithResponseHeaders(
+        string $query,
+        array $variables = [],
+        string $operationName = '',
+        array $headers = []
+    ): array {
+        return $this->getGraphQlClient()->getWithResponseHeaders(
+            $query,
+            $variables,
+            $operationName,
+            $this->composeHeaders($headers)
+        );
+    }
+
+    /**
+     * Perform GraphQL query via POST and returns the response headers
+     *
+     * @param string $query
+     * @param array $variables
+     * @param string $operationName
+     * @param array $headers
+     * @return array
+     */
+    public function graphQlMutationWithResponseHeaders(
+        string $query,
+        array $variables = [],
+        string $operationName = '',
+        array $headers = []
+    ): array {
+        return $this->getGraphQlClient()->postWithResponseHeaders(
             $query,
             $variables,
             $operationName,
@@ -122,6 +193,11 @@ abstract class GraphQlAbstract extends WebapiAbstract
                 $expectedValue,
                 "Value of '{$responseField}' field must not be NULL"
             );
+            self::assertArrayHasKey(
+                $responseField,
+                $actualResponse,
+                "Response array does not contain key '{$responseField}'"
+            );
             self::assertEquals(
                 $expectedValue,
                 $actualResponse[$responseField],
@@ -129,5 +205,19 @@ abstract class GraphQlAbstract extends WebapiAbstract
                 . var_export($expectedValue, true)
             );
         }
+    }
+
+    /**
+     * Tear down test and flush page cache
+     *
+     * @return void
+     */
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+        $appDir = dirname(Bootstrap::getInstance()->getAppTempDir());
+        $out = '';
+        // phpcs:ignore Magento2.Security.InsecureFunction
+        exec("php -f {$appDir}/bin/magento cache:flush full_page", $out);
     }
 }

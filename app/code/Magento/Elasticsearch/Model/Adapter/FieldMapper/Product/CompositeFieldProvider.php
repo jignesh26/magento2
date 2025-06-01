@@ -9,6 +9,8 @@ namespace Magento\Elasticsearch\Model\Adapter\FieldMapper\Product;
 
 /**
  * Provide fields for product.
+ * @deprecated Elasticsearch is no longer supported by Adobe
+ * @see this class will be responsible for ES only
  */
 class CompositeFieldProvider implements FieldProviderInterface
 {
@@ -43,9 +45,9 @@ class CompositeFieldProvider implements FieldProviderInterface
         $allAttributes = [];
 
         foreach ($this->providers as $provider) {
-            $allAttributes = array_merge($allAttributes, $provider->getFields($context));
+            $allAttributes[] = $provider->getFields($context);
         }
 
-        return $allAttributes;
+        return array_merge([], ...$allAttributes);
     }
 }

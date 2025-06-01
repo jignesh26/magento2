@@ -1,17 +1,21 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\Catalog\Test\Unit\Controller\Adminhtml\Product\Initialization\Helper;
 
 use Magento\Catalog\Controller\Adminhtml\Product\Initialization\Helper\AttributeFilter;
 use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\ResourceModel\Eav\Attribute;
-use PHPUnit_Framework_MockObject_MockObject as MockObject;
+use Magento\Framework\DataObject;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class AttributeFilterTest extends \PHPUnit\Framework\TestCase
+class AttributeFilterTest extends TestCase
 {
     /**
      * @var AttributeFilter
@@ -28,9 +32,9 @@ class AttributeFilterTest extends \PHPUnit\Framework\TestCase
      */
     protected $productMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $objectHelper = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $objectHelper = new ObjectManager($this);
         $this->model = $objectHelper->getObject(AttributeFilter::class);
     }
 
@@ -39,18 +43,20 @@ class AttributeFilterTest extends \PHPUnit\Framework\TestCase
      * @param array $useDefaults
      * @param array $expectedProductData
      * @param array $initialProductData
+     * @param mixed $attributeList
      * @dataProvider setupInputDataProvider
      */
     public function testPrepareProductAttributes(
-        $requestProductData,
-        $useDefaults,
-        $expectedProductData,
-        $initialProductData
-    ) {
+        array $requestProductData,
+        array $useDefaults,
+        array $expectedProductData,
+        array $initialProductData,
+        mixed $attributeList
+    ): void {
         /** @var MockObject | Product $productMockMap */
         $productMockMap = $this->getMockBuilder(Product::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getData', 'getAttributes'])
+            ->onlyMethods(['getData', 'getAttributes'])
             ->getMock();
 
         if (!empty($initialProductData)) {
@@ -64,6 +70,11 @@ class AttributeFilterTest extends \PHPUnit\Framework\TestCase
                 ->willReturn(
                     $this->getProductAttributesMock($useDefaults)
                 );
+        } elseif ($attributeList) {
+            $productMockMap
+                ->expects($this->once())
+                ->method('getAttributes')
+                ->willReturn($attributeList);
         }
 
         $actualProductData = $this->model->prepareProductAttributes($productMockMap, $requestProductData, $useDefaults);
@@ -74,11 +85,11 @@ class AttributeFilterTest extends \PHPUnit\Framework\TestCase
      * @return array
      * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
-    public function setupInputDataProvider()
+    public static function setupInputDataProvider(): array
     {
         return [
-            'create_new_product' => [
-                'productData' => [
+            'test case for create new product without custom attribute' => [
+                'requestProductData' => [
                     'name' => 'testName',
                     'sku' => 'testSku',
                     'price' => '100',
@@ -91,9 +102,36 @@ class AttributeFilterTest extends \PHPUnit\Framework\TestCase
                     'price' => '100',
                 ],
                 'initialProductData' => [],
+                'attributeList' => null
             ],
-            'update_product_without_use_defaults' => [
-                'productData' => [
+            'test case for create new product with custom attribute' => [
+                'requestProductData' => [
+                    'name' => 'testName',
+                    'sku' => 'testSku',
+                    'price' => '100',
+                    'description' => 'testDescription',
+                    'custom_attr' => ''
+                ],
+                'useDefaults' => [],
+                'expectedProductData' => [
+                    'name' => 'testName',
+                    'sku' => 'testSku',
+                    'price' => '100',
+                    'description' => 'testDescription',
+                    'custom_attr' => ''
+                ],
+                'initialProductData' => [],
+                'attributeList' => [
+                    'custom_attr' => new DataObject(
+                        ['frontend_type' => 'frontend', 'backend_type' => 'backend',
+                            'is_user_defined' => '1', 'is_required' => '0',
+                            'additional_data' => 'swatch_input_type: visual'
+                        ]
+                    )
+                ]
+            ],
+            'test case for update product without use_defaults' => [
+                'requestProductData' => [
                     'name' => 'testName2',
                     'sku' => 'testSku2',
                     'price' => '101',
@@ -113,9 +151,41 @@ class AttributeFilterTest extends \PHPUnit\Framework\TestCase
                     ['price', '101'],
                     ['special_price', null],
                 ],
+                'attributeList' => null
             ],
-            'update_product_without_use_defaults_2' => [
-                'productData' => [
+            'test case for update product with custom attribute' => [
+                'requestProductData' => [
+                    'name' => 'testName2',
+                    'sku' => 'testSku2',
+                    'price' => '101',
+                    'description' => 'testDescription',
+                    'custom_attr' => '',
+                ],
+                'useDefaults' => [],
+                'expectedProductData' => [
+                    'name' => 'testName2',
+                    'sku' => 'testSku2',
+                    'price' => '101',
+                    'description' => 'testDescription',
+                    'custom_attr' => '',
+                ],
+                'initialProductData' => [
+                    ['name', 'testName2'],
+                    ['sku', 'testSku2'],
+                    ['price', '101'],
+                    ['custom_attr', ''],
+                ],
+                'attributeList' => [
+                    'custom_attr' => new DataObject(
+                        ['frontend_type' => 'frontend', 'backend_type' => 'backend',
+                            'is_user_defined' => '1', 'is_required' => '0',
+                            'additional_data' => 'swatch_input_type: visual'
+                        ]
+                    )
+                ]
+            ],
+            'test case for update product without use_defaults_2' => [
+                'requestProductData' => [
                     'name' => 'testName2',
                     'sku' => 'testSku2',
                     'price' => '101',
@@ -136,9 +206,10 @@ class AttributeFilterTest extends \PHPUnit\Framework\TestCase
                     ['price', '101'],
                     ['special_price', null],
                 ],
+                'attributeList' => null
             ],
-            'update_product_with_use_defaults' => [
-                'productData' => [
+            'test case for update product with use_defaults' => [
+                'requestProductData' => [
                     'name' => 'testName2',
                     'sku' => 'testSku2',
                     'price' => '101',
@@ -162,8 +233,9 @@ class AttributeFilterTest extends \PHPUnit\Framework\TestCase
                     ['special_price', null],
                     ['description', 'descr text'],
                 ],
+                'attributeList' => null
             ],
-            'update_product_with_use_defaults_2' => [
+            'test case for update product with use_defaults_2' => [
                 'requestProductData' => [
                     'name' => 'testName3',
                     'sku' => 'testSku3',
@@ -187,8 +259,9 @@ class AttributeFilterTest extends \PHPUnit\Framework\TestCase
                     ['price', null, '101'],
                     ['description', null, 'descr text'],
                 ],
+                'attributeList' => null
             ],
-            'update_product_with_use_defaults_3' => [
+            'test case for update product with use_defaults_3' => [
                 'requestProductData' => [
                     'name' => 'testName3',
                     'sku' => 'testSku3',
@@ -212,6 +285,55 @@ class AttributeFilterTest extends \PHPUnit\Framework\TestCase
                     ['price', null, '101'],
                     ['description', null, 'descr text'],
                 ],
+                'attributeList' => null
+            ],
+            'test case for update product with empty string attribute' => [
+                'requestProductData' => [
+                    'name' => 'testName3',
+                    'sku' => 'testSku3',
+                    'price' => '103',
+                    'special_price' => '100',
+                    'custom_attribute' => '',
+                ],
+                'useDefaults' => [],
+                'expectedProductData' => [
+                    'name' => 'testName3',
+                    'sku' => 'testSku3',
+                    'price' => '103',
+                    'special_price' => '100',
+                    'custom_attribute' => '',
+                ],
+                'initialProductData' => [
+                    ['name', null, 'testName2'],
+                    ['sku', null, 'testSku2'],
+                    ['price', null, '101'],
+                    ['custom_attribute', null, '0'],
+                ],
+                'attributeList' => null
+            ],
+            'update_product_with_multi_select_attribute' => [
+                'requestProductData' => [
+                    'name' => 'testName3',
+                    'sku' => 'testSku3',
+                    'price' => '103',
+                    'special_price' => '100',
+                    'multi_select_attribute' => 'test',
+                ],
+                'useDefaults' => ['multi_select_attribute' => '1'],
+                'expectedProductData' => [
+                    'name' => 'testName3',
+                    'sku' => 'testSku3',
+                    'price' => '103',
+                    'special_price' => '100',
+                    'multi_select_attribute' => false,
+                ],
+                'initialProductData' => [
+                    ['name', null, 'testName2'],
+                    ['sku', null, 'testSku2'],
+                    ['price', null, '101'],
+                    ['multi_select_attribute', null, 'test'],
+                ],
+                'attributeList' => null
             ],
         ];
     }

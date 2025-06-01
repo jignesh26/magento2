@@ -11,6 +11,7 @@ namespace Magento\Framework\Session;
  * Session Manager Interface
  *
  * @api
+ * @since 100.0.2
  */
 interface SessionManagerInterface
 {
@@ -68,7 +69,7 @@ interface SessionManagerInterface
      * @param  array $options
      * @return void
      */
-    public function destroy(array $options = null);
+    public function destroy(?array $options = null);
 
     /**
      * Unset session data

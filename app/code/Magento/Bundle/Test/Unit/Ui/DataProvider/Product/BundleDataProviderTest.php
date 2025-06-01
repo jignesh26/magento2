@@ -1,20 +1,26 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Bundle\Test\Unit\Ui\DataProvider\Product;
 
-use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Bundle\Helper\Data;
 use Magento\Bundle\Ui\DataProvider\Product\BundleDataProvider;
-use Magento\Framework\App\RequestInterface;
 use Magento\Catalog\Model\ResourceModel\Product\Collection;
 use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory;
-use Magento\Bundle\Helper\Data;
+use Magento\Framework\App\RequestInterface;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Store\Model\Store;
+use Magento\Ui\DataProvider\Modifier\PoolInterface;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class BundleDataProviderTest extends \PHPUnit\Framework\TestCase
+class BundleDataProviderTest extends TestCase
 {
-    const ALLOWED_TYPE = 'simple';
+    private const ALLOWED_TYPE = 'simple';
 
     /**
      * @var ObjectManager
@@ -22,37 +28,45 @@ class BundleDataProviderTest extends \PHPUnit\Framework\TestCase
     protected $objectManager;
 
     /**
-     * @var RequestInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var RequestInterface|MockObject
      */
     protected $requestMock;
 
     /**
-     * @var CollectionFactory|\PHPUnit_Framework_MockObject_MockObject
+     * @var CollectionFactory|MockObject
      */
     protected $collectionFactoryMock;
 
     /**
-     * @var Collection|\PHPUnit_Framework_MockObject_MockObject
+     * @var Collection|MockObject
      */
     protected $collectionMock;
 
     /**
-     * @var Data|\PHPUnit_Framework_MockObject_MockObject
+     * @var Data|MockObject
      */
     protected $dataHelperMock;
 
     /**
+     * @var PoolInterface|MockObject
+     */
+    private $modifierPool;
+
+    /**
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = new ObjectManager($this);
+
+        $this->modifierPool = $this->getMockBuilder(PoolInterface::class)
+            ->getMockForAbstractClass();
 
         $this->requestMock = $this->getMockBuilder(RequestInterface::class)
             ->getMockForAbstractClass();
         $this->collectionMock = $this->getMockBuilder(Collection::class)
             ->disableOriginalConstructor()
-            ->setMethods(
+            ->onlyMethods(
                 [
                     'toArray',
                     'isLoaded',
@@ -65,14 +79,14 @@ class BundleDataProviderTest extends \PHPUnit\Framework\TestCase
             )->getMock();
         $this->collectionFactoryMock = $this->getMockBuilder(CollectionFactory::class)
             ->disableOriginalConstructor()
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->getMock();
         $this->collectionFactoryMock->expects($this->any())
             ->method('create')
             ->willReturn($this->collectionMock);
         $this->dataHelperMock = $this->getMockBuilder(Data::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getAllowedSelectionTypes'])
+            ->onlyMethods(['getAllowedSelectionTypes'])
             ->getMock();
     }
 
@@ -92,6 +106,7 @@ class BundleDataProviderTest extends \PHPUnit\Framework\TestCase
             'addFilterStrategies' => [],
             'meta' => [],
             'data' => [],
+            'modifiersPool' => $this->modifierPool,
         ]);
     }
 
@@ -116,13 +131,16 @@ class BundleDataProviderTest extends \PHPUnit\Framework\TestCase
             ->method('addFilterByRequiredOptions');
         $this->collectionMock->expects($this->once())
             ->method('addStoreFilter')
-            ->with(\Magento\Store\Model\Store::DEFAULT_STORE_ID);
+            ->with(Store::DEFAULT_STORE_ID);
         $this->collectionMock->expects($this->once())
             ->method('toArray')
             ->willReturn($items);
         $this->collectionMock->expects($this->once())
             ->method('getSize')
             ->willReturn(count($items));
+        $this->modifierPool->expects($this->once())
+            ->method('getModifiersInstances')
+            ->willReturn([]);
 
         $this->assertEquals($expectedData, $this->getModel()->getData());
     }

@@ -7,8 +7,9 @@
 namespace Magento\Swatches\Model\ResourceModel;
 
 /**
- * @codeCoverageIgnore
  * Swatch Resource Model
+ *
+ * @codeCoverageIgnore
  * @api
  * @since 100.0.2
  */
@@ -25,8 +26,10 @@ class Swatch extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
     }
 
     /**
-     * @param string $defaultValue
+     * Update default swatch option value.
+     *
      * @param integer $id
+     * @param string $defaultValue
      * @return void
      */
     public function saveDefaultSwatchOption($id, $defaultValue)
@@ -44,12 +47,13 @@ class Swatch extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
      * @param array $optionIDs
      * @param int $type
      * @throws \Magento\Framework\Exception\LocalizedException
+     * @since 100.2.4
      */
     public function clearSwatchOptionByOptionIdAndType($optionIDs, $type = null)
     {
         if (count($optionIDs)) {
             foreach ($optionIDs as $optionId) {
-                $where = ['option_id' => $optionId];
+                $where = ['option_id = ?' => $optionId];
                 if ($type !== null) {
                     $where['type = ?'] = $type;
                 }

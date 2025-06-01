@@ -1,7 +1,9 @@
 // /**
-//  * Copyright © Magento, Inc. All rights reserved.
-//  * See COPYING.txt for license details.
+//  * Copyright 2024 Adobe
+//  * All Rights Reserved.
 //  */
+
+@color-grey: #aaa;
 
 //
 //  Catalog product grid
@@ -11,6 +13,14 @@
     .admin__data-grid-wrap {
         .data-row {
             cursor: pointer;
+        }
+    }
+}
+
+.catalog-category-edit {
+    .admin__grid-control {
+        .admin__grid-control-value {
+            display: none;
         }
     }
 }
@@ -63,7 +73,7 @@
 
 .catalog-category-edit,
 .catalog-category-add {
-    //  TODO: refactor trees
+    //  TODO refactor trees
     .x-tree.tree-wrapper {
         overflow-x: auto;
     }
@@ -91,6 +101,35 @@
         .admin__field + .admin__field {
             margin-left: @indent__s;
             margin-top: 0;
+            .admin__field-control {
+                .admin__control-addon {
+                    .admin__control-text {
+                        min-width: 6rem;
+                    }
+                }
+            }
         }
+    }
+}
+
+//
+//  Catalog Product Edit Action Attribute
+//  ---------------------------------------------
+
+.admin__field-control {
+    .attribute-change-checkbox {
+        input[type='checkbox'].checkbox {
+            margin-top: 0;
+        }
+    }
+}
+
+//
+//  Catalog Category Tree
+//  ---------------------------------------------
+
+.jstree-children {
+    .not-active-category {
+        color: @color-grey;
     }
 }

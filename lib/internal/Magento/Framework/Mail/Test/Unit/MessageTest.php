@@ -1,48 +1,60 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Mail\Test\Unit;
 
-class MessageTest extends \PHPUnit\Framework\TestCase
+use Magento\Framework\Mail\Message;
+use PHPUnit\Framework\TestCase;
+
+/**
+ * test Magento\Framework\Mail\Message
+ */
+class MessageTest extends TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|\Magento\Framework\Mail\Message
+     * @var Message
      */
-    protected $_messageMock;
+    protected $message;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->_messageMock = $this->createPartialMock(
-            \Magento\Framework\Mail\Message::class,
-            ['setBody', 'setMessageType']
-        );
+        $this->message = new Message();
     }
 
     public function testSetBodyHtml()
     {
-        $this->_messageMock->expects($this->once())
-            ->method('setMessageType')
-            ->with('text/html');
+        $this->message->setBodyHtml('body');
 
-        $this->_messageMock->expects($this->once())
-            ->method('setBody')
-            ->with('body');
-
-        $this->_messageMock->setBodyHtml('body');
+        $part = $this->message->getBody();
+        $this->assertEquals('html', $part->getMediaSubtype());
+        $this->assertEquals(
+            'quoted-printable',
+            $part->getPreparedHeaders()->get('Content-Transfer-Encoding')->getBody()
+        );
+        $this->assertEquals(
+            'utf-8',
+            $part->getPreparedHeaders()->get('Content-Transfer-Encoding')->getCharset()
+        );
+        $this->assertEquals('body', $part->getBody());
+        $this->assertEquals('inline', $part->getDisposition());
     }
 
     public function testSetBodyText()
     {
-        $this->_messageMock->expects($this->once())
-            ->method('setMessageType')
-            ->with('text/plain');
+        $this->message->setBodyText('body');
 
-        $this->_messageMock->expects($this->once())
-            ->method('setBody')
-            ->with('body');
-
-        $this->_messageMock->setBodyText('body');
+        $part = $this->message->getBody();
+        $this->assertEquals('plain', $part->getMediaSubtype());
+        $this->assertEquals(
+            'quoted-printable',
+            $part->getPreparedHeaders()->get('Content-Transfer-Encoding')->getBody()
+        );
+        $this->assertEquals('utf-8', $part->getPreparedHeaders()->get('Content-Transfer-Encoding')->getCharset());
+        $this->assertEquals('body', $part->getBody());
+        $this->assertEquals('inline', $part->getDisposition());
     }
 }

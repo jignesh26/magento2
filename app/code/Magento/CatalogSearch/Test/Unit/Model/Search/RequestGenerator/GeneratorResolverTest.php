@@ -1,46 +1,46 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\CatalogSearch\Test\Unit\Model\Search\RequestGenerator;
 
 use Magento\CatalogSearch\Model\Search\RequestGenerator\GeneratorInterface;
 use Magento\CatalogSearch\Model\Search\RequestGenerator\GeneratorResolver;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class GeneratorResolverTest extends \PHPUnit\Framework\TestCase
+class GeneratorResolverTest extends TestCase
 {
     /** @var  GeneratorResolver */
     private $resolver;
 
-    /** @var  GeneratorInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var  GeneratorInterface|MockObject */
     private $defaultGenerator;
 
-    /** @var  GeneratorInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var  GeneratorInterface|MockObject */
     private $datetimeGenerator;
 
-    /** @var  GeneratorInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var  GeneratorInterface|MockObject */
     private $rangeGenerator;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->defaultGenerator = $this->getMockBuilder(GeneratorInterface::class)
-            ->setMethods([])
             ->getMockForAbstractClass();
 
         $this->datetimeGenerator = $this->getMockBuilder(GeneratorInterface::class)
-            ->setMethods([])
             ->getMockForAbstractClass();
 
         $this->rangeGenerator = $this->getMockBuilder(GeneratorInterface::class)
-            ->setMethods([])
             ->getMockForAbstractClass();
 
-        $invalidTypeGenerator = $this->getMockBuilder(\stdClass::class)
-            ->setMethods([]);
+        $invalidTypeGenerator = $this->getMockBuilder(\stdClass::class);
 
-        $objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $objectManager = new ObjectManager($this);
         $this->resolver = $objectManager->getObject(
             GeneratorResolver::class,
             [
@@ -65,11 +65,9 @@ class GeneratorResolverTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($this->defaultGenerator, $this->resolver->getGeneratorForType('unknown_type'));
     }
 
-    /**
-     * @expectedException InvalidArgumentException
-     */
     public function testGetInvalidGeneratorType()
     {
+        $this->expectException('InvalidArgumentException');
         $this->resolver->getGeneratorForType('invalid_type');
     }
 }

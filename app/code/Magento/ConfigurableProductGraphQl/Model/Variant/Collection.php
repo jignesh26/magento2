@@ -7,19 +7,23 @@ declare(strict_types=1);
 
 namespace Magento\ConfigurableProductGraphQl\Model\Variant;
 
+use Exception;
 use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\Catalog\Model\Product;
-use Magento\ConfigurableProduct\Model\ResourceModel\Product\Type\Configurable\Product\CollectionFactory;
 use Magento\ConfigurableProduct\Model\ResourceModel\Product\Type\Configurable\Product\Collection as ChildCollection;
-use Magento\Catalog\Model\ProductFactory;
+use Magento\ConfigurableProduct\Model\ResourceModel\Product\Type\Configurable\Product\CollectionFactory;
 use Magento\Framework\EntityManager\MetadataPool;
 use Magento\Framework\Api\SearchCriteriaBuilder;
-use Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\Product as DataProvider;
+use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
+use Magento\GraphQl\Model\Query\ContextInterface;
+use Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\Product\CollectionProcessorInterface;
+use Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\Product\CollectionPostProcessor;
+use Magento\Catalog\Model\Product\Attribute\Source\Status;
 
 /**
  * Collection for fetching configurable child product data.
  */
-class Collection
+class Collection implements ResetAfterRequestInterface
 {
     /**
      * @var CollectionFactory
@@ -27,19 +31,9 @@ class Collection
     private $childCollectionFactory;
 
     /**
-     * @var ProductFactory
-     */
-    private $productFactory;
-
-    /**
      * @var SearchCriteriaBuilder
      */
     private $searchCriteriaBuilder;
-
-    /**
-     * @var DataProvider
-     */
-    private $productDataProvider;
 
     /**
      * @var MetadataPool
@@ -47,9 +41,9 @@ class Collection
     private $metadataPool;
 
     /**
-     * @var int[]
+     * @var Product[]
      */
-    private $parentIds = [];
+    private $parentProducts = [];
 
     /**
      * @var array
@@ -62,40 +56,56 @@ class Collection
     private $attributeCodes = [];
 
     /**
+     * @var CollectionProcessorInterface
+     */
+    private $collectionProcessor;
+
+    /**
+     * @var CollectionPostProcessor
+     */
+    private $collectionPostProcessor;
+
+    /**
      * @param CollectionFactory $childCollectionFactory
-     * @param ProductFactory $productFactory
      * @param SearchCriteriaBuilder $searchCriteriaBuilder
-     * @param DataProvider $productDataProvider
      * @param MetadataPool $metadataPool
+     * @param CollectionProcessorInterface $collectionProcessor
+     * @param CollectionPostProcessor $collectionPostProcessor
      */
     public function __construct(
         CollectionFactory $childCollectionFactory,
-        ProductFactory $productFactory,
         SearchCriteriaBuilder $searchCriteriaBuilder,
-        DataProvider $productDataProvider,
-        MetadataPool $metadataPool
+        MetadataPool $metadataPool,
+        CollectionProcessorInterface $collectionProcessor,
+        CollectionPostProcessor $collectionPostProcessor
     ) {
         $this->childCollectionFactory = $childCollectionFactory;
-        $this->productFactory = $productFactory;
         $this->searchCriteriaBuilder = $searchCriteriaBuilder;
-        $this->productDataProvider = $productDataProvider;
         $this->metadataPool = $metadataPool;
+        $this->collectionProcessor = $collectionProcessor;
+        $this->collectionPostProcessor = $collectionPostProcessor;
     }
 
     /**
-     * Add parent Id to collection filter
+     * Add parent to collection filter
      *
-     * @param int $id
+     * @param Product $product
      * @return void
+     * @throws Exception
      */
-    public function addParentId(int $id) : void
+    public function addParentProduct(Product $product) : void
     {
-        if (!in_array($id, $this->parentIds) && !empty($this->childrenMap)) {
-            $this->childrenMap = [];
-            $this->parentIds[] = $id;
-        } elseif (!in_array($id, $this->parentIds)) {
-            $this->parentIds[] = $id;
+        $linkField = $this->metadataPool->getMetadata(ProductInterface::class)->getLinkField();
+        $productId = $product->getData($linkField);
+
+        if (isset($this->parentProducts[$productId])) {
+            return;
         }
+
+        if (!empty($this->childrenMap)) {
+            $this->childrenMap = [];
+        }
+        $this->parentProducts[$productId] = $product;
     }
 
     /**
@@ -113,11 +123,13 @@ class Collection
      * Retrieve child products from for passed in parent id.
      *
      * @param int $id
+     * @param ContextInterface $context
+     * @param array $attributeCodes
      * @return array
      */
-    public function getChildProductsByParentId(int $id) : array
+    public function getChildProductsByParentId(int $id, ContextInterface $context, array $attributeCodes) : array
     {
-        $childrenMap = $this->fetch();
+        $childrenMap = $this->fetch($context, $attributeCodes);
 
         if (!isset($childrenMap[$id])) {
             return [];
@@ -129,35 +141,63 @@ class Collection
     /**
      * Fetch all children products from parent id's.
      *
+     * @param ContextInterface $context
+     * @param array $attributeCodes
      * @return array
+     * @throws Exception
      */
-    private function fetch() : array
+    private function fetch(ContextInterface $context, array $attributeCodes) : array
     {
-        if (empty($this->parentIds) || !empty($this->childrenMap)) {
+        if (empty($this->parentProducts) || !empty($this->childrenMap)) {
             return $this->childrenMap;
         }
 
-        $linkField = $this->metadataPool->getMetadata(ProductInterface::class)->getLinkField();
-        foreach ($this->parentIds as $id) {
-            /** @var ChildCollection $childCollection */
-            $childCollection = $this->childCollectionFactory->create();
-            /** @var Product $product */
-            $product = $this->productFactory->create();
-            $product->setData($linkField, $id);
+        /** @var ChildCollection $childCollection */
+        $childCollection = $this->childCollectionFactory->create();
+        foreach ($this->parentProducts as $product) {
             $childCollection->setProductFilter($product);
+        }
+        $childCollection->addWebsiteFilter($context->getExtensionAttributes()->getStore()->getWebsiteId());
+        $linkField = $this->metadataPool->getMetadata(ProductInterface::class)->getLinkField();
+        $childCollection->getSelect()->group('e.' . $linkField);
+        $childCollection->getSelect()->columns([
+            'parent_ids' => new \Zend_Db_Expr('GROUP_CONCAT(link_table.parent_id)')
+        ]);
 
-            /** @var Product $childProduct */
-            foreach ($childCollection->getItems() as $childProduct) {
-                $formattedChild = ['model' => $childProduct, 'sku' => $childProduct->getSku()];
-                $parentId = (int)$childProduct->getParentId();
+        $attributeCodes = array_unique(array_merge($this->attributeCodes, $attributeCodes));
+
+        $this->collectionProcessor->process(
+            $childCollection,
+            $this->searchCriteriaBuilder->create(),
+            $attributeCodes,
+            $context
+        );
+        $this->collectionPostProcessor->process($childCollection, $attributeCodes);
+
+        /** @var Product $childProduct */
+        foreach ($childCollection as $childProduct) {
+            if ((int)$childProduct->getStatus() !== Status::STATUS_ENABLED) {
+                continue;
+            }
+            $formattedChild = ['model' => $childProduct, 'sku' => $childProduct->getSku()];
+            $parentIds = $childProduct->getParentIds() ? explode(',', $childProduct->getParentIds()) : [];
+            foreach ($parentIds as $parentId) {
                 if (!isset($this->childrenMap[$parentId])) {
                     $this->childrenMap[$parentId] = [];
                 }
-
                 $this->childrenMap[$parentId][] = $formattedChild;
             }
         }
-
         return $this->childrenMap;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function _resetState(): void
+    {
+        $this->parentProducts = [];
+        $this->childrenMap = [];
+        $this->attributeCodes = [];
     }
 }

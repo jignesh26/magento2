@@ -1,50 +1,62 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Checkout\Test\Unit\CustomerData;
 
+use Magento\Catalog\Helper\Image;
+use Magento\Catalog\Helper\Product\ConfigurationPool;
+use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\Product\Configuration\Item\ItemResolverInterface;
+use Magento\Catalog\Model\Product\Url;
+use Magento\Checkout\CustomerData\DefaultItem;
+use Magento\Checkout\Helper\Data;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Quote\Model\Quote\Item;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class DefaultItemTest extends \PHPUnit\Framework\TestCase
+class DefaultItemTest extends TestCase
 {
     /**
-     * @var \Magento\Checkout\CustomerData\DefaultItem
+     * @var DefaultItem
      */
     private $model;
 
     /**
-     * @var \Magento\Catalog\Helper\Image
+     * @var Image
      */
     private $imageHelper;
 
     /**
-     * @var \Magento\Catalog\Helper\Product\ConfigurationPool
+     * @var ConfigurationPool
      */
     private $configurationPool;
 
     /**
-     * @var ItemResolverInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ItemResolverInterface|MockObject
      */
     private $itemResolver;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
-        $this->imageHelper = $this->getMockBuilder(\Magento\Catalog\Helper\Image::class)
+        $objectManager = new ObjectManager($this);
+        $this->imageHelper = $this->getMockBuilder(Image::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $this->configurationPool = $this->getMockBuilder(\Magento\Catalog\Helper\Product\ConfigurationPool::class)
-            ->setMethods([])
+        $this->configurationPool = $this->getMockBuilder(ConfigurationPool::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $checkoutHelper = $this->getMockBuilder(\Magento\Checkout\Helper\Data::class)
-            ->setMethods(['formatPrice'])->disableOriginalConstructor()->getMock();
+        $checkoutHelper = $this->getMockBuilder(Data::class)
+            ->onlyMethods(['formatPrice'])->disableOriginalConstructor()
+            ->getMock();
         $checkoutHelper->expects($this->any())->method('formatPrice')->willReturn(5);
-        $this->itemResolver = $this->createMock(ItemResolverInterface::class);
+        $this->itemResolver = $this->getMockForAbstractClass(ItemResolverInterface::class);
         $this->model = $objectManager->getObject(
-            \Magento\Checkout\CustomerData\DefaultItem::class,
+            DefaultItem::class,
             [
                 'imageHelper' => $this->imageHelper,
                 'configurationPool' => $this->configurationPool,
@@ -56,19 +68,19 @@ class DefaultItemTest extends \PHPUnit\Framework\TestCase
 
     public function testGetItemData()
     {
-        $urlModel = $this->getMockBuilder(\Magento\Catalog\Model\Product\Url::class)
+        $urlModel = $this->getMockBuilder(Url::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $product = $this->getMockBuilder(\Magento\Catalog\Model\Product::class)
-            ->setMethods(['getUrlModel', 'isVisibleInSiteVisibility', 'getSku'])
+        $product = $this->getMockBuilder(Product::class)
+            ->onlyMethods(['getUrlModel', 'isVisibleInSiteVisibility', 'getSku'])
             ->disableOriginalConstructor()
             ->getMock();
         $product->expects($this->any())->method('getUrlModel')->willReturn($urlModel);
         $product->expects($this->any())->method('isVisibleInSiteVisibility')->willReturn(true);
         $product->expects($this->any())->method('getSku')->willReturn('simple');
-        /** @var \Magento\Quote\Model\Quote\Item $item */
-        $item = $this->getMockBuilder(\Magento\Quote\Model\Quote\Item::class)
-            ->setMethods(['getProductType', 'getProduct', 'getCalculationPrice'])
+        /** @var Item $item */
+        $item = $this->getMockBuilder(Item::class)
+            ->onlyMethods(['getProductType', 'getProduct', 'getCalculationPrice'])
             ->disableOriginalConstructor()
             ->getMock();
         $item->expects($this->any())->method('getProduct')->willReturn($product);
@@ -85,7 +97,7 @@ class DefaultItemTest extends \PHPUnit\Framework\TestCase
         $this->itemResolver->expects($this->any())
             ->method('getFinalProduct')
             ->with($item)
-            ->will($this->returnValue($product));
+            ->willReturn($product);
 
         $itemData = $this->model->getItemData($item);
         $this->assertArrayHasKey('options', $itemData);
@@ -102,5 +114,6 @@ class DefaultItemTest extends \PHPUnit\Framework\TestCase
         $this->assertArrayHasKey('product_price_value', $itemData);
         $this->assertArrayHasKey('product_image', $itemData);
         $this->assertArrayHasKey('canApplyMsrp', $itemData);
+        $this->assertArrayHasKey('message', $itemData);
     }
 }

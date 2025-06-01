@@ -1,12 +1,17 @@
 <?php
 /**
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Backend\Controller\Adminhtml\System\Design;
 
-class Save extends \Magento\Backend\Controller\Adminhtml\System\Design
+use Magento\Framework\App\Action\HttpPostActionInterface;
+use Magento\Framework\Filter\FilterInput;
+
+/**
+ * Save design action.
+ */
+class Save extends \Magento\Backend\Controller\Adminhtml\System\Design implements HttpPostActionInterface
 {
     /**
      * Filtering posted data. Converting localized data if needed
@@ -16,16 +21,18 @@ class Save extends \Magento\Backend\Controller\Adminhtml\System\Design
      */
     protected function _filterPostData($data)
     {
-        $inputFilter = new \Zend_Filter_Input(
+        $inputFilter = new FilterInput(
             ['date_from' => $this->dateFilter, 'date_to' => $this->dateFilter],
             [],
             $data
         );
-        $data = $inputFilter->getUnescaped();
-        return $data;
+
+        return $inputFilter->getUnescaped();
     }
 
     /**
+     * Save design action.
+     *
      * @return \Magento\Backend\Model\View\Result\Redirect
      */
     public function execute()
@@ -54,10 +61,10 @@ class Save extends \Magento\Backend\Controller\Adminhtml\System\Design
             } catch (\Exception $e) {
                 $this->messageManager->addErrorMessage($e->getMessage());
                 $this->_objectManager->get(\Magento\Backend\Model\Session::class)->setDesignData($data);
-                return $resultRedirect->setPath('adminhtml/*/', ['id' => $design->getId()]);
+                return $resultRedirect->setPath('*/*/edit', ['id' => $design->getId()]);
             }
         }
 
-        return $resultRedirect->setPath('adminhtml/*/');
+        return $resultRedirect->setPath('*/*/');
     }
 }

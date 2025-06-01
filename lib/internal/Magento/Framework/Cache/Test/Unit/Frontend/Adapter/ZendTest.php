@@ -3,9 +3,15 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Cache\Test\Unit\Frontend\Adapter;
 
-class ZendTest extends \PHPUnit\Framework\TestCase
+use Magento\Framework\Cache\Frontend\Adapter\Zend;
+use Magento\Framework\TestFramework\Unit\Helper\ProxyTesting;
+use PHPUnit\Framework\TestCase;
+
+class ZendTest extends TestCase
 {
     /**
      * @param string $method
@@ -16,12 +22,15 @@ class ZendTest extends \PHPUnit\Framework\TestCase
      */
     public function testProxyMethod($method, $params, $expectedParams, $expectedResult)
     {
+        if (is_callable($expectedResult)) {
+            $expectedResult = $expectedResult($this);
+        }
         $frontendMock = $this->createMock(\Zend_Cache_Core::class);
         $frontendFactory = function () use ($frontendMock) {
             return $frontendMock;
         };
-        $object = new \Magento\Framework\Cache\Frontend\Adapter\Zend($frontendFactory);
-        $helper = new \Magento\Framework\TestFramework\Unit\Helper\ProxyTesting();
+        $object = new Zend($frontendFactory);
+        $helper = new ProxyTesting();
         $result = $helper->invokeWithExpectations(
             $object,
             $frontendMock,
@@ -37,7 +46,7 @@ class ZendTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function proxyMethodDataProvider()
+    public static function proxyMethodDataProvider()
     {
         return [
             'test' => ['test', ['record_id'], ['RECORD_ID'], 111],
@@ -71,9 +80,14 @@ class ZendTest extends \PHPUnit\Framework\TestCase
                 'getBackend',
                 [],
                 [],
-                $this->createMock(\Zend_Cache_Backend::class),
+                static fn (self $testCase) => $testCase->createZendCacheBackendMock(),
             ]
         ];
+    }
+
+    public function createZendCacheBackendMock()
+    {
+        return $this->createMock(\Zend_Cache_Backend::class);
     }
 
     /**
@@ -89,14 +103,14 @@ class ZendTest extends \PHPUnit\Framework\TestCase
         $frontendFactory = function () use ($frontendMock) {
             return $frontendMock;
         };
-        $object = new \Magento\Framework\Cache\Frontend\Adapter\Zend($frontendFactory);
+        $object = new Zend($frontendFactory);
         $object->clean($cleaningMode);
     }
 
     /**
      * @return array
      */
-    public function cleanExceptionDataProvider()
+    public static function cleanExceptionDataProvider()
     {
         return [
             'cleaning mode "expired"' => [
@@ -120,7 +134,7 @@ class ZendTest extends \PHPUnit\Framework\TestCase
         $frontendFactory = function () use ($frontendMock) {
             return $frontendMock;
         };
-        $object = new \Magento\Framework\Cache\Frontend\Adapter\Zend($frontendFactory);
+        $object = new Zend($frontendFactory);
         $this->assertSame($frontendMock, $object->getLowLevelFrontend());
     }
 }

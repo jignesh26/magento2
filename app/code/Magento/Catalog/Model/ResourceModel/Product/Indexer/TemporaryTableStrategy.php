@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Catalog\Model\ResourceModel\Product\Indexer;
@@ -30,7 +30,7 @@ class TemporaryTableStrategy implements \Magento\Framework\Indexer\Table\Strateg
 
     /**
      * TemporaryTableStrategy constructor.
-     * @param \Magento\Framework\Indexer\Table\Strategy $strategy
+     * @param \Magento\Framework\Indexer\Table\StrategyInterface $strategy
      * @param \Magento\Framework\App\ResourceConnection $resource
      */
     public function __construct(
@@ -66,9 +66,10 @@ class TemporaryTableStrategy implements \Magento\Framework\Indexer\Table\Strateg
     }
 
     /**
-     * Create temporary index table based on memory table
+     * Create temporary index table based on memory table{@inheritdoc}
      *
-     * {@inheritdoc}
+     * @param string $tablePrefix
+     * @return string
      */
     public function prepareTableName($tablePrefix)
     {

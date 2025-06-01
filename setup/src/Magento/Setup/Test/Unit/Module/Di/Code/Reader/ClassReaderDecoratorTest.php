@@ -3,29 +3,34 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Setup\Test\Unit\Module\Di\Code\Reader;
 
+use Magento\Framework\Code\Reader\ClassReader;
+use Magento\Setup\Module\Di\Code\Reader\ClassReaderDecorator;
 use Magento\Setup\Module\Di\Compiler\ConstructorArgument;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class ClassReaderDecoratorTest extends \PHPUnit\Framework\TestCase
+class ClassReaderDecoratorTest extends TestCase
 {
     /**
-     * @var \Magento\Setup\Module\Di\Code\Reader\ClassReaderDecorator
+     * @var ClassReaderDecorator
      */
     private $model;
 
     /**
-     * @var \Magento\Framework\Code\Reader\ClassReader | \PHPUnit_Framework_MockObject_MockObject
+     * @var ClassReader|MockObject
      */
     private $classReaderMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->classReaderMock = $this->getMockBuilder(\Magento\Framework\Code\Reader\ClassReader::class)
+        $this->classReaderMock = $this->getMockBuilder(ClassReader::class)
             ->disableOriginalConstructor()
-            ->setMethods([])
             ->getMock();
-        $this->model = new \Magento\Setup\Module\Di\Code\Reader\ClassReaderDecorator($this->classReaderMock);
+        $this->model = new ClassReaderDecorator($this->classReaderMock);
     }
 
     /**
@@ -49,7 +54,7 @@ class ClassReaderDecoratorTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getConstructorDataProvider()
+    public static function getConstructorDataProvider()
     {
         return [
             [null, 'null', null],

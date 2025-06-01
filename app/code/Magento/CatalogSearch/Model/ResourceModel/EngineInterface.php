@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\CatalogSearch\Model\ResourceModel;
 
@@ -13,10 +13,16 @@ namespace Magento\CatalogSearch\Model\ResourceModel;
  */
 interface EngineInterface
 {
+    /**
+     * Field prefix constant
+     *
+     * @deprecated mysql search engine has been removed
+     * @see \Magento\Framework\Search\EngineResolverInterface
+     */
     const FIELD_PREFIX = 'attr_';
 
     /**
-     * Scope identifier
+     * Scope identifier constant
      *
      * @deprecated since using engine resolver
      * @see \Magento\Framework\Search\EngineResolverInterface

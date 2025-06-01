@@ -1,11 +1,13 @@
 <?php
 /**
+ * Copyright 2011 Adobe
+ * All Rights Reserved.
+ *
  * Obsolete classes
  *
  * Format: array(<class_name>[, <replacement>])
  *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * @codingStandardsIgnoreFile
  */
 return [
     ['Mage_Admin_Helper_Data', 'Magento\Backend\Helper\Data'],
@@ -1790,7 +1792,7 @@ return [
     ],
     ['Magento\Adminhtml\Block\Report\Shopcart\Product', 'Magento\Reports\Block\Adminhtml\Shopcart\Product'],
     ['Magento\Adminhtml\Block\Report\Wishlist\Grid', 'Magento\Reports\Block\Adminhtml\Wishlist\Grid'],
-    ['Magento\Adminhtml\Block\Report\Wishlist', 'Magento\Reports\Block\Adminhtml\Wishlist'],
+    ['Magento\Adminhtml\Block\Report\Wishlist'],
     ['Magento\Backend\Helper\Addresses'],
     ['Magento\Backend\Controller\Adminhtml\System\Variable', 'Magento\Variable\Controller\Adminhtml\System\Variable'],
     [
@@ -2721,6 +2723,10 @@ return [
     ['Magento\CatalogSearch\Model\Fulltext\Observer'],
     ['Magento\CatalogSearch\Model\ResourceModel\Indexer\Fulltext'],
     [
+        'Magento\CatalogSearch\Setup\Patch\Data\MySQLSearchDeprecationNotification',
+        'Magento\CatalogSearch\Setup\Patch\Data\MySQLSearchRemovalNotification',
+    ],
+    [
         'Magento\Tax\Block\Adminhtml\Rate\Grid\Renderer\Country',
         'Magento\TaxImportExport\Block\Adminhtml\Rate\Grid\Renderer\Country',
     ],
@@ -2839,7 +2845,7 @@ return [
     ['Magento\Framework\Stdlib\CookieManager', 'Magento\Framework\Stdlib\CookieManagerInterface'],
     ['Magento\Framework\Interception\PluginList', 'Magento\Framework\Interception\PluginListInterface'],
     ['Magento\Framework\Interception\Config', 'Magento\Framework\Interception\ConfigInterface'],
-    ['Magento\Framework\Interception\Chain', 'Magento\Framework\Interception\ChainInterface'],
+    ['Magento\Framework\Interception\Chain'],
     ['Magento\Framework\Interception\Definition', 'Magento\Framework\Interception\DefinitionInterface'],
     ['Magento\Framework\ObjectManager\Factory', 'Magento\Framework\ObjectManager\FactoryInterface'],
     ['Magento\Framework\ObjectManager\Config', 'Magento\Framework\ObjectManager\ConfigInterface'],
@@ -3198,6 +3204,8 @@ return [
     ['Magento\Tax\Model\ResourceModel\Sales\Order\Tax\Item', 'Magento\Sales\Model\ResourceModel\Order\Tax\Item'],
     ['Magento\Tax\Model\Sales\Order\Tax\Item', 'Magento\Sales\Model\Order\Tax\Item'],
     ['Magento\Reports\Block\Adminhtml\Product\Grid'],
+    ['Magento\Reports\Block\Adminhtml\Product\Widget\Viewed\Item'],
+    ['Magento\Reports\Block\Adminhtml\Wishlist'],
     ['Magento\Reports\Model\Totals'],
     ['Magento\Log\Model\Shell'],
     ['Magento\Log\App\Shell'],
@@ -4234,8 +4242,94 @@ return [
         'Magento\Elasticsearch\Test\Unit\Model\SearchAdapter\ConnectionManagerTest',
         'Magento\Elasticsearch\Test\Unit\SearchAdapter\ConnectionManagerTest'
     ],
-    ['Zend_Feed', 'Zend\Feed'],
-    ['Zend_Uri', 'Zend\Uri\Uri'],
+    ['Zend_Feed', 'Laminas\Feed'],
+    ['Zend_Uri', 'Laminas\Uri\Uri'],
     ['Zend_Mime', 'Magento\Framework\HTTP\Mime'],
+    ['Zend_Mail'],
+    ['Zend_Json'],
+    ['Zend_Currency', 'Magento\Framework\Currency'],
     ['Magento\Framework\Encryption\Crypt', 'Magento\Framework\Encryption\EncryptionAdapterInterface'],
+    ['Magento\Wishlist\Setup\Patch\Schema\AddProductIdConstraint'],
+    ['Magento\Elasticsearch\Block\Adminhtml\System\Config\TestConnection'],
+    ['Magento\Elasticsearch\Model\Adapter\BatchDataMapper\CategoryFieldsProvider'],
+    ['Magento\Elasticsearch\Model\Adapter\DataMapper\ProductDataMapper'],
+    ['Magento\Elasticsearch\Model\Adapter\FieldMapper\ProductFieldMapper'],
+    ['Magento\Elasticsearch\Model\Client\Elasticsearch'],
+    ['Magento\Elasticsearch\SearchAdapter\Aggregation\Interval'],
+    ['Magento\Elasticsearch\ElasticAdapter\Model\Adapter\FieldType'],
+    ['Magento\Elasticsearch\Model\Adapter\DataMapperInterface'],
+    ['Magento\Elasticsearch\ElasticAdapter\Model\Adapter\DataMapper\ProductDataMapperProxy'],
+    ['Magento\Elasticsearch\ElasticAdapter\Model\Adapter\DataMapper\ProductDataMapper'],
+    ['Magento\Elasticsearch\Model\Adapter\DataMapper\DataMapperResolver'],
+    ['Magento\Elasticsearch\Model\Adapter\Container\Attribute'],
+    ['PHPUnit_Framework_MockObject_MockObject', 'PHPUnit\Framework\MockObject\MockObject'],
+    ['PHPUnit\Framework\BaseTestListener'],
+    ['Magento\Backend\Model\Setup\MenuBuilder'],
+    ['Magento\Setup\Controller\AddDatabase'],
+    ['Magento\Setup\Controller\BackupActionItems'],
+    ['Magento\Setup\Controller\CompleteBackup'],
+    ['Magento\Setup\Controller\ConfigureCatalogSearch'],
+    ['Magento\Setup\Controller\CreateAdminAccount'],
+    ['Magento\Setup\Controller\CreateBackup'],
+    ['Magento\Setup\Controller\CustomizeYourStore'],
+    ['Magento\Setup\Controller\DatabaseCheck'],
+    ['Magento\Setup\Controller\DataOption'],
+    ['Magento\Setup\Controller\DependencyCheck'],
+    ['Magento\Setup\Controller\Environment'],
+    ['Magento\Setup\Controller\ExtensionGrid'],
+    ['Magento\Setup\Controller\Home'],
+    ['Magento\Setup\Controller\Install'],
+    ['Magento\Setup\Controller\InstallExtensionGrid'],
+    ['Magento\Setup\Controller\LandingUpdater'],
+    ['Magento\Setup\Controller\Maintenance'],
+    ['Magento\Setup\Controller\Marketplace'],
+    ['Magento\Setup\Controller\MarketplaceCredentials'],
+    ['Magento\Setup\Controller\ModuleGrid'],
+    ['Magento\Setup\Controller\Modules'],
+    ['Magento\Setup\Controller\OtherComponentsGrid'],
+    ['Magento\Setup\Controller\ReadinessCheckInstaller'],
+    ['Magento\Setup\Controller\ReadinessCheckUpdater'],
+    ['Magento\Setup\Controller\SearchEngineCheck'],
+    ['Magento\Setup\Controller\SelectVersion'],
+    ['Magento\Setup\Controller\StartUpdater'],
+    ['Magento\Setup\Controller\Success'],
+    ['Magento\Setup\Controller\SystemConfig'],
+    ['Magento\Setup\Controller\UpdateExtensionGrid'],
+    ['Magento\Setup\Controller\UpdaterSuccess'],
+    ['Magento\Setup\Controller\UrlCheck'],
+    ['Magento\Setup\Controller\ValidateAdminCredentials'],
+    ['Magento\Setup\Controller\WebConfiguration'],
+    ['Magento\Setup\Controller\Session'],
+    ['Magento\Setup\Model\Grid\Extension'],
+    ['Magento\Setup\Model\Grid\Module'],
+    ['Magento\Setup\Model\Installer\ProgressFactory'],
+    ['Magento\Setup\Model\CronScriptReadinessCheck'],
+    ['Magento\Setup\Model\DependencyReadinessCheck'],
+    ['Magento\Setup\Model\ModuleStatus'],
+    ['Magento\Setup\Model\ModuleStatusFactory'],
+    ['Magento\Setup\Model\PackagesData'],
+    ['Magento\Setup\Model\PayloadValidator'],
+    ['Magento\Setup\Model\RequestDataConverter'],
+    ['Magento\Setup\Model\SystemPackage'],
+    ['Magento\Setup\Model\UninstallDependencyCheck'],
+    ['Magento\Setup\Model\UpdaterTaskCreator'],
+    ['Magento\Setup\Model\WebLogger'],
+    ['Magento\Setup\Validator\AdminCredentialsValidator'],
+    ['Magento\Setup\Model\Updater'],
+    ['Magento\Setup\Console\Command\CronRunCommand'],
+    [
+        'Magento\Elasticsearch\SearchAdapter\Query\Builder\Match',
+        'Magento\Elasticsearch\SearchAdapter\Query\Builder\MatchQuery'
+    ],
+    [
+        'Magento\Framework\Search\Request\Query\Match',
+        'Magento\Framework\Search\Request\Query\MatchQuery'
+    ],
+    [
+        'Magento\Elasticsearch\Test\Unit\SearchAdapter\Query\Builder\MatchTest',
+        'Magento\Elasticsearch\Test\Unit\SearchAdapter\Query\Builder\MatchQueryTest'
+    ],
+    ['Magento\Elasticsearch\Test\Unit\Model\DataProvider\Base\SuggestionsTest'],
+    ['Zend_Measure_Length', 'Magento\Framework\Measure\Length'],
+    ['Zend_Measure_Weight', 'Magento\Framework\Measure\Weight'],
 ];

@@ -3,11 +3,14 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Filesystem\Test\Unit;
 
-use \Magento\Framework\Filesystem\DirectoryList;
+use Magento\Framework\Filesystem\DirectoryList;
+use PHPUnit\Framework\TestCase;
 
-class DirectoryListTest extends \PHPUnit\Framework\TestCase
+class DirectoryListTest extends TestCase
 {
     public function testGetDefaultConfig()
     {
@@ -29,7 +32,7 @@ class DirectoryListTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function validateDataProvider()
+    public static function validateDataProvider()
     {
         return [
             ['', 'Unexpected value type.'],
@@ -49,23 +52,21 @@ class DirectoryListTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals('/root/dir', $object->getRoot());
     }
 
-    /**
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Unknown type: foo
-     */
     public function testUnknownType()
     {
+        $this->expectException('InvalidArgumentException');
+        $this->expectExceptionMessage('Unknown type: foo');
         new DirectoryList('/root/dir', ['foo' => [DirectoryList::PATH => '/foo/dir']]);
     }
 
     /**
      * @param string $method
-     * @expectedException \Magento\Framework\Exception\FileSystemException
-     * @expectedExceptionMessage Unknown directory type: 'foo'
      * @dataProvider assertCodeDataProvider
      */
     public function testAssertCode($method)
     {
+        $this->expectException('Magento\Framework\Exception\FileSystemException');
+        $this->expectExceptionMessage('Unknown directory type: \'foo\'');
         $object = new DirectoryList('/root/dir');
         $object->$method('foo');
     }
@@ -73,7 +74,7 @@ class DirectoryListTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function assertCodeDataProvider()
+    public static function assertCodeDataProvider()
     {
         return [['getPath', 'getUrlPath']];
     }
@@ -92,7 +93,7 @@ class DirectoryListTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getUrlPathDataProvider()
+    public static function getUrlPathDataProvider()
     {
         return [
             [[], false],
@@ -114,19 +115,21 @@ class DirectoryListTest extends \PHPUnit\Framework\TestCase
 
     /**
      * @param string $value
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage URL path must be relative directory path in lowercase with '/' directory separator:
      * @dataProvider assertUrlPathDataProvider
      */
     public function testAssertUrlPath($value)
     {
+        $this->expectException('InvalidArgumentException');
+        $this->expectExceptionMessage(
+            'URL path must be relative directory path in lowercase with \'/\' directory separator:'
+        );
         new DirectoryList('/root/dir', [DirectoryList::SYS_TMP => [DirectoryList::URL_PATH => $value]]);
     }
 
     /**
      * @return array
      */
-    public function assertUrlPathDataProvider()
+    public static function assertUrlPathDataProvider()
     {
         return [
             ['/'],

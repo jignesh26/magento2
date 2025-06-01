@@ -1,15 +1,18 @@
 <?php
 /**
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\Catalog\Model;
 
 use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Framework\Exception\StateException;
 
+/**
+ * Class \Magento\Catalog\Model\ProductAttributeGroupRepository
+ */
 class ProductAttributeGroupRepository implements \Magento\Catalog\Api\ProductAttributeGroupRepositoryInterface
 {
     /**
@@ -43,15 +46,21 @@ class ProductAttributeGroupRepository implements \Magento\Catalog\Api\ProductAtt
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function save(\Magento\Eav\Api\Data\AttributeGroupInterface $group)
     {
+        /** @var \Magento\Catalog\Model\Product\Attribute\Group $group */
+        $extensionAttributes = $group->getExtensionAttributes();
+        if ($extensionAttributes) {
+            $group->setSortOrder($extensionAttributes->getSortOrder());
+            $group->setAttributeGroupCode($extensionAttributes->getAttributeGroupCode());
+        }
         return $this->groupRepository->save($group);
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function getList(\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria)
     {
@@ -59,7 +68,7 @@ class ProductAttributeGroupRepository implements \Magento\Catalog\Api\ProductAtt
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function get($groupId)
     {
@@ -75,7 +84,7 @@ class ProductAttributeGroupRepository implements \Magento\Catalog\Api\ProductAtt
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function deleteById($groupId)
     {
@@ -86,7 +95,7 @@ class ProductAttributeGroupRepository implements \Magento\Catalog\Api\ProductAtt
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function delete(\Magento\Eav\Api\Data\AttributeGroupInterface $group)
     {

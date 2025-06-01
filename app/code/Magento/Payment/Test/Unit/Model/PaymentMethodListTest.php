@@ -3,14 +3,20 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Payment\Test\Unit\Model;
 
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
+use Magento\Payment\Api\Data\PaymentMethodInterface;
+use Magento\Payment\Api\Data\PaymentMethodInterfaceFactory;
+use Magento\Payment\Helper\Data;
+use Magento\Payment\Model\Method\AbstractMethod;
+use Magento\Payment\Model\PaymentMethodList;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-/**
- * Class PaymentMethodListTest.
- */
-class PaymentMethodListTest extends \PHPUnit\Framework\TestCase
+class PaymentMethodListTest extends TestCase
 {
     /**
      * @var ObjectManagerHelper
@@ -18,17 +24,17 @@ class PaymentMethodListTest extends \PHPUnit\Framework\TestCase
     private $objectManagerHelper;
 
     /**
-     * @var \Magento\Payment\Model\PaymentMethodList|\PHPUnit_Framework_MockObject_MockObject
+     * @var PaymentMethodList|MockObject
      */
     private $paymentMethodList;
 
     /**
-     * @var \Magento\Payment\Api\Data\PaymentMethodInterfaceFactory|\PHPUnit_Framework_MockObject_MockObject
+     * @var PaymentMethodInterfaceFactory|MockObject
      */
     private $methodFactoryMock;
 
     /**
-     * @var \Magento\Payment\Helper\Data|\PHPUnit_Framework_MockObject_MockObject
+     * @var \Magento\Payment\Helper\Data|MockObject
      */
     private $helperMock;
 
@@ -37,19 +43,19 @@ class PaymentMethodListTest extends \PHPUnit\Framework\TestCase
      *
      * @return void
      */
-    public function setUp()
+    protected function setUp(): void
     {
-        $this->methodFactoryMock = $this->getMockBuilder(\Magento\Payment\Api\Data\PaymentMethodInterfaceFactory::class)
-            ->setMethods(['create'])
+        $this->methodFactoryMock = $this->getMockBuilder(PaymentMethodInterfaceFactory::class)
+            ->onlyMethods(['create'])
             ->disableOriginalConstructor()
             ->getMock();
-        $this->helperMock = $this->getMockBuilder(\Magento\Payment\Helper\Data::class)
+        $this->helperMock = $this->getMockBuilder(Data::class)
             ->disableOriginalConstructor()
             ->getMock();
 
         $this->objectManagerHelper = new ObjectManagerHelper($this);
         $this->paymentMethodList = $this->objectManagerHelper->getObject(
-            \Magento\Payment\Model\PaymentMethodList::class,
+            PaymentMethodList::class,
             [
                 'methodFactory' => $this->methodFactoryMock,
                 'helper' => $this->helperMock
@@ -76,7 +82,7 @@ class PaymentMethodListTest extends \PHPUnit\Framework\TestCase
         $this->methodFactoryMock->expects($this->any())
             ->method('create')
             ->willReturnCallback(function ($data) {
-                $paymentMethod = $this->getMockBuilder(\Magento\Payment\Api\Data\PaymentMethodInterface::class)
+                $paymentMethod = $this->getMockBuilder(PaymentMethodInterface::class)
                     ->getMockForAbstractClass();
                 $paymentMethod->expects($this->any())
                     ->method('getCode')
@@ -102,7 +108,14 @@ class PaymentMethodListTest extends \PHPUnit\Framework\TestCase
      */
     public function testGetList($storeId, $paymentMethodConfig, $methodInstancesMap, $expected)
     {
-        $this->setUpGetList($paymentMethodConfig, $methodInstancesMap);
+        $methodInstancesMapFinal = array();
+        $i = 0;
+        foreach ($methodInstancesMap as $methodInstances) {
+            $methodInstancesMapFinal[$i][0] = $methodInstances[0];
+            $methodInstancesMapFinal[$i][1] = $methodInstances[1]($this);
+            $i++;
+        }
+        $this->setUpGetList($paymentMethodConfig, $methodInstancesMapFinal);
 
         $codes = array_map(
             function ($method) {
@@ -119,15 +132,15 @@ class PaymentMethodListTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function getListDataProvider()
+    public static function getListDataProvider()
     {
         return [
             [
                 1,
                 ['method_code_1' => [], 'method_code_2' => []],
                 [
-                    ['method_code_1', $this->mockPaymentMethodInstance(1, 10, 'method_code_1', 'title', true)],
-                    ['method_code_2', $this->mockPaymentMethodInstance(1, 5, 'method_code_2', 'title', true)]
+                    ['method_code_1', static fn (self $testCase) => $testCase->mockPaymentMethodInstance(1, 10, 'method_code_1', 'title', true)],
+                    ['method_code_2', static fn (self $testCase) => $testCase->mockPaymentMethodInstance(1, 5, 'method_code_2', 'title', true)]
                 ],
                 ['method_code_2', 'method_code_1']
             ]
@@ -147,7 +160,14 @@ class PaymentMethodListTest extends \PHPUnit\Framework\TestCase
      */
     public function testGetActiveList($storeId, $paymentMethodConfig, $methodInstancesMap, $expected)
     {
-        $this->setUpGetList($paymentMethodConfig, $methodInstancesMap);
+        $methodInstancesMapFinal = array();
+        $i = 0;
+        foreach ($methodInstancesMap as $methodInstances) {
+            $methodInstancesMapFinal[$i][0] = $methodInstances[0];
+            $methodInstancesMapFinal[$i][1] = $methodInstances[1]($this);
+            $i++;
+        }
+        $this->setUpGetList($paymentMethodConfig, $methodInstancesMapFinal);
 
         $codes = array_map(
             function ($method) {
@@ -164,15 +184,15 @@ class PaymentMethodListTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function getActiveListDataProvider()
+    public static function getActiveListDataProvider()
     {
         return [
             [
                 1,
                 ['method_code_1' => [], 'method_code_2' => []],
                 [
-                    ['method_code_1', $this->mockPaymentMethodInstance(1, 10, 'method_code_1', 'title', false)],
-                    ['method_code_2', $this->mockPaymentMethodInstance(1, 5, 'method_code_2', 'title', true)]
+                    ['method_code_1', static fn (self $testCase) => $testCase->mockPaymentMethodInstance(1, 10, 'method_code_1', 'title', false)],
+                    ['method_code_2', static fn (self $testCase) => $testCase->mockPaymentMethodInstance(1, 5, 'method_code_2', 'title', true)]
                 ],
                 ['method_code_2']
             ]
@@ -187,12 +207,12 @@ class PaymentMethodListTest extends \PHPUnit\Framework\TestCase
      * @param string $code
      * @param string $title
      * @param bool $isActive
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return MockObject
      */
     private function mockPaymentMethodInstance($storeId, $sortOrder, $code, $title, $isActive)
     {
-        $paymentMethodInstance = $this->getMockBuilder(\Magento\Payment\Model\Method\AbstractMethod::class)
-            ->setMethods(['getCode', 'getTitle', 'isActive', 'getConfigData'])
+        $paymentMethodInstance = $this->getMockBuilder(AbstractMethod::class)
+            ->onlyMethods(['getCode', 'getTitle', 'isActive', 'getConfigData'])
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
         $paymentMethodInstance->expects($this->any())

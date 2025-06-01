@@ -41,13 +41,13 @@ class GeneratorTest extends \PHPUnit\Framework\TestCase
      */
     protected $backupRegistrar;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $reflection = new \ReflectionClass(\Magento\Framework\Component\ComponentRegistrar::class);
         $paths = $reflection->getProperty('paths');
         $paths->setAccessible(true);
         $this->backupRegistrar = $paths->getValue();
-        $paths->setValue(['module' => [], 'theme' => []]);
+        $paths->setValue(null, ['module' => [], 'theme' => []]);
         $paths->setAccessible(false);
 
         $this->testDir = realpath(__DIR__ . '/_files');
@@ -77,20 +77,20 @@ class GeneratorTest extends \PHPUnit\Framework\TestCase
         $this->generator = ServiceLocator::getDictionaryGenerator();
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         if (file_exists($this->outputFileName)) {
             unlink($this->outputFileName);
         }
         $property = new \ReflectionProperty(\Magento\Setup\Module\I18n\ServiceLocator::class, '_dictionaryGenerator');
         $property->setAccessible(true);
-        $property->setValue(null);
+        $property->setValue(null, null);
         $property->setAccessible(false);
 
         $reflection = new \ReflectionClass(\Magento\Framework\Component\ComponentRegistrar::class);
         $paths = $reflection->getProperty('paths');
         $paths->setAccessible(true);
-        $paths->setValue($this->backupRegistrar);
+        $paths->setValue(null, $this->backupRegistrar);
         $paths->setAccessible(false);
     }
 
@@ -109,7 +109,7 @@ class GeneratorTest extends \PHPUnit\Framework\TestCase
         $output = file_get_contents($this->outputFileName);
         foreach ($expected as $line) {
             if ($line) {
-                $this->assertContains($line, $output);
+                $this->assertStringContainsString($line, $output);
             }
         }
     }

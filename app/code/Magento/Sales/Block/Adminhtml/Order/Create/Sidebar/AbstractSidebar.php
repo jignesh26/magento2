@@ -1,8 +1,11 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2011 Adobe
+ * All Rights Reserved.
  */
+
+declare(strict_types=1);
+
 namespace Magento\Sales\Block\Adminhtml\Order\Create\Sidebar;
 
 use Magento\Framework\Pricing\PriceCurrencyInterface;
@@ -11,7 +14,6 @@ use Magento\Framework\Pricing\PriceCurrencyInterface;
  * Adminhtml sales order create sidebar block
  *
  * @api
- * @author      Magento Core Team <core@magentocommerce.com>
  * @since 100.0.2
  */
 class AbstractSidebar extends \Magento\Sales\Block\Adminhtml\Order\Create\AbstractCreate
@@ -24,8 +26,6 @@ class AbstractSidebar extends \Magento\Sales\Block\Adminhtml\Order\Create\Abstra
     protected $_sidebarStorageAction = 'add';
 
     /**
-     * Sales config
-     *
      * @var \Magento\Sales\Model\Config
      */
     protected $_salesConfig;

@@ -1,8 +1,9 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\Backend\Test\Unit\Block\Cache;
 
@@ -10,11 +11,9 @@ use Magento\Backend\Block\Cache\Permissions;
 use Magento\Framework\Authorization;
 use Magento\Framework\AuthorizationInterface;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-/**
- * Class PermissionsTest
- */
 class PermissionsTest extends TestCase
 {
     /**
@@ -23,7 +22,7 @@ class PermissionsTest extends TestCase
     private $permissions;
 
     /**
-     * @var AuthorizationInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var AuthorizationInterface|MockObject
      */
     private $mockAuthorization;
 
@@ -32,13 +31,13 @@ class PermissionsTest extends TestCase
      */
     private $objectManager;
 
-    public function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = new ObjectManager($this);
 
         $this->mockAuthorization = $this->getMockBuilder(Authorization::class)
             ->disableOriginalConstructor()
-            ->setMethods(['isAllowed'])
+            ->onlyMethods(['isAllowed'])
             ->getMock();
 
         $this->permissions = new Permissions($this->mockAuthorization);

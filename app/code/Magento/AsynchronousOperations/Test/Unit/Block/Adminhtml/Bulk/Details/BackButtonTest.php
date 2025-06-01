@@ -1,27 +1,33 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\AsynchronousOperations\Test\Unit\Block\Adminhtml\Bulk\Details;
 
-class BackButtonTest extends \PHPUnit\Framework\TestCase
+use Magento\AsynchronousOperations\Block\Adminhtml\Bulk\Details\BackButton;
+use Magento\Framework\UrlInterface;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+
+class BackButtonTest extends TestCase
 {
     /**
-     * @var \Magento\AsynchronousOperations\Block\Adminhtml\Bulk\Details\BackButton
+     * @var BackButton
      */
     protected $block;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $urlBuilderMock;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->urlBuilderMock = $this->getMockBuilder(\Magento\Framework\UrlInterface::class)
-            ->getMock();
-        $this->block = new \Magento\AsynchronousOperations\Block\Adminhtml\Bulk\Details\BackButton(
+        $this->urlBuilderMock = $this->getMockForAbstractClass(UrlInterface::class);
+        $this->block = new BackButton(
             $this->urlBuilderMock
         );
     }

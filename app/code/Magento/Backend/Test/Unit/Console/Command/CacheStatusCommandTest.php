@@ -1,17 +1,18 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\Backend\Test\Unit\Console\Command;
 
 use Magento\Backend\Console\Command\CacheStatusCommand;
 use Symfony\Component\Console\Tester\CommandTester;
 
-class CacheStatusCommandTest extends AbstractCacheCommandTest
+class CacheStatusCommandTest extends AbstractCacheCommandTestCase
 {
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->command = new CacheStatusCommand($this->cacheManagerMock);
@@ -30,7 +31,7 @@ class CacheStatusCommandTest extends AbstractCacheCommandTest
     /**
      * {@inheritdoc}
      */
-    public function getExpectedExecutionOutput(array $types)
+    public static function getExpectedExecutionOutput(array $types)
     {
         $output = 'Current status:' . PHP_EOL;
         foreach ($types as $type => $status) {

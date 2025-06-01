@@ -3,12 +3,15 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Store\Test\Unit\Model;
 
-use Magento\Store\Model\ScopeTypeNormalizer;
 use Magento\Store\Model\ScopeInterface;
+use Magento\Store\Model\ScopeTypeNormalizer;
+use PHPUnit\Framework\TestCase;
 
-class ScopeTypeNormalizerTest extends \PHPUnit\Framework\TestCase
+class ScopeTypeNormalizerTest extends TestCase
 {
     /**
      * @var ScopeTypeNormalizer
@@ -18,7 +21,7 @@ class ScopeTypeNormalizerTest extends \PHPUnit\Framework\TestCase
     /**
      * @inheritdoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->scopeTypeNormalizer = new ScopeTypeNormalizer();
     }
@@ -37,7 +40,7 @@ class ScopeTypeNormalizerTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function normalizeDataProvider()
+    public static function normalizeDataProvider()
     {
         return [
             [ScopeInterface::SCOPE_WEBSITE, true, ScopeInterface::SCOPE_WEBSITES],
@@ -70,7 +73,7 @@ class ScopeTypeNormalizerTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function normalizeDefaultDataProvider()
+    public static function normalizeDefaultDataProvider()
     {
         return [
             [ScopeInterface::SCOPE_WEBSITE, ScopeInterface::SCOPE_WEBSITES],

@@ -1,147 +1,192 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
 
 namespace Magento\GroupedImportExport\Test\Unit\Model\Import\Product\Type;
 
+use Magento\Catalog\Api\Data\ProductInterface;
+use Magento\Catalog\Model\ResourceModel\Product\Attribute\Collection as ProductAttributeCollection;
+use Magento\Catalog\Model\ResourceModel\Product\Attribute\CollectionFactory as ProductAttributeCollectionFactory;
+use Magento\CatalogImportExport\Model\Import\Product;
+use Magento\CatalogImportExport\Model\Import\Product\SkuStorage;
+use Magento\Eav\Model\ResourceModel\Entity\Attribute\Set\CollectionFactory as AttributeSetCollectionFactory;
+use Magento\Framework\App\ResourceConnection;
+use Magento\Framework\DB\Adapter\Pdo\Mysql;
+use Magento\Framework\DB\Select;
+use Magento\Framework\EntityManager\EntityMetadata;
+use Magento\Framework\EntityManager\MetadataPool;
 use Magento\GroupedImportExport;
+use Magento\GroupedImportExport\Model\Import\Product\Type\Grouped;
+use Magento\GroupedImportExport\Model\Import\Product\Type\Grouped\Links;
+use Magento\Catalog\Model\ProductTypes\ConfigInterface;
+use Magento\ImportExport\Test\Unit\Model\Import\AbstractImportTestCase;
+use PHPUnit\Framework\MockObject\MockObject;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class GroupedTest extends \Magento\ImportExport\Test\Unit\Model\Import\AbstractImportTestCase
+class GroupedTest extends AbstractImportTestCase
 {
-    /** @var GroupedImportExport\Model\Import\Product\Type\Grouped */
-    protected $grouped;
+    /**
+     * @var GroupedImportExport\Model\Import\Product\Type\Grouped
+     */
+    private $grouped;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var AttributeSetCollectionFactory|MockObject
      */
-    protected $setCollectionFactory;
+    private $setCollectionFactory;
 
     /**
-     * @var \Magento\Eav\Model\ResourceModel\Entity\Attribute\Set\Collection|\PHPUnit_Framework_MockObject_MockObject
+     * @var ProductAttributeCollectionFactory|MockObject
      */
-    protected $setCollection;
+    private $attrCollectionFactory;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var ProductAttributeCollection|MockObject
      */
-    protected $attrCollectionFactory;
+    private $attrCollection;
 
     /**
-     * @var \Magento\Framework\DB\Adapter\Pdo\Mysql|\PHPUnit_Framework_MockObject_MockObject
+     * @var Mysql|MockObject
      */
-    protected $connection;
+    private $connection;
 
     /**
-     * @var \Magento\Framework\DB\Select|\PHPUnit_Framework_MockObject_MockObject
+     * @var Select|MockObject
      */
-    protected $select;
+    private $select;
 
     /**
-     * @var \Magento\Framework\App\ResourceConnection|\PHPUnit_Framework_MockObject_MockObject
+     * @var ResourceConnection|MockObject
      */
-    protected $resource;
+    private $resource;
 
     /**
      * @var []
      */
-    protected $params;
+    private $params;
 
     /**
-     * @var GroupedImportExport\Model\Import\Product\Type\Grouped\Links|\PHPUnit_Framework_MockObject_MockObject
+     * @var GroupedImportExport\Model\Import\Product\Type\Grouped\Links|MockObject
      */
-    protected $links;
+    private $links;
 
     /**
-     * @var \Magento\CatalogImportExport\Model\Import\Product|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigInterface|MockObject
      */
-    protected $entityModel;
+    private $configMock;
 
     /**
+     * @var Product|MockObject
+     */
+    private $entityModel;
+
+    /**
+     * @var Product\SkuStorage|MockObject
+     */
+    private Product\SkuStorage $skuStorage;
+
+    /**
+     * @inheritdoc
+     *
      * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
 
-        $this->setCollectionFactory = $this->createPartialMock(
-            \Magento\Eav\Model\ResourceModel\Entity\Attribute\Set\CollectionFactory::class,
-            ['create']
-        );
-        $this->setCollection = $this->createPartialMock(
-            \Magento\Eav\Model\ResourceModel\Entity\Attribute\Set\Collection::class,
-            ['setEntityTypeFilter']
-        );
-        $this->setCollectionFactory->expects($this->any())->method('create')->will(
-            $this->returnValue($this->setCollection)
-        );
-        $this->setCollection->expects($this->any())->method('setEntityTypeFilter')->will($this->returnValue([]));
-        $this->attrCollectionFactory = $this->createPartialMock(
-            \Magento\Catalog\Model\ResourceModel\Product\Attribute\CollectionFactory::class,
-            ['create', 'addFieldToFilter']
-        );
-        $this->attrCollectionFactory->expects($this->any())->method('create')->will($this->returnSelf());
-        $this->attrCollectionFactory->expects($this->any())->method('addFieldToFilter')->willReturn([]);
+        $this->setCollectionFactory = $this->createMock(AttributeSetCollectionFactory::class);
+        $this->attrCollectionFactory = $this->createMock(ProductAttributeCollectionFactory::class);
+        $this->attrCollection = $this->createMock(ProductAttributeCollection::class);
+        $this->attrCollectionFactory->method('create')->willReturn($this->attrCollection);
+        $this->attrCollection->expects($this->any())->method('addFieldToFilter')->willReturnSelf();
+        $this->attrCollection->expects($this->any())->method('getItems')->willReturn([]);
         $this->entityModel = $this->createPartialMock(
-            \Magento\CatalogImportExport\Model\Import\Product::class,
-            ['getErrorAggregator', 'getNewSku', 'getOldSku', 'getNextBunch', 'isRowAllowedToImport', 'getRowScope']
+            Product::class,
+            [
+                'getErrorAggregator',
+                'getNewSku',
+                'getOldSku',
+                'getNextBunch',
+                'isRowAllowedToImport',
+                'getRowScope'
+            ]
         );
+        $this->skuStorage = $this->createMock(Product\SkuStorage::class);
         $this->entityModel->method('getErrorAggregator')->willReturn($this->getErrorAggregatorObject());
         $this->params = [
             0 => $this->entityModel,
             1 => 'grouped'
         ];
-        $this->links = $this->createMock(\Magento\GroupedImportExport\Model\Import\Product\Type\Grouped\Links::class);
+        $this->links = $this->createMock(Links::class);
+        $this->configMock = $this->getMockForAbstractClass(ConfigInterface::class);
+        $this->configMock->expects($this->once())
+            ->method('getComposableTypes')
+            ->willReturn(['simple', 'virtual', 'downloadable']);
         $entityAttributes = [
             [
                 'attribute_set_name' => 'attribute_id',
                 'attribute_id' => 'attributeSetName',
             ]
         ];
-        $this->connection = $this->createPartialMock(
-            \Magento\Framework\DB\Adapter\Pdo\Mysql::class,
-            ['select', 'fetchAll', 'fetchPairs', 'joinLeft', 'insertOnDuplicate', 'delete', 'quoteInto']
-        );
+        $this->connection = $this->getMockBuilder(Mysql::class)
+            ->addMethods(['joinLeft'])
+            ->onlyMethods(['select', 'fetchAll', 'fetchPairs', 'insertOnDuplicate', 'delete', 'quoteInto'])
+            ->disableOriginalConstructor()
+            ->getMock();
         $this->select = $this->createPartialMock(
-            \Magento\Framework\DB\Select::class,
+            Select::class,
             ['from', 'where', 'joinLeft', 'getConnection']
         );
-        $this->select->expects($this->any())->method('from')->will($this->returnSelf());
-        $this->select->expects($this->any())->method('where')->will($this->returnSelf());
-        $this->select->expects($this->any())->method('joinLeft')->will($this->returnSelf());
-        $this->connection->expects($this->any())->method('select')->will($this->returnValue($this->select));
-        $connectionMock = $this->createMock(\Magento\Framework\DB\Adapter\Pdo\Mysql::class);
-        $connectionMock->expects($this->any())->method('quoteInto')->will($this->returnValue('query'));
+        $this->select->expects($this->any())->method('from')->willReturnSelf();
+        $this->select->expects($this->any())->method('where')->willReturnSelf();
+        $this->select->expects($this->any())->method('joinLeft')->willReturnSelf();
+        $this->connection->expects($this->any())->method('select')->willReturn($this->select);
+        $connectionMock = $this->createMock(Mysql::class);
+        $connectionMock->expects($this->any())->method('quoteInto')->willReturn('query');
         $this->select->expects($this->any())->method('getConnection')->willReturn($connectionMock);
         $this->connection->expects($this->any())->method('insertOnDuplicate')->willReturnSelf();
         $this->connection->expects($this->any())->method('delete')->willReturnSelf();
         $this->connection->expects($this->any())->method('quoteInto')->willReturn('');
-        $this->connection->expects($this->any())->method('fetchAll')->will($this->returnValue($entityAttributes));
+        $this->connection->expects($this->any())->method('fetchAll')->willReturn($entityAttributes);
         $this->resource = $this->createPartialMock(
-            \Magento\Framework\App\ResourceConnection::class,
+            ResourceConnection::class,
             ['getConnection', 'getTableName']
         );
-        $this->resource->expects($this->any())->method('getConnection')->will($this->returnValue($this->connection));
-        $this->resource->expects($this->any())->method('getTableName')->will($this->returnValue('tableName'));
+        $this->resource->expects($this->any())->method('getConnection')->willReturn($this->connection);
+        $this->resource->expects($this->any())->method('getTableName')->willReturn('tableName');
+        $objects = [
+            [
+                ConfigInterface::class,
+                $this->createMock(ConfigInterface::class)
+            ],
+            [
+                SkuStorage::class,
+                $this->createMock(SkuStorage::class)
+            ]
+        ];
+        $this->objectManagerHelper->prepareObjectManager($objects);
         $this->grouped = $this->objectManagerHelper->getObject(
-            \Magento\GroupedImportExport\Model\Import\Product\Type\Grouped::class,
+            Grouped::class,
             [
                 'attrSetColFac' => $this->setCollectionFactory,
                 'prodAttrColFac' => $this->attrCollectionFactory,
                 'resource' => $this->resource,
                 'params' => $this->params,
-                'links' => $this->links
+                'links' => $this->links,
+                'config' => $this->configMock,
+                'skuStorage' => $this->skuStorage
             ]
         );
-        $metadataPoolMock = $this->createMock(\Magento\Framework\EntityManager\MetadataPool::class);
-        $entityMetadataMock = $this->createMock(\Magento\Framework\EntityManager\EntityMetadata::class);
+        $metadataPoolMock = $this->createMock(MetadataPool::class);
+        $entityMetadataMock = $this->createMock(EntityMetadata::class);
         $metadataPoolMock->expects($this->any())
             ->method('getMetadata')
-            ->with(\Magento\Catalog\Api\Data\ProductInterface::class)
+            ->with(ProductInterface::class)
             ->willReturn($entityMetadataMock);
         $entityMetadataMock->expects($this->any())
             ->method('getLinkField')
@@ -149,7 +194,7 @@ class GroupedTest extends \Magento\ImportExport\Test\Unit\Model\Import\AbstractI
         $entityMetadataMock->expects($this->any())
             ->method('getIdentifierField')
             ->willReturn('entity_id');
-        $reflection = new \ReflectionClass(\Magento\GroupedImportExport\Model\Import\Product\Type\Grouped::class);
+        $reflection = new \ReflectionClass(Grouped::class);
         $reflectionProperty = $reflection->getProperty('metadataPool');
         $reflectionProperty->setAccessible(true);
         $reflectionProperty->setValue($this->grouped, $metadataPoolMock);
@@ -161,20 +206,37 @@ class GroupedTest extends \Magento\ImportExport\Test\Unit\Model\Import\AbstractI
      * @param array $skus
      * @param array $bunch
      *
+     * @return void
      * @dataProvider saveDataProvider
      */
-    public function testSaveData($skus, $bunch)
+    public function testSaveData($skus, $bunch): void
     {
-        $this->entityModel->expects($this->once())->method('getNewSku')->will($this->returnValue($skus['newSku']));
-        $this->entityModel->expects($this->once())->method('getOldSku')->will($this->returnValue($skus['oldSku']));
-        $attributes = ['position' => ['id' => 0], 'qty' => ['id' => 0]];
-        $this->links->expects($this->once())->method('getAttributes')->will($this->returnValue($attributes));
+        $this->entityModel->expects($this->once())->method('getNewSku')->willReturn($skus['newSku']);
+        $this->entityModel->expects($this->never())->method('getOldSku');
 
-        $this->entityModel->expects($this->at(2))->method('getNextBunch')->will($this->returnValue([$bunch]));
-        $this->entityModel->expects($this->any())->method('isRowAllowedToImport')->will($this->returnValue(true));
-        $this->entityModel->expects($this->any())->method('getRowScope')->will($this->returnValue(
-            \Magento\CatalogImportExport\Model\Import\Product::SCOPE_DEFAULT
-        ));
+        $this->skuStorage->expects($this->any())
+            ->method('has')
+            ->willReturnCallback(function ($sku) use ($skus) {
+                return isset($skus['oldSku'][$sku]);
+            });
+
+        $this->skuStorage->expects($this->any())
+            ->method('get')
+            ->willReturnCallback(function ($sku) use ($skus) {
+                return $skus['oldSku'][$sku] ?? null;
+            });
+
+        $attributes = ['position' => ['id' => 0], 'qty' => ['id' => 0]];
+        $this->links->expects($this->once())->method('getAttributes')->willReturn($attributes);
+
+        $callCount = 0;
+        $this->entityModel
+            ->method('getNextBunch')
+            ->willReturnCallback(function () use (&$callCount, $bunch) {
+                return $callCount++ === 0 ? [$bunch] : null;
+            });
+        $this->entityModel->expects($this->any())->method('isRowAllowedToImport')->willReturn(true);
+        $this->entityModel->expects($this->any())->method('getRowScope')->willReturn(Product::SCOPE_DEFAULT);
 
         $this->links->expects($this->once())->method('saveLinksData');
         $this->grouped->saveData();
@@ -185,16 +247,16 @@ class GroupedTest extends \Magento\ImportExport\Test\Unit\Model\Import\AbstractI
      *
      * @return array
      */
-    public function saveDataProvider()
+    public static function saveDataProvider(): array
     {
         return [
             [
                 'skus' => [
                     'newSku' => [
-                        'sku_assoc1' => ['entity_id' => 1],
+                        'sku_assoc1' => ['entity_id' => 1, 'type_id' => 'simple'],
                         'productsku' => ['entity_id' => 3, 'attr_set_code' => 'Default', 'type_id' => 'grouped']
                     ],
-                    'oldSku' => ['sku_assoc2' => ['entity_id' => 2]]
+                    'oldSku' => ['sku_assoc2' => ['entity_id' => 2, 'type_id' => 'simple']]
                 ],
                 'bunch' => [
                     'associated_skus' => 'sku_assoc1=1, sku_assoc2=2',
@@ -226,7 +288,7 @@ class GroupedTest extends \Magento\ImportExport\Test\Unit\Model\Import\AbstractI
             [
                 'skus' => [
                     'newSku' => [
-                        'sku_assoc1' => ['entity_id' => 1],
+                        'sku_assoc1' => ['entity_id' => 1, 'type_id' => 'simple'],
                         'productsku' => ['entity_id' => 3, 'attr_set_code' => 'Default', 'type_id' => 'grouped']
                     ],
                     'oldSku' => []
@@ -242,34 +304,103 @@ class GroupedTest extends \Magento\ImportExport\Test\Unit\Model\Import\AbstractI
 
     /**
      * Test saveData() with store row scope
+     *
+     * @return void
      */
-    public function testSaveDataScopeStore()
+    public function testSaveDataScopeStore(): void
     {
-        $this->entityModel->expects($this->once())->method('getNewSku')->will($this->returnValue([
-            'sku_assoc1' => ['entity_id' => 1],
-            'productsku' => ['entity_id' => 2, 'attr_set_code' => 'Default', 'type_id' => 'grouped']
-        ]));
-        $this->entityModel->expects($this->once())->method('getOldSku')->will($this->returnValue([
-            'sku_assoc2' => ['entity_id' => 3]
-        ]));
-        $attributes = ['position' => ['id' => 0], 'qty' => ['id' => 0]];
-        $this->links->expects($this->once())->method('getAttributes')->will($this->returnValue($attributes));
+        $this->entityModel->expects($this->once())->method('getNewSku')->willReturn(
+            [
+                'sku_assoc1' => ['entity_id' => 1, 'type_id' => 'simple'],
+                'productsku' => ['entity_id' => 2, 'attr_set_code' => 'Default', 'type_id' => 'grouped']
+            ]
+        );
+        $oldSkusData = [
+            'sku_assoc2' => ['entity_id' => 3, 'type_id' => 'simple']
+        ];
+        $this->entityModel->expects($this->never())->method('getOldSku');
 
-        $bunch = [[
-            'associated_skus' => 'sku_assoc1=1, sku_assoc2=2',
-            'sku' => 'productsku',
-            'product_type' => 'grouped'
-        ]];
-        $this->entityModel->expects($this->at(2))->method('getNextBunch')->will($this->returnValue($bunch));
-        $this->entityModel->expects($this->any())->method('isRowAllowedToImport')->will($this->returnValue(true));
-        $this->entityModel->expects($this->at(4))->method('getRowScope')->will($this->returnValue(
-            \Magento\CatalogImportExport\Model\Import\Product::SCOPE_DEFAULT
-        ));
-        $this->entityModel->expects($this->at(5))->method('getRowScope')->will($this->returnValue(
-            \Magento\CatalogImportExport\Model\Import\Product::SCOPE_STORE
-        ));
+        $this->skuStorage->expects($this->any())
+            ->method('has')
+            ->willReturnCallback(function ($sku) use ($oldSkusData) {
+                return isset($oldSkusData[$sku]);
+            });
+
+        $this->skuStorage->expects($this->any())
+            ->method('get')
+            ->willReturnCallback(function ($sku) use ($oldSkusData) {
+                return $oldSkusData[$sku] ?? null;
+            });
+
+        $attributes = ['position' => ['id' => 0], 'qty' => ['id' => 0]];
+        $this->links->expects($this->once())->method('getAttributes')->willReturn($attributes);
+
+        $bunch = [
+            [
+                'associated_skus' => 'sku_assoc1=1, sku_assoc2=2',
+                'sku' => 'productsku',
+                'product_type' => 'grouped'
+            ]
+        ];
+        $this->entityModel->expects($this->any())->method('isRowAllowedToImport')->willReturn(true);
+        $callCount = 0;
+        $this->entityModel
+            ->method('getNextBunch')
+            ->willReturnCallback(function () use (&$callCount, $bunch) {
+                return $callCount++ === 0 ? $bunch : null;
+            });
+        $this->entityModel
+            ->method('getRowScope')
+            ->willReturnOnConsecutiveCalls(Product::SCOPE_DEFAULT, Product::SCOPE_STORE);
 
         $this->links->expects($this->once())->method('saveLinksData');
+        $this->grouped->saveData();
+    }
+
+    /**
+     * Test saveData() with composite product associated with a grouped product
+     *
+     * @return void
+     */
+    public function testSaveDataAssociatedComposite(): void
+    {
+        $this->entityModel->expects($this->once())->method('getNewSku')->willReturn(
+            [
+                'sku_assoc1' => ['entity_id' => 1, 'type_id' => 'configurable'],
+                'productsku' => ['entity_id' => 2, 'attr_set_code' => 'Default', 'type_id' => 'grouped']
+            ]
+        );
+        $this->entityModel->expects($this->never())->method('getOldSku');
+        $attributes = ['position' => ['id' => 0], 'qty' => ['id' => 0]];
+        $this->links->expects($this->once())->method('getAttributes')->willReturn($attributes);
+
+        $bunch = [
+            [
+                'associated_skus' => 'sku_assoc1=1',
+                'sku' => 'productsku',
+                'product_type' => 'grouped'
+            ]
+        ];
+
+        $this->entityModel->expects($this->any())->method('isRowAllowedToImport')->willReturn(true);
+        $callCount = 0;
+        $this->entityModel
+            ->method('getNextBunch')
+            ->willReturnCallback(function () use (&$callCount, $bunch) {
+                return $callCount++ === 0 ? $bunch : null;
+            });
+        $this->entityModel
+            ->method('getRowScope')
+            ->willReturnOnConsecutiveCalls(Product::SCOPE_DEFAULT, Product::SCOPE_STORE);
+
+        $expectedLinkData = [
+            'product_ids' => [],
+            'attr_product_ids' => [],
+            'position' => [],
+            'qty' => [],
+            'relation' => []
+        ];
+        $this->links->expects($this->once())->method('saveLinksData')->with($expectedLinkData);
         $this->grouped->saveData();
     }
 }

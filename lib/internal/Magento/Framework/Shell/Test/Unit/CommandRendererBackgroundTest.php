@@ -3,27 +3,33 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Shell\Test\Unit;
 
-use \Magento\Framework\Shell\CommandRendererBackground;
+use Magento\Framework\OsInfo;
+use Magento\Framework\Shell\CommandRendererBackground;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class CommandRendererBackgroundTest extends \PHPUnit\Framework\TestCase
+class CommandRendererBackgroundTest extends TestCase
 {
     /**
      * Test data for command
      *
      * @var string
      */
-    protected $testCommand = 'php -r test.php';
+    protected static $testCommand = 'php -r test.php';
 
     /**
-     * @var \Magento\Framework\OsInfo|\PHPUnit_Framework_MockObject_MockObject
+     * @var OsInfo|MockObject
      */
     protected $osInfo;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->osInfo = $this->getMockBuilder(\Magento\Framework\OsInfo::class)->getMock();
+        $this->osInfo = $this->getMockBuilder(OsInfo::class)
+            ->getMock();
     }
 
     /**
@@ -35,12 +41,12 @@ class CommandRendererBackgroundTest extends \PHPUnit\Framework\TestCase
     {
         $this->osInfo->expects($this->once())
             ->method('isWindows')
-            ->will($this->returnValue($isWindows));
+            ->willReturn($isWindows);
 
         $commandRenderer = new CommandRendererBackground($this->osInfo);
         $this->assertEquals(
             $expectedResults,
-            $commandRenderer->render($this->testCommand)
+            $commandRenderer->render(self::$testCommand)
         );
     }
 
@@ -49,11 +55,11 @@ class CommandRendererBackgroundTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function commandPerOsTypeDataProvider()
+    public static function commandPerOsTypeDataProvider()
     {
         return [
-            'windows' => [true, 'start /B "magento background task" ' . $this->testCommand . ' 2>&1'],
-            'unix'    => [false, $this->testCommand . ' > /dev/null &'],
+            'windows' => [true, 'start /B "magento background task" ' . self::$testCommand . ' 2>&1'],
+            'unix'    => [false, self::$testCommand . ' 2>/dev/null >/dev/null &'],
         ];
     }
 }

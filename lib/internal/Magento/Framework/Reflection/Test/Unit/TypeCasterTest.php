@@ -3,17 +3,17 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Reflection\Test\Unit;
 
 use Magento\Framework\Reflection\TypeCaster;
-use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
 use Magento\Framework\Serialize\Serializer\Json;
-use \PHPUnit_Framework_MockObject_MockObject as MockObject;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-/**
- * Type caster Test
- */
-class TypeCasterTest extends \PHPUnit\Framework\TestCase
+class TypeCasterTest extends TestCase
 {
     /**
      * @var TypeCaster
@@ -28,7 +28,7 @@ class TypeCasterTest extends \PHPUnit\Framework\TestCase
     /**
      * Set up helper.
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $objectManager = new ObjectManager($this);
         $this->serializer = $this->getMockBuilder(Json::class)
@@ -77,7 +77,7 @@ class TypeCasterTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function typeCastValueProvider()
+    public static function typeCastValueProvider()
     {
         return [
             'null' => [null, 'int', null],
@@ -102,7 +102,7 @@ class TypeCasterTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function arraysDataProvider()
+    public static function arraysDataProvider()
     {
         return [
             [['type' => 'VI', 'masked' => 1111], 'string', '{"type":"VI","masked":1111}'],

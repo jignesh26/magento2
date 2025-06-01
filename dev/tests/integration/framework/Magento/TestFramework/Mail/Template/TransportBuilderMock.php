@@ -6,12 +6,20 @@
 
 namespace Magento\TestFramework\Mail\Template;
 
+/**
+ * Mock of mail transport builder
+ */
 class TransportBuilderMock extends \Magento\Framework\Mail\Template\TransportBuilder
 {
     /**
      * @var \Magento\Framework\Mail\Message
      */
     protected $_sentMessage;
+
+    /**
+     * @var callable
+     */
+    private $onMessageSentCallback;
 
     /**
      * Reset object state
@@ -21,7 +29,7 @@ class TransportBuilderMock extends \Magento\Framework\Mail\Template\TransportBui
     protected function reset()
     {
         $this->_sentMessage = $this->message;
-        parent::reset();
+        return parent::reset();
     }
 
     /**
@@ -38,11 +46,37 @@ class TransportBuilderMock extends \Magento\Framework\Mail\Template\TransportBui
      * Return transport mock.
      *
      * @return \Magento\TestFramework\Mail\TransportInterfaceMock
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function getTransport()
     {
         $this->prepareMessage();
         $this->reset();
-        return new \Magento\TestFramework\Mail\TransportInterfaceMock();
+        return $this->objectManager->create(
+            \Magento\TestFramework\Mail\TransportInterfaceMock::class,
+            [
+                'message' => $this->message,
+                'onMessageSentCallback' => $this->onMessageSentCallback
+            ]
+        );
+    }
+
+    /**
+     * Set callback to be called when message is sent.
+     *
+     * @param callable $callback
+     */
+    public function setOnMessageSentCallback(callable $callback): void
+    {
+        $this->onMessageSentCallback = $callback;
+    }
+
+    /**
+     * Clean previous test data.
+     */
+    public function clean(): void
+    {
+        $this->_sentMessage = null;
+        $this->onMessageSentCallback = null;
     }
 }

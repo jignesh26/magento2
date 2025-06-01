@@ -3,12 +3,15 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\DB\Test\Unit\Ddl;
 
 use Magento\Framework\DB\Ddl\Sequence;
 use Magento\Framework\DB\Ddl\Table;
+use PHPUnit\Framework\TestCase;
 
-class SequenceTest extends \PHPUnit\Framework\TestCase
+class SequenceTest extends TestCase
 {
     /**
      * @param array $params
@@ -41,7 +44,7 @@ class SequenceTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function createSequenceDdlDataProvider()
+    public static function createSequenceDdlDataProvider()
     {
         return [
             [

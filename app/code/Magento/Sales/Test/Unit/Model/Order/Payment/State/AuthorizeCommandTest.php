@@ -3,6 +3,8 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Sales\Test\Unit\Model\Order\Payment\State;
 
 use Magento\Directory\Model\Currency;
@@ -10,12 +12,13 @@ use Magento\Sales\Api\Data\OrderPaymentInterface;
 use Magento\Sales\Model\Order;
 use Magento\Sales\Model\Order\Payment\State\AuthorizeCommand;
 use Magento\Sales\Model\Order\StatusResolver;
-use PHPUnit_Framework_MockObject_MockObject as MockObject;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @see AuthorizeCommand
  */
-class AuthorizeCommandTest extends \PHPUnit\Framework\TestCase
+class AuthorizeCommandTest extends TestCase
 {
     /**
      * @var float
@@ -25,7 +28,7 @@ class AuthorizeCommandTest extends \PHPUnit\Framework\TestCase
     /**
      * @var string
      */
-    private $newOrderStatus = 'custom_status';
+    private static $newOrderStatus = 'custom_status';
 
     /**
      * @see AuthorizeCommand::execute
@@ -58,21 +61,21 @@ class AuthorizeCommandTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function commandResultDataProvider()
+    public static function commandResultDataProvider()
     {
         return [
             [
                 false,
                 false,
                 Order::STATE_PROCESSING,
-                $this->newOrderStatus,
+                self::$newOrderStatus,
                 'Authorized amount of %1.'
             ],
             [
                 true,
                 false,
                 Order::STATE_PAYMENT_REVIEW,
-                $this->newOrderStatus,
+                self::$newOrderStatus,
                 'We will authorize %1 after the payment is approved at the payment gateway.'
             ],
             [
@@ -103,7 +106,7 @@ class AuthorizeCommandTest extends \PHPUnit\Framework\TestCase
             ->disableOriginalConstructor()
             ->getMock();
         $statusResolver->method('getOrderStatusByState')
-            ->willReturn($this->newOrderStatus);
+            ->willReturn(self::$newOrderStatus);
 
         return $statusResolver;
     }
@@ -130,7 +133,7 @@ class AuthorizeCommandTest extends \PHPUnit\Framework\TestCase
     private function getPayment($isTransactionPending, $isFraudDetected)
     {
         $payment = $this->getMockBuilder(OrderPaymentInterface::class)
-            ->setMethods(['getIsTransactionPending', 'getIsFraudDetected'])
+            ->addMethods(['getIsTransactionPending', 'getIsFraudDetected'])
             ->getMockForAbstractClass();
         $payment->method('getIsTransactionPending')
             ->willReturn($isTransactionPending);

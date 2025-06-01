@@ -45,7 +45,7 @@ class Combine extends \Magento\Rule\Model\Condition\Combine
         $pAttributes = [];
         $iAttributes = [];
         foreach ($productAttributes as $code => $label) {
-            if (strpos($code, 'quote_item_') === 0) {
+            if (strpos($code, 'quote_item_') === 0 || strpos($code, 'parent::quote_item_') === 0) {
                 $iAttributes[] = [
                     'value' => \Magento\SalesRule\Model\Rule\Condition\Product::class . '|' . $code,
                     'label' => $label,
@@ -89,6 +89,7 @@ class Combine extends \Magento\Rule\Model\Condition\Combine
 
     /**
      * @inheritdoc
+     * @since 101.0.6
      */
     protected function _isValid($entity)
     {
@@ -145,7 +146,8 @@ class Combine extends \Magento\Rule\Model\Condition\Combine
     private function retrieveValidateEntities($attributeScope, \Magento\Framework\Model\AbstractModel $entity)
     {
         if ($attributeScope === 'parent') {
-            $validateEntities = [$entity];
+            $parentItem = $entity->getParentItem();
+            $validateEntities = $parentItem ? [$parentItem] : [$entity];
         } elseif ($attributeScope === 'children') {
             $validateEntities = $entity->getChildren() ?: [$entity];
         } else {

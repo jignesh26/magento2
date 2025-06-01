@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Cron;
 
@@ -12,6 +12,8 @@ use Magento\Catalog\Api\Data\ProductAttributeInterface;
 use Magento\Store\Model\Store;
 
 /**
+ * Cron job for removing outdated prices.
+ *
  * Cron operation is responsible for deleting all product prices on WEBSITE level
  * in case 'Catalog Price Scope' configuration parameter is set to GLOBAL.
  */
@@ -76,7 +78,7 @@ class DeleteOutdatedPriceValues
     /**
      * Checks if price scope config option explicitly equal to global value.
      *
-     * Such strict comparision is required to prevent price deleting when
+     * Such strict comparison is required to prevent price deleting when
      * price scope config option is null for some reason.
      *
      * @return bool

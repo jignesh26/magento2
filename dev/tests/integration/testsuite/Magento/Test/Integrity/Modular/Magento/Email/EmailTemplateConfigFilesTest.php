@@ -28,7 +28,7 @@ class EmailTemplateConfigFilesTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function fileFormatDataProvider()
+    public static function fileFormatDataProvider()
     {
         return \Magento\Framework\App\Utility\Files::init()->getConfigFiles('email_templates.xml');
     }
@@ -62,7 +62,7 @@ class EmailTemplateConfigFilesTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function templateReferenceDataProvider()
+    public static function templateReferenceDataProvider()
     {
         $data = [];
         /** @var \Magento\Email\Model\Template\Config $emailConfig */
@@ -81,7 +81,7 @@ class EmailTemplateConfigFilesTest extends \PHPUnit\Framework\TestCase
     public function testMergedFormat()
     {
         $validationState = $this->createMock(\Magento\Framework\Config\ValidationStateInterface::class);
-        $validationState->expects($this->any())->method('isValidationRequired')->will($this->returnValue(true));
+        $validationState->expects($this->any())->method('isValidationRequired')->willReturn(true);
         /** @var \Magento\Email\Model\Template\Config\Reader $reader */
         $reader = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(
             \Magento\Email\Model\Template\Config\Reader::class,

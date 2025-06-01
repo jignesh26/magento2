@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Analytics\Model;
 
@@ -53,7 +53,7 @@ class Connector
     public function execute($commandName)
     {
         if (!array_key_exists($commandName, $this->commands)) {
-            throw new NotFoundException(__('Command was not found.'));
+            throw new NotFoundException(__('Command "%1" was not found.', $commandName));
         }
 
         /** @var \Magento\Analytics\Model\Connector\CommandInterface $command */

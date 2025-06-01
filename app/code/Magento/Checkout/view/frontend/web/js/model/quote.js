@@ -1,13 +1,14 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 /**
  * @api
  */
 define([
     'ko',
-    'underscore'
+    'underscore',
+    'domReady!'
 ], function (ko, _) {
     'use strict';
 
@@ -140,6 +141,13 @@ define([
             });
 
             return total;
+        },
+
+        /**
+         * @return {Boolean}
+         */
+        isPersistent: function () {
+            return !!Number(quoteData['is_persistent']);
         }
     };
 });

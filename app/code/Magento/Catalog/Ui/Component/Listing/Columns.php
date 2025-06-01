@@ -1,18 +1,20 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Ui\Component\Listing;
 
 /**
+ * Column IU component
+ *
  * @api
  * @since 100.0.2
  */
 class Columns extends \Magento\Ui\Component\Listing\Columns
 {
     /**
-     * Default columns max order
+     * Default columns max order value
      */
     const DEFAULT_COLUMNS_MAX_ORDER = 100;
 
@@ -20,6 +22,11 @@ class Columns extends \Magento\Ui\Component\Listing\Columns
      * @var \Magento\Catalog\Ui\Component\Listing\Attribute\RepositoryInterface
      */
     protected $attributeRepository;
+
+    /**
+     * @var \Magento\Catalog\Ui\Component\ColumnFactory
+     */
+    private $columnFactory;
 
     /**
      * @var array
@@ -30,6 +37,7 @@ class Columns extends \Magento\Ui\Component\Listing\Columns
         'boolean' => 'select',
         'multiselect' => 'select',
         'date' => 'dateRange',
+        'datetime' => 'datetimeRange',
     ];
 
     /**
@@ -52,7 +60,7 @@ class Columns extends \Magento\Ui\Component\Listing\Columns
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function prepare()
     {

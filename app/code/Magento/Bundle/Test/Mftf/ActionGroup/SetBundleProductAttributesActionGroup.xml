@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
- /**
-  * Copyright © Magento, Inc. All rights reserved.
-  * See COPYING.txt for license details.
-  */
+/**
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
+ */
 -->
 
 <actionGroups xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-            xsi:noNamespaceSchemaLocation="urn:magento:mftf:Test/etc/actionGroupSchema.xsd">
+              xsi:noNamespaceSchemaLocation="urn:magento:mftf:Test/etc/actionGroupSchema.xsd">
     <actionGroup name="SetBundleProductAttributes">
+        <annotations>
+            <description>Requires navigation to the Product Creation page. Fills in the arguments listed below on the product page. Saves the changes.</description>
+        </annotations>
         <arguments>
             <argument name="attributeSet" defaultValue="Default" type="string"/>
             <argument name="bundleProductName" defaultValue="defaultBundleProductNameAndSku" type="string"/>
@@ -27,7 +30,6 @@
         1) Go to bundle product creation page
         2) Will not Enable/Disable
         -->
-
         <!--Apply Attribute Set-->
         <click selector="{{AdminProductFormSection.attributeSet}}" stepKey="startEditAttrSet"/>
         <fillField selector="{{AdminProductFormSection.attributeSetFilter}}" userInput="{{attributeSet}}" stepKey="searchForAttrSet"/>
@@ -58,9 +60,10 @@
         <checkOption selector="{{AdminProductFormBundleSection.dynamicWeightToggle}}" stepKey="dynamicWeight"/>
 
         <!--Weight-->
+        <scrollTo selector="{{AdminProductFormBundleSection.weightFieldLabel}}" stepKey="scrollToWeight"/>
         <fillField selector="{{AdminProductFormBundleSection.weightField}}" userInput="{{weight}}" stepKey="fillIn"/>
 
-        <!--Visibilty-->
+        <!--Visibility-->
         <selectOption selector="{{AdminProductFormBundleSection.visibilityDropDown}}" userInput="{{visibility}}" stepKey="openVisibility"/>
 
         <!--Categories-->

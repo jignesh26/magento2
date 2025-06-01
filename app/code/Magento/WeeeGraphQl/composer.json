@@ -3,11 +3,14 @@
     "description": "N/A",
     "type": "magento2-module",
     "require": {
-        "php": "~7.1.3||~7.2.0",
-        "magento/framework": "*"
+        "php": "~8.2.0||~8.3.0||~8.4.0",
+        "magento/framework": "*",
+        "magento/module-sales": "*",
+        "magento/module-store": "*",
+        "magento/module-tax": "*",
+        "magento/module-weee": "*"
     },
     "suggest": {
-        "magento/module-weee": "*",
         "magento/module-catalog-graph-ql": "*"
     },
     "license": [

@@ -1,27 +1,53 @@
-<?php declare(strict_types=1);
+<?php
 /**
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Framework\Test\Unit\Data\Form\Element;
 
+use Magento\Framework\Data\Form;
+use Magento\Framework\Data\Form\Element\Hidden;
+use Magento\Framework\Escaper;
+use Magento\Framework\Math\Random;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Framework\View\Helper\SecureHtmlRenderer;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Test for \Magento\Framework\Data\Form\Element\Hidden.
  */
-class HiddenTest extends \PHPUnit\Framework\TestCase
+class HiddenTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\Data\Form\Element\Hidden
+     * @var Hidden
      */
     private $element;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $objectManager = new ObjectManager($this);
-        $this->element = $objectManager->getObject(\Magento\Framework\Data\Form\Element\Hidden::class);
+        $objects = [
+            [
+                SecureHtmlRenderer::class,
+                $this->createMock(SecureHtmlRenderer::class)
+            ],
+            [
+                Random::class,
+                $this->createMock(Random::class)
+            ]
+        ];
+        $objectManager->prepareObjectManager($objects);
+        $escaper = $objectManager->getObject(
+            Escaper::class
+        );
+        $this->element = $objectManager->getObject(
+            Hidden::class,
+            [
+                'escaper' => $escaper
+            ]
+        );
     }
 
     /**
@@ -31,28 +57,28 @@ class HiddenTest extends \PHPUnit\Framework\TestCase
      */
     public function testGetElementHtml($value)
     {
-        $form = $this->createMock(\Magento\Framework\Data\Form::class);
+        $form = $this->createMock(Form::class);
         $this->element->setForm($form);
         $this->element->setValue($value);
         $html = $this->element->getElementHtml();
 
         if (is_array($value)) {
             foreach ($value as $item) {
-                $this->assertContains($item, $html);
+                $this->assertStringContainsString($item, $html);
             }
             return;
         }
-        $this->assertContains($value, $html);
+        $this->assertStringContainsString($value, $html);
     }
 
     /**
      * @return array
      */
-    public function getElementHtmlDataProvider()
+    public static function getElementHtmlDataProvider()
     {
         return [
             ['some_value'],
-            ['store_ids[]' => ['1', '2']],
+            ['value' => ['1', '2']],
         ];
     }
 }

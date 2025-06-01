@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <!--
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
@@ -13,6 +13,13 @@
                 <item name="dynamic_price" xsi:type="string">price_type</item>
                 <item name="dynamic_sku" xsi:type="string">sku_type</item>
                 <item name="dynamic_weight" xsi:type="string">weight_type</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="Magento\QuoteGraphQl\Model\Resolver\CartItemTypeResolver">
+        <arguments>
+            <argument name="supportedTypes" xsi:type="array">
+                <item name="bundle" xsi:type="string">BundleCartItem</item>
             </argument>
         </arguments>
     </type>

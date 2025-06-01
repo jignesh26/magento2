@@ -1,28 +1,31 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Analytics\Test\Unit\Model\Plugin;
 
 use Magento\Analytics\Model\Config\Backend\Baseurl\SubscriptionUpdateHandler;
 use Magento\Analytics\Model\Plugin\BaseUrlConfigPlugin;
-use Magento\Analytics\Model\SubscriptionStatusProvider;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\Config\Value;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
 use Magento\Store\Model\ScopeInterface;
 use Magento\Store\Model\Store;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class BaseUrlConfigPluginTest extends \PHPUnit\Framework\TestCase
+class BaseUrlConfigPluginTest extends TestCase
 {
     /**
-     * @var SubscriptionUpdateHandler | \PHPUnit_Framework_MockObject_MockObject
+     * @var SubscriptionUpdateHandler|MockObject
      */
     private $subscriptionUpdateHandlerMock;
 
     /**
-     * @var Value | \PHPUnit_Framework_MockObject_MockObject
+     * @var Value|MockObject
      */
     private $configValueMock;
 
@@ -39,14 +42,13 @@ class BaseUrlConfigPluginTest extends \PHPUnit\Framework\TestCase
     /**
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->subscriptionUpdateHandlerMock = $this->getMockBuilder(SubscriptionUpdateHandler::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->subscriptionUpdateHandlerMock = $this->createMock(SubscriptionUpdateHandler::class);
         $this->configValueMock = $this->getMockBuilder(Value::class)
             ->disableOriginalConstructor()
-            ->setMethods(['isValueChanged', 'getPath', 'getScope', 'getOldValue'])
+            ->addMethods(['getPath', 'getScope'])
+            ->onlyMethods(['isValueChanged', 'getOldValue'])
             ->getMock();
         $this->objectManagerHelper = new ObjectManagerHelper($this);
         $this->plugin = $this->objectManagerHelper->getObject(
@@ -87,25 +89,25 @@ class BaseUrlConfigPluginTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function afterSavePluginIsNotApplicableDataProvider()
+    public static function afterSavePluginIsNotApplicableDataProvider()
     {
         return [
             'Value has not been changed' => [
-                'Config Value Data' => [
+                'configValueData' => [
                     'isValueChanged' => false,
                     'path' => Store::XML_PATH_SECURE_BASE_URL,
                     'scope' => ScopeConfigInterface::SCOPE_TYPE_DEFAULT
                 ],
             ],
             'Unsecure URL has been changed' => [
-                'Config Value Data' => [
+                'configValueData' => [
                     'isValueChanged' => true,
                     'path' => Store::XML_PATH_UNSECURE_BASE_URL,
                     'scope' => ScopeConfigInterface::SCOPE_TYPE_DEFAULT
                 ],
             ],
             'Secure URL has been changed not in the Default scope' => [
-                'Config Value Data' => [
+                'configValueData' => [
                     'isValueChanged' => true,
                     'path' => Store::XML_PATH_SECURE_BASE_URL,
                     'scope' => ScopeInterface::SCOPE_STORES

@@ -12,7 +12,7 @@ class WidgetTest extends \PHPUnit\Framework\TestCase
      */
     protected $_model = null;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->_model = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(
             \Magento\Widget\Model\Widget::class
@@ -23,7 +23,7 @@ class WidgetTest extends \PHPUnit\Framework\TestCase
     {
         $declaredWidgets = $this->_model->getWidgetsArray();
         $this->assertNotEmpty($declaredWidgets);
-        $this->assertInternalType('array', $declaredWidgets);
+        $this->assertIsArray($declaredWidgets);
         foreach ($declaredWidgets as $row) {
             $this->assertArrayHasKey('name', $row);
             $this->assertArrayHasKey('code', $row);
@@ -55,7 +55,7 @@ class WidgetTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getPlaceholderImageUrlDataProvider()
+    public static function getPlaceholderImageUrlDataProvider()
     {
         return [
             'custom image' => [\Magento\Catalog\Block\Product\Widget\NewWidget::class,

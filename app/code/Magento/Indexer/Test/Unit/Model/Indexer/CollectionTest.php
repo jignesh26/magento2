@@ -3,6 +3,8 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Indexer\Test\Unit\Model\Indexer;
 
 use Magento\Framework\Data\Collection\EntityFactoryInterface;
@@ -13,8 +15,10 @@ use Magento\Indexer\Model\Indexer\Collection;
 use Magento\Indexer\Model\Indexer\State;
 use Magento\Indexer\Model\ResourceModel\Indexer\State\Collection as StateCollection;
 use Magento\Indexer\Model\ResourceModel\Indexer\State\CollectionFactory;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class CollectionTest extends \PHPUnit\Framework\TestCase
+class CollectionTest extends TestCase
 {
     /**
      * @var ObjectManagerHelper
@@ -27,24 +31,24 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
     private $collection;
 
     /**
-     * @var ConfigInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigInterface|MockObject
      */
     private $configMock;
 
     /**
-     * @var CollectionFactory|\PHPUnit_Framework_MockObject_MockObject
+     * @var CollectionFactory|MockObject
      */
     private $statesFactoryMock;
 
     /**
-     * @var EntityFactoryInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var EntityFactoryInterface|MockObject
      */
     private $entityFactoryMock;
 
     /**
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManagerHelper = new ObjectManagerHelper($this);
 
@@ -52,7 +56,7 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
             ->getMockForAbstractClass();
 
         $this->statesFactoryMock = $this->getMockBuilder(CollectionFactory::class)
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->disableOriginalConstructor()
             ->getMock();
 
@@ -76,6 +80,14 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
      */
     public function testLoadData(array $indexersData, array $states)
     {
+        $finalStates = [];
+
+        foreach ($states as $key => $state) {
+            if (is_callable($state)) {
+                $finalStates[$key] = $state($this);
+            }
+        }
+
         $statesCollection = $this->getMockBuilder(StateCollection::class)
             ->disableOriginalConstructor()
             ->getMock();
@@ -84,18 +96,18 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
             ->method('create')
             ->willReturn($statesCollection);
         $statesCollection->method('getItems')
-            ->willReturn($states);
+            ->willReturn($finalStates);
 
         $calls = [];
         foreach ($indexersData as $indexerId => $indexerData) {
             $indexer = $this->getIndexerMock($indexerData);
-            $state = $states[$indexerId] ?? '';
+            $state = $finalStates[$indexerId] ?? '';
             $indexer
                 ->expects($this->once())
                 ->method('load')
                 ->with($indexerId);
             $indexer
-                ->expects($this->exactly($state ? 1: 0))
+                ->expects($this->exactly($state ? 1 : 0))
                 ->method('setState')
                 ->with($state);
             $calls[] = $indexer;
@@ -120,11 +132,11 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function loadDataDataProvider()
+    public static function loadDataDataProvider()
     {
         return [
             [
-                'indexers' => [
+                'indexersData' => [
                     'indexer_2' => [
                         'indexer_id' => 'indexer_2',
                     ],
@@ -136,8 +148,8 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
                     ],
                 ],
                 'states' => [
-                    'indexer_2' => $this->getStateMock(['indexer_id' => 'indexer_2']),
-                    'indexer_3' => $this->getStateMock(['indexer_id' => 'indexer_3']),
+                    'indexer_2' => static fn (self $testCase) => $testCase->getStateMock(['indexer_id' => 'indexer_2']),
+                    'indexer_3' => static fn (self $testCase) => $testCase->getStateMock(['indexer_id' => 'indexer_3']),
                 ],
             ]
         ];
@@ -176,11 +188,11 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getAllIdsDataProvider()
+    public static function getAllIdsDataProvider()
     {
         return [
             [
-                'indexers' => [
+                'indexersData' => [
                     'indexer_2' => [
                         'indexer_id' => 'indexer_2',
                     ],
@@ -220,7 +232,7 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function stubMethodsDataProvider()
+    public static function stubMethodsDataProvider()
     {
         return [
             [
@@ -279,7 +291,7 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function stubMethodsWithReturnSelfDataProvider()
+    public static function stubMethodsWithReturnSelfDataProvider()
     {
         return [
             [
@@ -294,11 +306,11 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|IndexerInterface
+     * @return MockObject|IndexerInterface
      */
     private function getIndexerMock(array $data = [])
     {
-        /** @var \PHPUnit_Framework_MockObject_MockObject|IndexerInterface $indexer */
+        /** @var MockObject|IndexerInterface $indexer */
         $indexer = $this->getMockBuilder(IndexerInterface::class)
             ->getMockForAbstractClass();
         if (isset($data['indexer_id'])) {
@@ -310,11 +322,11 @@ class CollectionTest extends \PHPUnit\Framework\TestCase
 
     /**
      * @param array $data
-     * @return \PHPUnit_Framework_MockObject_MockObject|State
+     * @return MockObject|State
      */
     private function getStateMock(array $data = [])
     {
-        /** @var \PHPUnit_Framework_MockObject_MockObject|State $state */
+        /** @var MockObject|State $state */
         $state = $this->getMockBuilder(State::class)
             ->disableOriginalConstructor()
             ->getMock();

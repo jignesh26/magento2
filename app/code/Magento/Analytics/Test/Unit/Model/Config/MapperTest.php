@@ -1,17 +1,20 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Analytics\Test\Unit\Model\Config;
 
 use Magento\Analytics\Model\Config\Mapper;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class MapperTest extends \PHPUnit\Framework\TestCase
+class MapperTest extends TestCase
 {
     /**
      * @var ObjectManagerHelper
@@ -26,7 +29,7 @@ class MapperTest extends \PHPUnit\Framework\TestCase
     /**
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManagerHelper = new ObjectManagerHelper($this);
 
@@ -48,7 +51,7 @@ class MapperTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function executingDataProvider()
+    public static function executingDataProvider()
     {
         return [
             'wrongConfig' => [

@@ -18,12 +18,12 @@ class PartialResponseTest extends \Magento\TestFramework\TestCase\WebapiAbstract
     /** @var string */
     protected $customerData;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->_markTestAsRestOnly('Partial response functionality available in REST mode only.');
 
         $this->customerHelper = Bootstrap::getObjectManager()
-            ->get(\Magento\TestFramework\Helper\Customer::class);
+            ->create(\Magento\TestFramework\Helper\Customer::class, ['name' => $this->name()]);
 
         $this->customerData = $this->customerHelper->createSampleCustomer();
     }

@@ -3,13 +3,17 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Store\Test\Unit\Model\Address;
 
 use Magento\Framework\DataObject;
+use Magento\Framework\Event\ManagerInterface;
+use Magento\Framework\Filter\FilterManager;
 use Magento\Store\Model\Address\Renderer;
+use PHPUnit\Framework\TestCase;
 
-class RendererTest extends \PHPUnit\Framework\TestCase
+class RendererTest extends TestCase
 {
     /**
      * @var Renderer
@@ -21,18 +25,18 @@ class RendererTest extends \PHPUnit\Framework\TestCase
      *
      * @SuppressWarnings(PHPMD.UnusedLocalVariable)
      */
-    protected function setUp()
+    protected function setUp(): void
     {
-        $eventManager = $this->getMockBuilder(\Magento\Framework\Event\ManagerInterface::class)
+        $eventManager = $this->getMockBuilder(ManagerInterface::class)
             ->disableOriginalConstructor()
-            ->setMethods(['dispatch'])
-            ->getMock();
+            ->onlyMethods(['dispatch'])
+            ->getMockForAbstractClass();
 
         $eventManager->expects($this->once())->method('dispatch')->with('store_address_format');
 
-        $filterManager = $this->getMockBuilder(\Magento\Framework\Filter\FilterManager::class)
+        $filterManager = $this->getMockBuilder(FilterManager::class)
             ->disableOriginalConstructor()
-            ->setMethods(['template'])
+            ->addMethods(['template'])
             ->getMock();
 
         $filterManager->expects($this->once())
@@ -62,7 +66,7 @@ class RendererTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function formatDataProvider()
+    public static function formatDataProvider()
     {
         $storeInfo = new DataObject([
             'region' => 'Gondolin',

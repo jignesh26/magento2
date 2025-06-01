@@ -5,6 +5,8 @@
  */
 namespace Magento\ImportExport\Model;
 
+use ReflectionClass;
+
 class ExportTest extends \PHPUnit\Framework\TestCase
 {
     /**
@@ -14,7 +16,7 @@ class ExportTest extends \PHPUnit\Framework\TestCase
      */
     protected $_model;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->_model = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(
             \Magento\ImportExport\Model\Export::class
@@ -33,31 +35,33 @@ class ExportTest extends \PHPUnit\Framework\TestCase
     {
         $this->_model->setData(['entity' => $entity]);
         $this->_model->getEntityAttributeCollection();
-        $this->assertAttributeInstanceOf(
-            $expectedEntityType,
-            '_entityAdapter',
-            $this->_model,
-            'Entity adapter property has wrong type'
-        );
+        $this->assertIsObject($this->_model);
+        $this->assertTrue(property_exists($this->_model, '_entityAdapter'));
+        $object = new ReflectionClass(get_class($this->_model));
+        $attribute = $object->getProperty('_entityAdapter');
+        $attribute->setAccessible(true);
+        $propertyObject = $attribute->getValue($this->_model);
+        $attribute->setAccessible(false);
+        $this->assertInstanceOf($expectedEntityType, $propertyObject);
     }
 
     /**
      * @return array
      */
-    public function getEntityDataProvider()
+    public static function getEntityDataProvider()
     {
         return [
             'product' => [
-                '$entity' => 'catalog_product',
-                '$expectedEntityType' => \Magento\CatalogImportExport\Model\Export\Product::class,
+                'entity' => 'catalog_product',
+                'expectedEntityType' => \Magento\CatalogImportExport\Model\Export\Product::class,
             ],
             'customer main data' => [
-                '$entity' => 'customer',
-                '$expectedEntityType' => \Magento\CustomerImportExport\Model\Export\Customer::class,
+                'entity' => 'customer',
+                'expectedEntityType' => \Magento\CustomerImportExport\Model\Export\Customer::class,
             ],
             'customer address' => [
-                '$entity' => 'customer_address',
-                '$expectedEntityType' => \Magento\CustomerImportExport\Model\Export\Address::class,
+                'entity' => 'customer_address',
+                'expectedEntityType' => \Magento\CustomerImportExport\Model\Export\Address::class,
             ]
         ];
     }
@@ -65,11 +69,12 @@ class ExportTest extends \PHPUnit\Framework\TestCase
     /**
      * Test method '_getEntityAdapter' in case when entity is invalid
      *
-     * @expectedException \Magento\Framework\Exception\LocalizedException
      * @covers \Magento\ImportExport\Model\Export::_getEntityAdapter
      */
     public function testGetEntityAdapterWithInvalidEntity()
     {
+        $this->expectException(\Magento\Framework\Exception\LocalizedException::class);
+
         $this->_model->setData(['entity' => 'test']);
         $this->_model->getEntityAttributeCollection();
     }

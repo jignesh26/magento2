@@ -1,7 +1,5 @@
 <?php
 /**
- * Encrypted config field backend model
- *
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
@@ -9,6 +7,8 @@
 namespace Magento\Config\Model\Config\Backend;
 
 /**
+ * Encrypted config field backend model.
+ *
  * @api
  * @since 100.0.2
  */
@@ -36,8 +36,8 @@ class Encrypted extends \Magento\Framework\App\Config\Value implements
         \Magento\Framework\App\Config\ScopeConfigInterface $config,
         \Magento\Framework\App\Cache\TypeListInterface $cacheTypeList,
         \Magento\Framework\Encryption\EncryptorInterface $encryptor,
-        \Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
-        \Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
+        ?\Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
+        ?\Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
         array $data = []
     ) {
         $this->_encryptor = $encryptor;

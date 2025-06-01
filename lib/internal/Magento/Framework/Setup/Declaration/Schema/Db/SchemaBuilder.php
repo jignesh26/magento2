@@ -1,18 +1,21 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
+ * Copyright 2017 Adobe All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Framework\Setup\Declaration\Schema\Db;
 
+use Magento\Framework\Exception\NotFoundException;
 use Magento\Framework\Phrase;
 use Magento\Framework\Setup\Declaration\Schema\Dto\Column;
 use Magento\Framework\Setup\Declaration\Schema\Dto\ElementFactory;
 use Magento\Framework\Setup\Declaration\Schema\Dto\Schema;
 use Magento\Framework\Setup\Declaration\Schema\Dto\Table;
 use Magento\Framework\Setup\Declaration\Schema\Sharding;
-use Magento\Framework\Setup\Exception;
+use Magento\Framework\Config\FileResolverByModule;
+use Magento\Framework\Setup\Declaration\Schema\Declaration\ReaderComposite;
 
 /**
  * This type of builder is responsible for converting ENTIRE data, that comes from db
@@ -48,27 +51,50 @@ class SchemaBuilder
     private $tables;
 
     /**
+     * @var ReaderComposite
+     */
+    private $readerComposite;
+
+    /**
      * Constructor.
      *
-     * @param ElementFactory          $elementFactory
+     * @param ElementFactory $elementFactory
      * @param DbSchemaReaderInterface $dbSchemaReader
-     * @param Sharding                $sharding
+     * @param Sharding $sharding
+     * @param ReaderComposite $readerComposite
      */
     public function __construct(
         ElementFactory $elementFactory,
         DbSchemaReaderInterface $dbSchemaReader,
-        Sharding $sharding
+        Sharding $sharding,
+        ReaderComposite $readerComposite
     ) {
         $this->elementFactory = $elementFactory;
         $this->dbSchemaReader = $dbSchemaReader;
         $this->sharding = $sharding;
+        $this->readerComposite = $readerComposite;
     }
 
     /**
      * @inheritdoc
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function build(Schema $schema)
     {
+        $data = $this->readerComposite->read(FileResolverByModule::ALL_MODULES);
+        $tablesWithJsonTypeField = [];
+        if (isset($data['table'])) {
+            foreach ($data['table'] as $keyTable => $tableColumns) {
+                $tableColumns['column'] ??= [];
+                foreach ($tableColumns['column'] as $keyColumn => $columnData) {
+                    if ($columnData['type'] == 'json') {
+                        $tablesWithJsonTypeField[$keyTable] = $keyColumn;
+                    }
+                }
+            }
+        }
+
         foreach ($this->sharding->getResources() as $resource) {
             foreach ($this->dbSchemaReader->readTables($resource) as $tableName) {
                 $columns = [];
@@ -88,7 +114,7 @@ class SchemaBuilder
                     [
                         'name' => $tableName,
                         'resource' => $resource,
-                        'engine' => strtolower($tableOptions['engine']),
+                        'engine' => strtolower($tableOptions['engine'] ?? ''),
                         'comment' => $tableOptions['comment'] === '' ? null : $tableOptions['comment'],
                         'charset' => $tableOptions['charset'],
                         'collation' => $tableOptions['collation']
@@ -97,6 +123,10 @@ class SchemaBuilder
 
                 // Process columns
                 foreach ($columnsData as $columnData) {
+                    if (isset($tablesWithJsonTypeField[$tableName])
+                        && $tablesWithJsonTypeField[$tableName] === $columnData['name']) {
+                        $columnData['type'] = 'json';
+                    }
                     $columnData['table'] = $table;
                     $column = $this->elementFactory->create($columnData['type'], $columnData);
                     $columns[$column->getName()] = $column;
@@ -131,8 +161,8 @@ class SchemaBuilder
     /**
      * Process references for all tables. Schema validation required.
      *
-     * @param  Table[] $tables
-     * @param Schema $schema
+     * @param   Table[] $tables
+     * @param   Schema $schema
      */
     private function processReferenceKeys(array $tables, Schema $schema)
     {
@@ -170,15 +200,15 @@ class SchemaBuilder
     /**
      * Retrieve column objects from names.
      *
-     * @param  Column[] $columns
-     * @param  array    $data
-     * @return Column[]
-     * @throws Exception
+     * @param   Column[] $columns
+     * @param   array $data
+     * @return  Column[]
+     * @throws  NotFoundException
      */
     private function resolveInternalRelations(array $columns, array $data)
     {
         if (!is_array($data['column'])) {
-            throw new Exception(
+            throw new NotFoundException(
                 new Phrase("Cannot find columns for internal index")
             );
         }
@@ -188,7 +218,7 @@ class SchemaBuilder
             if (!isset($columns[$columnName])) {
                 $tableName = isset($data['table']) ? $data['table']->getName() : '';
                 trigger_error(
-                    new Phrase(
+                    (string)new Phrase(
                         'Column %1 does not exist for index/constraint %2 in table %3.',
                         [
                             $columnName,

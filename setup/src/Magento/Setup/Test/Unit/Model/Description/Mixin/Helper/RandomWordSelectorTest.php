@@ -3,18 +3,23 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Setup\Test\Unit\Model\Description\Mixin\Helper;
 
-class RandomWordSelectorTest extends \PHPUnit\Framework\TestCase
+use Magento\Setup\Model\Description\Mixin\Helper\RandomWordSelector;
+use PHPUnit\Framework\TestCase;
+
+class RandomWordSelectorTest extends TestCase
 {
     /**
-     * @var \Magento\Setup\Model\Description\Mixin\Helper\RandomWordSelector
+     * @var RandomWordSelector
      */
     private $helper;
 
-    public function setUp()
+    protected function setUp(): void
     {
-        $this->helper = new \Magento\Setup\Model\Description\Mixin\Helper\RandomWordSelector();
+        $this->helper = new RandomWordSelector();
     }
 
     /**
@@ -30,33 +35,33 @@ class RandomWordSelectorTest extends \PHPUnit\Framework\TestCase
 
         $fixtureWords = str_word_count($fixtureSource, 1);
         foreach ($randWords as $randWord) {
-            $this->assertTrue(in_array($randWord, $fixtureWords));
+            $this->assertContains($randWord, $fixtureWords);
         }
     }
 
     /**
      * @return array
      */
-    public function getTestData()
+    public static function getTestData()
     {
         return [
             [
-                'source' => '
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit, 
+                'fixtureSource' => '
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit,
                     sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
                 ',
-                'count' => 1
+                'fixtureCount' => 1
             ],
             [
-                'source' => 'Lorem.',
-                'count' => 5
+                'fixtureSource' => 'Lorem.',
+                'fixtureCount' => 5
             ],
             [
-                'source' => '
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit, 
+                'fixtureSource' => '
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit,
                     sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
                 ',
-                'count' => 3
+                'fixtureCount' => 3
             ],
         ];
     }

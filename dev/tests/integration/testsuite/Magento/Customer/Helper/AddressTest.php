@@ -10,7 +10,7 @@ class AddressTest extends \PHPUnit\Framework\TestCase
     /** @var \Magento\Customer\Helper\Address */
     protected $helper;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->helper = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->get(
             \Magento\Customer\Helper\Address::class
@@ -26,7 +26,7 @@ class AddressTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($expectedClass, $this->helper->getAttributeValidationClass($attributeCode));
     }
 
-    public function getAttributeValidationClass()
+    public static function getAttributeValidationClass()
     {
         return [
             ['bad-code', ''],

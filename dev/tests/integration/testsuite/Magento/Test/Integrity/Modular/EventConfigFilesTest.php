@@ -12,7 +12,7 @@ class EventConfigFilesTest extends \PHPUnit\Framework\TestCase
      */
     protected $_schemaFile;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
         $this->_schemaFile = $objectManager->get(\Magento\Framework\Event\Config\SchemaLocator::class)->getSchema();
@@ -40,7 +40,7 @@ class EventConfigFilesTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function eventConfigFilesDataProvider()
+    public static function eventConfigFilesDataProvider()
     {
         return \Magento\Framework\App\Utility\Files::init()->getConfigFiles('{*/events.xml,events.xml}');
     }

@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 
 /**
@@ -11,7 +11,7 @@ define([
     'Magento_Ui/js/modal/alert',
     'jquery/ui'
 ], function ($, alert) {
-    'use strict';
+    'use strict'; // eslint-disable-line strict
 
     $.widget('mage.testConnection', {
         options: {
@@ -40,18 +40,20 @@ define([
                 element =  $('#' + this.options.elementId),
                 self = this,
                 params = {},
-                msg = '';
+                msg = '',
+                fieldToCheck = this.options.fieldToCheck || 'success';
 
             element.removeClass('success').addClass('fail');
-            $.each($.parseJSON(this.options.fieldMapping), function (key, el) {
+            $.each(JSON.parse(this.options.fieldMapping), function (key, el) {
                 params[key] = $('#' + el).val();
             });
             $.ajax({
                 url: this.options.url,
                 showLoader: true,
-                data: params
+                data: params,
+                headers: this.options.headers || {}
             }).done(function (response) {
-                if (response.success) {
+                if (response[fieldToCheck]) {
                     element.removeClass('fail').addClass('success');
                     result = self.options.successText;
                 } else {

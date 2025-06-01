@@ -21,7 +21,7 @@ class AclConfigFilesTest extends \PHPUnit\Framework\TestCase
      */
     protected $_schemeFile;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $urnResolver = new \Magento\Framework\Config\Dom\UrnResolver();
         $this->_schemeFile = $urnResolver->getRealPath('urn:magento:framework:Acl/etc/acl.xsd');
@@ -49,7 +49,7 @@ class AclConfigFilesTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function aclConfigFileDataProvider()
+    public static function aclConfigFileDataProvider()
     {
         return \Magento\Framework\App\Utility\Files::init()->getConfigFiles('acl.xml');
     }

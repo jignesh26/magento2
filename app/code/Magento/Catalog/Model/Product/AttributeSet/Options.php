@@ -1,16 +1,30 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Model\Product\AttributeSet;
 
+/**
+ * Attribute Set Options
+ */
 class Options implements \Magento\Framework\Data\OptionSourceInterface
 {
+
     /**
-     * @var null|array
+     * @var array
      */
     protected $options;
+
+    /**
+     * @var \Magento\Eav\Model\ResourceModel\Entity\Attribute\Set\CollectionFactory
+     */
+    protected $collectionFactory;
+
+    /**
+     * @var \Magento\Catalog\Model\ResourceModel\Product
+     */
+    protected $product;
 
     /**
      * @param \Magento\Eav\Model\ResourceModel\Entity\Attribute\Set\CollectionFactory $collectionFactory
@@ -25,7 +39,7 @@ class Options implements \Magento\Framework\Data\OptionSourceInterface
     }
 
     /**
-     * @return array|null
+     * @inheritDoc
      */
     public function toOptionArray()
     {
@@ -34,6 +48,7 @@ class Options implements \Magento\Framework\Data\OptionSourceInterface
                 ->setEntityTypeFilter($this->product->getTypeId())
                 ->toOptionArray();
         }
+
         return $this->options;
     }
 }

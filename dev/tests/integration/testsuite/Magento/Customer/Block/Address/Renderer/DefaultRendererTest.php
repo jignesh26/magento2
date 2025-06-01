@@ -17,7 +17,7 @@ class DefaultRendererTest extends \PHPUnit\Framework\TestCase
      */
     protected $_addressConfig;
 
-    public function setUp()
+    protected function setUp(): void
     {
         $this->_addressConfig = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->get(
             \Magento\Customer\Model\Address\Config::class
@@ -35,7 +35,7 @@ class DefaultRendererTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($expected, $actual);
     }
 
-    public function renderArrayDataProvider()
+    public static function renderArrayDataProvider()
     {
         $addressAttributes = [
             'city' => 'CityM',
@@ -82,7 +82,7 @@ class DefaultRendererTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($expected, $actual);
     }
 
-    public function renderDataProvider()
+    public static function renderDataProvider()
     {
         $data = [
             'city' => 'CityM',

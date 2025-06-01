@@ -5,15 +5,25 @@
  */
 declare(strict_types=1);
 
+use Magento\Catalog\Api\ProductRepositoryInterface;
+use Magento\Sales\Api\Data\OrderInterfaceFactory;
 use Magento\Sales\Model\Order;
 use Magento\Sales\Api\OrderRepositoryInterface;
 use Magento\Sales\Model\Order\Address as OrderAddress;
+use Magento\TestFramework\Helper\Bootstrap;
+use Magento\TestFramework\Workaround\Override\Fixture\Resolver;
 
-require 'order.php';
+Resolver::getInstance()->requireDataFixture('Magento/Sales/_files/order.php');
+$objectManager = Bootstrap::getObjectManager();
+/** @var ProductRepositoryInterface $productRepository */
+$productRepository = $objectManager->create(ProductRepositoryInterface::class);
+$product = $productRepository->get('simple');
 /** @var Order $order */
-/** @var Order\Payment $payment */
-/** @var Order\Item $orderItem */
-/** @var array $addressData Data for creating addresses for the orders. */
+$order = $objectManager->get(OrderInterfaceFactory::class)->create()->loadByIncrementId('100000001');
+$payment = $order->getPayment();
+$orderItems = $order->getItems();
+$orderItem = reset($orderItems);
+$addressData = include __DIR__ . '/address_data.php';
 $orders = [
     [
         'increment_id' => '100000002',
@@ -24,7 +34,7 @@ $orders = [
         'base_grand_total' => 120.00,
         'store_id' => 1,
         'website_id' => 1,
-        'payment' => $payment
+        'created_at' => '2022-09-04'
     ],
     [
         'increment_id' => '100000003',
@@ -33,9 +43,10 @@ $orders = [
         'grand_total' => 130.00,
         'base_grand_total' => 130.00,
         'subtotal' => 130.00,
+        'total_paid' => 130.00,
         'store_id' => 0,
         'website_id' => 0,
-        'payment' => $payment
+        'created_at' => '2022-09-10'
     ],
     [
         'increment_id' => '100000004',
@@ -46,7 +57,7 @@ $orders = [
         'subtotal' => 140.00,
         'store_id' => 1,
         'website_id' => 1,
-        'payment' => $payment
+        'created_at' => '2022-09-05'
     ],
     [
         'increment_id' => '100000005',
@@ -55,9 +66,10 @@ $orders = [
         'grand_total' => 150.00,
         'base_grand_total' => 150.00,
         'subtotal' => 150.00,
+        'total_paid' => 150.00,
         'store_id' => 1,
         'website_id' => 1,
-        'payment' => $payment
+        'created_at' => '2022-09-08'
     ],
     [
         'increment_id' => '100000006',
@@ -66,9 +78,10 @@ $orders = [
         'grand_total' => 160.00,
         'base_grand_total' => 160.00,
         'subtotal' => 160.00,
+        'total_paid' => 160.00,
         'store_id' => 1,
         'website_id' => 1,
-        'payment' => $payment
+        'created_at' => '2022-09-09'
     ],
 ];
 
@@ -76,8 +89,10 @@ $orders = [
 $orderRepository = $objectManager->create(OrderRepositoryInterface::class);
 /** @var array $orderData */
 foreach ($orders as $orderData) {
+    $newPayment = clone $payment;
+    $newPayment->setId(null);
     /** @var $order \Magento\Sales\Model\Order */
-    $order = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(
+    $order = Bootstrap::getObjectManager()->create(
         \Magento\Sales\Model\Order::class
     );
 
@@ -89,6 +104,15 @@ foreach ($orders as $orderData) {
     $shippingAddress = clone $billingAddress;
     $shippingAddress->setId(null)->setAddressType('shipping');
 
+    /** @var Order\Item $orderItem */
+    $orderItem = $objectManager->create(Order\Item::class);
+    $orderItem->setProductId($product->getId())
+        ->setQtyOrdered(2)
+        ->setBasePrice($product->getPrice())
+        ->setPrice($product->getPrice())
+        ->setRowTotal($product->getPrice())
+        ->setProductType('simple');
+
     $order
         ->setData($orderData)
         ->addItem($orderItem)
@@ -96,7 +120,8 @@ foreach ($orders as $orderData) {
         ->setCustomerId(1)
         ->setCustomerEmail('customer@example.com')
         ->setBillingAddress($billingAddress)
-        ->setShippingAddress($shippingAddress);
+        ->setShippingAddress($shippingAddress)
+        ->setPayment($newPayment);
 
     $orderRepository->save($order);
 }

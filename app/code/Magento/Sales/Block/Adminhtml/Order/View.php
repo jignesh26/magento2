@@ -1,11 +1,11 @@
 <?php
 /**
- * @category    Magento
- * @package     Magento_Sales
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
 namespace Magento\Sales\Block\Adminhtml\Order;
+
+use Magento\Sales\Model\ConfigInterface;
 
 /**
  * Adminhtml sales order view
@@ -16,29 +16,21 @@ namespace Magento\Sales\Block\Adminhtml\Order;
 class View extends \Magento\Backend\Block\Widget\Form\Container
 {
     /**
-     * Block group
-     *
      * @var string
      */
     protected $_blockGroup = 'Magento_Sales';
 
     /**
-     * Core registry
-     *
      * @var \Magento\Framework\Registry
      */
     protected $_coreRegistry = null;
 
     /**
-     * Sales config
-     *
      * @var \Magento\Sales\Model\Config
      */
     protected $_salesConfig;
 
     /**
-     * Reorder helper
-     *
      * @var \Magento\Sales\Helper\Reorder
      */
     protected $_reorderHelper;
@@ -46,14 +38,14 @@ class View extends \Magento\Backend\Block\Widget\Form\Container
     /**
      * @param \Magento\Backend\Block\Widget\Context $context
      * @param \Magento\Framework\Registry $registry
-     * @param \Magento\Sales\Model\Config $salesConfig
+     * @param ConfigInterface $salesConfig
      * @param \Magento\Sales\Helper\Reorder $reorderHelper
      * @param array $data
      */
     public function __construct(
         \Magento\Backend\Block\Widget\Context $context,
         \Magento\Framework\Registry $registry,
-        \Magento\Sales\Model\Config $salesConfig,
+        ConfigInterface $salesConfig,
         \Magento\Sales\Helper\Reorder $reorderHelper,
         array $data = []
     ) {
@@ -121,7 +113,7 @@ class View extends \Magento\Backend\Block\Widget\Form\Container
             );
         }
 
-        if ($this->_isAllowedAction('Magento_Sales::emails') && !$order->isCanceled()) {
+        if ($this->_isAllowedAction('Magento_Sales::email') && !$order->isCanceled()) {
             $message = __('Are you sure you want to send an order email to customer?');
             $this->addButton(
                 'send_notification',
@@ -447,6 +439,9 @@ class View extends \Magento\Backend\Block\Widget\Form\Container
      */
     public function getBackUrl()
     {
+        if ($this->getRequest()->getParam('customer_id')) {
+            return $this->getUrl('customer/index/edit', ['id'=> $this->getRequest()->getParam('customer_id')]);
+        }
         if ($this->getOrder() && $this->getOrder()->getBackUrl()) {
             return $this->getOrder()->getBackUrl();
         }
@@ -466,6 +461,8 @@ class View extends \Magento\Backend\Block\Widget\Form\Container
     }
 
     /**
+     * Get edit message
+     *
      * @param \Magento\Sales\Model\Order $order
      * @return \Magento\Framework\Phrase
      */
@@ -486,6 +483,8 @@ class View extends \Magento\Backend\Block\Widget\Form\Container
     }
 
     /**
+     * Get non editable types
+     *
      * @param \Magento\Sales\Model\Order $order
      * @return array
      */

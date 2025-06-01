@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 declare(strict_types=1);
 
@@ -15,6 +15,16 @@ use Magento\Catalog\Model\ResourceModel\Category;
  */
 class LevelCalculator
 {
+    /**
+     * @var ResourceConnection
+     */
+    private $resourceConnection;
+
+    /**
+     * @var Category
+     */
+    private $resourceCategory;
+
     /**
      * @param ResourceConnection $resourceConnection
      * @param Category $resourceCategory
@@ -38,7 +48,8 @@ class LevelCalculator
         $connection = $this->resourceConnection->getConnection();
         $select = $connection->select()
             ->from($this->resourceConnection->getTableName('catalog_category_entity'), 'level')
-            ->where($this->resourceCategory->getLinkField() . " = ?", $rootCategoryId);
+            ->where($this->resourceCategory->getEntityIdField() . " = ?", $rootCategoryId);
+
         return (int) $connection->fetchOne($select);
     }
 }

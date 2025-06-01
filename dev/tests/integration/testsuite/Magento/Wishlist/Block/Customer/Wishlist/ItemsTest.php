@@ -15,11 +15,11 @@ class ItemsTest extends \PHPUnit\Framework\TestCase
         );
         $block = $layout->addBlock(\Magento\Wishlist\Block\Customer\Wishlist\Items::class, 'test');
         $child = $this->getMockBuilder(\Magento\Wishlist\Block\Customer\Wishlist\Item\Column::class)
-            ->setMethods(['isEnabled'])
+            ->onlyMethods(['isEnabled'])
             ->disableOriginalConstructor()
             ->getMock();
 
-        $child->expects($this->any())->method('isEnabled')->will($this->returnValue(true));
+        $child->expects($this->any())->method('isEnabled')->willReturn(true);
         $layout->addBlock($child, 'child', 'test');
         $expected = $child->getType();
         $columns = $block->getColumns();

@@ -1,105 +1,135 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Cms\Test\Unit\Block\Adminhtml\Block\Widget;
+
+use Magento\Backend\Block\Template\Context;
+use Magento\Backend\Helper\Data;
+use Magento\Cms\Block\Adminhtml\Block\Widget\Chooser;
+use Magento\Cms\Model\Block;
+use Magento\Cms\Model\BlockFactory;
+use Magento\Cms\Model\ResourceModel\Block\CollectionFactory;
+use Magento\Framework\Data\Form\Element\AbstractElement;
+use Magento\Framework\Escaper;
+use Magento\Framework\Math\Random;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Framework\UrlInterface;
+use Magento\Framework\View\Element\BlockInterface;
+use Magento\Framework\View\LayoutInterface;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \Magento\Cms\Block\Adminhtml\Block\Widget\Chooser
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class ChooserTest extends \PHPUnit\Framework\TestCase
+class ChooserTest extends TestCase
 {
     /**
-     * @var \Magento\Cms\Block\Adminhtml\Block\Widget\Chooser
+     * @var Chooser
      */
     protected $this;
 
     /**
-     * @var \Magento\Backend\Block\Template\Context
+     * @var Context
      */
     protected $context;
 
     /**
-     * @var \Magento\Framework\View\LayoutInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var LayoutInterface|MockObject
      */
     protected $layoutMock;
 
     /**
-     * @var \Magento\Framework\Math\Random|\PHPUnit_Framework_MockObject_MockObject
+     * @var Random|MockObject
      */
     protected $mathRandomMock;
 
     /**
-     * @var \Magento\Framework\UrlInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var UrlInterface|MockObject
      */
     protected $urlBuilderMock;
 
     /**
-     * @var \Magento\Framework\Escaper|\PHPUnit_Framework_MockObject_MockObject
+     * @var Escaper|MockObject
      */
     protected $escaper;
 
     /**
-     * @var \Magento\Cms\Model\BlockFactory|\PHPUnit_Framework_MockObject_MockObject
+     * @var BlockFactory|MockObject
      */
     protected $blockFactoryMock;
 
     /**
-     * @var \Magento\Framework\Data\Form\Element\AbstractElement|\PHPUnit_Framework_MockObject_MockObject
+     * @var AbstractElement|MockObject
      */
     protected $elementMock;
 
     /**
-     * @var \Magento\Cms\Model\Block|\PHPUnit_Framework_MockObject_MockObject
+     * @var Block|MockObject
      */
     protected $modelBlockMock;
 
     /**
-     * @var \Magento\Framework\View\Element\BlockInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var BlockInterface|MockObject
      */
     protected $chooserMock;
 
-    protected function setUp()
+    /**
+     * @var Data|MockObject
+     */
+    protected $backendHelperMock;
+
+    /**
+     * @var CollectionFactory|MockObject
+     */
+    protected $collectionFactoryMock;
+
+    protected function setUp(): void
     {
-        $this->layoutMock = $this->getMockBuilder(\Magento\Framework\View\LayoutInterface::class)
+        $this->layoutMock = $this->getMockBuilder(LayoutInterface::class)
+            ->disableOriginalConstructor()
+            ->getMockForAbstractClass();
+        $this->mathRandomMock = $this->getMockBuilder(Random::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $this->mathRandomMock = $this->getMockBuilder(\Magento\Framework\Math\Random::class)
+        $this->urlBuilderMock = $this->getMockBuilder(UrlInterface::class)
             ->disableOriginalConstructor()
-            ->getMock();
-        $this->urlBuilderMock = $this->getMockBuilder(\Magento\Framework\UrlInterface::class)
+            ->getMockForAbstractClass();
+        $this->escaper = $this->getMockBuilder(Escaper::class)
             ->disableOriginalConstructor()
-            ->getMock();
-        $this->escaper = $this->getMockBuilder(\Magento\Framework\Escaper::class)
-            ->disableOriginalConstructor()
-            ->setMethods(
+            ->onlyMethods(
                 [
                     'escapeHtml',
+                    'escapeJs'
                 ]
             )
             ->getMock();
-        $this->blockFactoryMock = $this->getMockBuilder(\Magento\Cms\Model\BlockFactory::class)
-            ->setMethods(
+        $this->blockFactoryMock = $this->getMockBuilder(BlockFactory::class)
+            ->onlyMethods(
                 [
                     'create',
                 ]
             )
             ->disableOriginalConstructor()
             ->getMock();
-        $this->elementMock = $this->getMockBuilder(\Magento\Framework\Data\Form\Element\AbstractElement::class)
+        $this->elementMock = $this->getMockBuilder(AbstractElement::class)
             ->disableOriginalConstructor()
-            ->setMethods(
+            ->addMethods(['getValue'])
+            ->onlyMethods(
                 [
                     'getId',
-                    'getValue',
                     'setData',
                 ]
             )
             ->getMock();
-        $this->modelBlockMock = $this->getMockBuilder(\Magento\Cms\Model\Block::class)
+        $this->modelBlockMock = $this->getMockBuilder(Block::class)
             ->disableOriginalConstructor()
-            ->setMethods(
+            ->onlyMethods(
                 [
                     'getTitle',
                     'load',
@@ -107,24 +137,32 @@ class ChooserTest extends \PHPUnit\Framework\TestCase
                 ]
             )
             ->getMock();
-        $this->chooserMock = $this->getMockBuilder(\Magento\Framework\View\Element\BlockInterface::class)
+        $this->chooserMock = $this->getMockBuilder(BlockInterface::class)
             ->disableOriginalConstructor()
-            ->setMethods(
+            ->addMethods(
                 [
                     'setElement',
                     'setConfig',
                     'setFieldsetId',
                     'setSourceUrl',
                     'setUniqId',
-                    'setLabel',
-                    'toHtml',
+                    'setLabel'
                 ]
             )
+            ->onlyMethods(['toHtml'])
+            ->getMockForAbstractClass();
+        $this->backendHelperMock = $this->getMockBuilder(Data::class)
+            ->disableOriginalConstructor()
             ->getMock();
 
-        $objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $this->collectionFactoryMock = $this->getMockBuilder(CollectionFactory::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $objectManager = new ObjectManager($this);
+        $objectManager->prepareObjectManager();
         $this->context = $objectManager->getObject(
-            \Magento\Backend\Block\Template\Context::class,
+            Context::class,
             [
                 'layout'     => $this->layoutMock,
                 'mathRandom' => $this->mathRandomMock,
@@ -133,7 +171,7 @@ class ChooserTest extends \PHPUnit\Framework\TestCase
             ]
         );
         $this->this = $objectManager->getObject(
-            \Magento\Cms\Block\Adminhtml\Block\Widget\Chooser::class,
+            Chooser::class,
             [
                 'context'      => $this->context,
                 'blockFactory' => $this->blockFactoryMock
@@ -236,7 +274,7 @@ class ChooserTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function prepareElementHtmlDataProvider()
+    public static function prepareElementHtmlDataProvider()
     {
         return [
             'elementValue NOT EMPTY, modelBlockId NOT EMPTY' => [
@@ -267,5 +305,34 @@ class ChooserTest extends \PHPUnit\Framework\TestCase
             ->willReturn($url);
 
         $this->assertEquals($url, $this->this->getGridUrl());
+    }
+
+    /**
+     * @covers \Magento\Cms\Block\Adminhtml\Block\Widget\Chooser::testGetRowClickCallback
+     */
+    public function testGetRowClickCallback(): void
+    {
+        $chooserBlock = new Chooser(
+            $this->context,
+            $this->backendHelperMock,
+            $this->blockFactoryMock,
+            $this->collectionFactoryMock
+        );
+        $this->escaper->expects($this->once())
+            ->method('escapeJs')
+            ->willReturnCallback(function ($input) {
+                return $input;
+            });
+        $jsCallback = $chooserBlock->getRowClickCallback();
+
+        $this->assertStringContainsString(
+            'blockId = trElement.down("td").innerHTML.replace(/^\s+|\s+$/g,"")',
+            $jsCallback,
+            'JavaScript callback should use first TD cell for block ID'
+        );
+
+        $this->assertStringContainsString('setElementValue(blockId)', $jsCallback);
+        $this->assertStringContainsString('setElementLabel(blockTitle)', $jsCallback);
+        $this->assertStringContainsString('close()', $jsCallback);
     }
 }

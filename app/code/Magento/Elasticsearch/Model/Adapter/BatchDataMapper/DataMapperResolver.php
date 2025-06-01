@@ -12,6 +12,8 @@ use Magento\Elasticsearch\Model\Config;
 
 /**
  * Map index data to search engine metadata
+ * @deprecated Elasticsearch is no longer supported by Adobe
+ * @see this class will be responsible for ES only
  */
 class DataMapperResolver implements BatchDataMapperInterface
 {
@@ -34,7 +36,7 @@ class DataMapperResolver implements BatchDataMapperInterface
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function map(array $documentData, $storeId, array $context = [])
     {

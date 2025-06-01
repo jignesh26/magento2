@@ -3,32 +3,34 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Framework\DB\Test\Unit\DB\Logger;
 
-use Magento\Framework\DB\Logger\FileFactory;
-use Magento\Framework\DB\Logger\QuietFactory;
-use Magento\Framework\DB\Logger\LoggerProxy;
 use Magento\Framework\DB\Logger\File;
+use Magento\Framework\DB\Logger\FileFactory;
+use Magento\Framework\DB\Logger\LoggerProxy;
 use Magento\Framework\DB\Logger\Quiet;
+use Magento\Framework\DB\Logger\QuietFactory;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\TestCase;
 
-class LoggerProxyTest extends \PHPUnit\Framework\TestCase
+class LoggerProxyTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\DB\Logger\LoggerProxy
+     * @var LoggerProxy
      */
     private $loggerProxy;
 
     /**
-     * @var \Magento\Framework\TestFramework\Unit\Helper\ObjectManager
+     * @var ObjectManager
      */
     private $objectManager;
 
     /**
      * {@inheritdoc}
      */
-    public function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = new ObjectManager($this);
     }
@@ -47,7 +49,7 @@ class LoggerProxyTest extends \PHPUnit\Framework\TestCase
 
         $fileLoggerFactoryMock = $this->getMockBuilder(FileFactory::class)
             ->disableOriginalConstructor()
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->getMock();
 
         $fileLoggerFactoryMock->expects($this->once())
@@ -63,7 +65,7 @@ class LoggerProxyTest extends \PHPUnit\Framework\TestCase
 
         $quietLoggerFactoryMock = $this->getMockBuilder(QuietFactory::class)
             ->disableOriginalConstructor()
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->getMock();
 
         $this->loggerProxy = $this->objectManager->getObject(
@@ -92,7 +94,7 @@ class LoggerProxyTest extends \PHPUnit\Framework\TestCase
 
         $fileLoggerFactoryMock = $this->getMockBuilder(FileFactory::class)
             ->disableOriginalConstructor()
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->getMock();
 
         $quietLoggerMock = $this->getMockBuilder(Quiet::class)
@@ -104,7 +106,7 @@ class LoggerProxyTest extends \PHPUnit\Framework\TestCase
 
         $quietLoggerFactoryMock = $this->getMockBuilder(QuietFactory::class)
             ->disableOriginalConstructor()
-            ->setMethods(['create'])
+            ->onlyMethods(['create'])
             ->getMock();
 
         $quietLoggerFactoryMock->expects($this->once())

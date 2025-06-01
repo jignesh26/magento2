@@ -5,6 +5,13 @@
  */
 namespace Magento\Downloadable\Block\Adminhtml\Catalog\Product\Edit\Tab\Downloadable;
 
+/**
+ * Class LinksTest
+ *
+ * @package Magento\Downloadable\Block\Adminhtml\Catalog\Product\Edit\Tab\Downloadable
+ * @deprecated
+ * @see \Magento\Downloadable\Ui\DataProvider\Product\Form\Modifier\Links
+ */
 class LinksTest extends \PHPUnit\Framework\TestCase
 {
     /**
@@ -102,7 +109,7 @@ class LinksTest extends \PHPUnit\Framework\TestCase
      *
      * @return array
      */
-    public function productLinksTitleDataProvider()
+    public static function productLinksTitleDataProvider()
     {
         return [
             ['simple', null, 'Links Title Test'],

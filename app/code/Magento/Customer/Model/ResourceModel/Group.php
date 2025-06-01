@@ -10,14 +10,10 @@ use Magento\Framework\Model\ResourceModel\Db\VersionControl\RelationComposite;
 
 /**
  * Customer group resource model
- *
- * @author      Magento Core Team <core@magentocommerce.com>
  */
 class Group extends \Magento\Framework\Model\ResourceModel\Db\VersionControl\AbstractDb
 {
     /**
-     * Group Management
-     *
      * @var \Magento\Customer\Api\GroupManagementInterface
      */
     protected $_groupManagement;
@@ -29,8 +25,8 @@ class Group extends \Magento\Framework\Model\ResourceModel\Db\VersionControl\Abs
 
     /**
      * @param \Magento\Framework\Model\ResourceModel\Db\Context $context
-     * @param Snapshot $entitySnapshot,
-     * @param RelationComposite $entityRelationComposite,
+     * @param Snapshot $entitySnapshot
+     * @param RelationComposite $entityRelationComposite
      * @param \Magento\Customer\Api\GroupManagementInterface $groupManagement
      * @param Customer\CollectionFactory $customersFactory
      * @param string $connectionName
@@ -110,6 +106,8 @@ class Group extends \Magento\Framework\Model\ResourceModel\Db\VersionControl\Abs
     }
 
     /**
+     * Create customers collection.
+     *
      * @return \Magento\Customer\Model\ResourceModel\Customer\Collection
      */
     protected function _createCustomersCollection()
@@ -131,7 +129,7 @@ class Group extends \Magento\Framework\Model\ResourceModel\Db\VersionControl\Abs
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     protected function _afterSave(\Magento\Framework\Model\AbstractModel $object)
     {

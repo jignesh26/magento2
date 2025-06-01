@@ -3,23 +3,27 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
 
 namespace Magento\Framework\Stdlib\Test\Unit\DateTime\Timezone;
 
-class ValidatorTest extends \PHPUnit\Framework\TestCase
+use Magento\Framework\Stdlib\DateTime\Timezone\Validator;
+use PHPUnit\Framework\TestCase;
+
+class ValidatorTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\Stdlib\DateTime\Timezone\Validator
+     * @var Validator
      */
     protected $_validator;
 
     /**
      * @dataProvider validateWithTimestampOutOfSystemRangeDataProvider
-     * @expectedException \Magento\Framework\Exception\ValidatorException
      */
     public function testValidateWithTimestampOutOfSystemRangeThrowsException($range, $validateArgs)
     {
-        $this->_validator = new \Magento\Framework\Stdlib\DateTime\Timezone\Validator($range['min'], $range['max']);
+        $this->expectException('Magento\Framework\Exception\ValidatorException');
+        $this->_validator = new Validator($range['min'], $range['max']);
         $this->_validator->validate($validateArgs['timestamp'], $validateArgs['to_date']);
 
         $this->expectExceptionMessage(
@@ -27,20 +31,18 @@ class ValidatorTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    /**
-     * @expectedException \Magento\Framework\Exception\ValidatorException
-     * @expectedExceptionMessage Transition year is out of specified date range.
-     */
     public function testValidateWithTimestampOutOfSpecifiedRangeThrowsException()
     {
-        $this->_validator = new \Magento\Framework\Stdlib\DateTime\Timezone\Validator();
+        $this->expectException('Magento\Framework\Exception\ValidatorException');
+        $this->expectExceptionMessage('Transition year is out of specified date range.');
+        $this->_validator = new Validator();
         $this->_validator->validate(mktime(1, 2, 3, 4, 5, 2007), mktime(1, 2, 3, 4, 5, 2006));
     }
 
     /**
      * @return array
      */
-    public function validateWithTimestampOutOfSystemRangeDataProvider()
+    public static function validateWithTimestampOutOfSystemRangeDataProvider()
     {
         return [
             [['min' => 2000, 'max' => 2030], ['timestamp' => PHP_INT_MAX, 'to_date' => PHP_INT_MAX]],

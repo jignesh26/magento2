@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <!--
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
@@ -35,5 +35,8 @@
     </event>
     <event name="magento_cms_api_data_pageinterface_load_after">
         <observer name="legacy_model_cms_page_after_load" instance="Magento\Framework\EntityManager\Observer\AfterEntityLoad" />
+    </event>
+    <event name="cms_page_prepare_save">
+        <observer name="validate_cms_page" instance="Magento\Cms\Observer\PageValidatorObserver" />
     </event>
 </config>

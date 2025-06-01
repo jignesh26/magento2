@@ -1,10 +1,16 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\CatalogRule\Model\Indexer;
+
+use Magento\Framework\App\ObjectManager;
+use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Stdlib\DateTime\TimezoneInterface;
+use Magento\Store\Model\StoreManagerInterface;
+use Zend_Db_Statement_Exception;
 
 /**
  * Reindex product prices according rule settings.
@@ -12,157 +18,100 @@ namespace Magento\CatalogRule\Model\Indexer;
 class ReindexRuleProductPrice
 {
     /**
-     * @var \Magento\Store\Model\StoreManagerInterface
+     * @var StoreManagerInterface
      */
     private $storeManager;
 
     /**
-     * @var \Magento\CatalogRule\Model\Indexer\RuleProductsSelectBuilder
+     * @var RuleProductsSelectBuilder
      */
     private $ruleProductsSelectBuilder;
 
     /**
-     * @var \Magento\CatalogRule\Model\Indexer\ProductPriceCalculator
+     * @var ProductPriceCalculator
      */
     private $productPriceCalculator;
 
     /**
-     * @var \Magento\Framework\Stdlib\DateTime\DateTime
+     * @var TimezoneInterface
      */
-    private $dateTime;
+    private $localeDate;
 
     /**
-     * @var \Magento\CatalogRule\Model\Indexer\RuleProductPricesPersistor
+     * @var RuleProductPricesPersistor
      */
     private $pricesPersistor;
 
     /**
-     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
+     * @var bool
+     */
+    private $useWebsiteTimezone;
+
+    /**
+     * @var ReindexRuleProductsPriceProcessor
+     */
+    private $reindexRuleProductsPriceProcessor;
+
+    /**
+     * @param StoreManagerInterface $storeManager
      * @param RuleProductsSelectBuilder $ruleProductsSelectBuilder
      * @param ProductPriceCalculator $productPriceCalculator
-     * @param \Magento\Framework\Stdlib\DateTime\DateTime $dateTime
-     * @param \Magento\CatalogRule\Model\Indexer\RuleProductPricesPersistor $pricesPersistor
+     * @param TimezoneInterface $localeDate
+     * @param RuleProductPricesPersistor $pricesPersistor
+     * @param bool $useWebsiteTimezone
+     * @param ReindexRuleProductsPriceProcessor|null $reindexRuleProductsPriceProcessor
      */
     public function __construct(
-        \Magento\Store\Model\StoreManagerInterface $storeManager,
-        \Magento\CatalogRule\Model\Indexer\RuleProductsSelectBuilder $ruleProductsSelectBuilder,
-        \Magento\CatalogRule\Model\Indexer\ProductPriceCalculator $productPriceCalculator,
-        \Magento\Framework\Stdlib\DateTime\DateTime $dateTime,
-        \Magento\CatalogRule\Model\Indexer\RuleProductPricesPersistor $pricesPersistor
+        StoreManagerInterface $storeManager,
+        RuleProductsSelectBuilder $ruleProductsSelectBuilder,
+        ProductPriceCalculator $productPriceCalculator,
+        TimezoneInterface $localeDate,
+        RuleProductPricesPersistor $pricesPersistor,
+        bool $useWebsiteTimezone = true,
+        ?ReindexRuleProductsPriceProcessor $reindexRuleProductsPriceProcessor = null
     ) {
         $this->storeManager = $storeManager;
         $this->ruleProductsSelectBuilder = $ruleProductsSelectBuilder;
         $this->productPriceCalculator = $productPriceCalculator;
-        $this->dateTime = $dateTime;
+        $this->localeDate = $localeDate;
         $this->pricesPersistor = $pricesPersistor;
+        $this->useWebsiteTimezone = $useWebsiteTimezone;
+        $this->reindexRuleProductsPriceProcessor = $reindexRuleProductsPriceProcessor ??
+            ObjectManager::getInstance()->get(ReindexRuleProductsPriceProcessor::class);
     }
 
     /**
      * Reindex product prices.
      *
      * @param int $batchCount
-     * @param \Magento\Catalog\Model\Product|null $product
+     * @param int|null $productId
      * @param bool $useAdditionalTable
      * @return bool
+     * @throws LocalizedException
+     * @throws Zend_Db_Statement_Exception
      * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
-    public function execute(
-        $batchCount,
-        \Magento\Catalog\Model\Product $product = null,
-        $useAdditionalTable = false
-    ) {
-        $fromDate = mktime(0, 0, 0, date('m'), date('d') - 1);
-        $toDate = mktime(0, 0, 0, date('m'), date('d') + 1);
-
+    public function execute(int $batchCount, ?int $productId = null, bool $useAdditionalTable = false)
+    {
         /**
          * Update products rules prices per each website separately
-         * because of max join limit in mysql
+         * because for each website date in website's timezone should be used
          */
         foreach ($this->storeManager->getWebsites() as $website) {
-            $productsStmt = $this->ruleProductsSelectBuilder->build($website->getId(), $product, $useAdditionalTable);
-            $dayPrices = [];
-            $stopFlags = [];
-            $prevKey = null;
-
-            while ($ruleData = $productsStmt->fetch()) {
-                $ruleProductId = $ruleData['product_id'];
-                $productKey = $ruleProductId .
-                    '_' .
-                    $ruleData['website_id'] .
-                    '_' .
-                    $ruleData['customer_group_id'];
-
-                if ($prevKey && $prevKey != $productKey) {
-                    $stopFlags = [];
-                    if (count($dayPrices) > $batchCount) {
-                        $this->pricesPersistor->execute($dayPrices, $useAdditionalTable);
-                        $dayPrices = [];
-                    }
-                }
-
-                $ruleData['from_time'] = $this->roundTime($ruleData['from_time']);
-                $ruleData['to_time'] = $this->roundTime($ruleData['to_time']);
-                /**
-                 * Build prices for each day
-                 */
-                for ($time = $fromDate; $time <= $toDate; $time += IndexBuilder::SECONDS_IN_DAY) {
-                    if (($ruleData['from_time'] == 0 ||
-                            $time >= $ruleData['from_time']) && ($ruleData['to_time'] == 0 ||
-                            $time <= $ruleData['to_time'])
-                    ) {
-                        $priceKey = $time . '_' . $productKey;
-
-                        if (isset($stopFlags[$priceKey])) {
-                            continue;
-                        }
-
-                        if (!isset($dayPrices[$priceKey])) {
-                            $dayPrices[$priceKey] = [
-                                'rule_date' => $time,
-                                'website_id' => $ruleData['website_id'],
-                                'customer_group_id' => $ruleData['customer_group_id'],
-                                'product_id' => $ruleProductId,
-                                'rule_price' => $this->productPriceCalculator->calculate($ruleData),
-                                'latest_start_date' => $ruleData['from_time'],
-                                'earliest_end_date' => $ruleData['to_time'],
-                            ];
-                        } else {
-                            $dayPrices[$priceKey]['rule_price'] = $this->productPriceCalculator->calculate(
-                                $ruleData,
-                                $dayPrices[$priceKey]
-                            );
-                            $dayPrices[$priceKey]['latest_start_date'] = max(
-                                $dayPrices[$priceKey]['latest_start_date'],
-                                $ruleData['from_time']
-                            );
-                            $dayPrices[$priceKey]['earliest_end_date'] = min(
-                                $dayPrices[$priceKey]['earliest_end_date'],
-                                $ruleData['to_time']
-                            );
-                        }
-
-                        if ($ruleData['action_stop']) {
-                            $stopFlags[$priceKey] = true;
-                        }
-                    }
-                }
-
-                $prevKey = $productKey;
-            }
-            $this->pricesPersistor->execute($dayPrices, $useAdditionalTable);
+            $productsStmt = $this->ruleProductsSelectBuilder->build(
+                (int)$website->getId(),
+                $productId,
+                $useAdditionalTable
+            );
+            $this->reindexRuleProductsPriceProcessor->execute(
+                $productsStmt,
+                $website,
+                $batchCount,
+                $useAdditionalTable,
+                $this->useWebsiteTimezone
+            );
         }
+
         return true;
-    }
-
-    /**
-     * @param int $timeStamp
-     * @return int
-     */
-    private function roundTime($timeStamp)
-    {
-        if (is_numeric($timeStamp) && $timeStamp != 0) {
-            $timeStamp = $this->dateTime->timestamp($this->dateTime->date('Y-m-d 00:00:00', $timeStamp));
-        }
-        return $timeStamp;
     }
 }

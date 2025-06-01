@@ -3,6 +3,8 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\DB\Test\Unit\Adapter\Pdo;
 
 use Magento\Framework\DB\Adapter\Pdo\Mysql;
@@ -11,21 +13,13 @@ use Magento\Framework\DB\LoggerInterface;
 use Magento\Framework\DB\SelectFactory;
 use Magento\Framework\ObjectManagerInterface;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class MysqlFactoryTest extends \PHPUnit\Framework\TestCase
+class MysqlFactoryTest extends TestCase
 {
     /**
-     * @var SelectFactory|\PHPUnit_Framework_MockObject_MockObject
-     */
-    private $selectFactoryMock;
-
-    /**
-     * @var LoggerInterface|\PHPUnit_Framework_MockObject_MockObject
-     */
-    private $loggerMock;
-
-    /**
-     * @var ObjectManagerInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ObjectManagerInterface|MockObject
      */
     private $objectManagerMock;
 
@@ -34,10 +28,10 @@ class MysqlFactoryTest extends \PHPUnit\Framework\TestCase
      */
     private $mysqlFactory;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $objectManager = new ObjectManager($this);
-        $this->objectManagerMock = $this->createMock(ObjectManagerInterface::class);
+        $this->objectManagerMock = $this->getMockForAbstractClass(ObjectManagerInterface::class);
         $this->mysqlFactory = $objectManager->getObject(
             MysqlFactory::class,
             [
@@ -49,16 +43,24 @@ class MysqlFactoryTest extends \PHPUnit\Framework\TestCase
     /**
      * @param array $objectManagerArguments
      * @param array $config
-     * @param LoggerInterface|null $logger
-     * @param SelectFactory|null $selectFactory
+     * @param string|null $loggerMockPlaceholder
+     * @param string|null $selectFactoryMockPlaceholder
      * @dataProvider createDataProvider
      */
     public function testCreate(
         array $objectManagerArguments,
         array $config,
-        LoggerInterface $logger = null,
-        SelectFactory $selectFactory = null
+        ?string $loggerMockPlaceholder = null,
+        ?string $selectFactoryMockPlaceholder = null
     ) {
+        $loggerMock = $this->getMockForAbstractClass(LoggerInterface::class);
+        $selectFactoryMock = $this->createMock(SelectFactory::class);
+        if ($loggerMockPlaceholder === 'loggerMock') {
+            $objectManagerArguments['logger'] = $loggerMock;
+        }
+        if ($selectFactoryMockPlaceholder === 'selectFactoryMock') {
+            $objectManagerArguments['selectFactory'] = $selectFactoryMock;
+        }
         $this->objectManagerMock->expects($this->once())
             ->method('create')
             ->with(
@@ -68,56 +70,52 @@ class MysqlFactoryTest extends \PHPUnit\Framework\TestCase
         $this->mysqlFactory->create(
             Mysql::class,
             $config,
-            $logger,
-            $selectFactory
+            $loggerMockPlaceholder === 'loggerMock' ? $loggerMock : null,
+            $selectFactoryMockPlaceholder === 'selectFactoryMock' ? $selectFactoryMock : null
         );
     }
 
     /**
      * @return array
      */
-    public function createDataProvider()
+    public static function createDataProvider()
     {
-        $this->loggerMock = $this->getMockForAbstractClass(LoggerInterface::class);
-        $this->selectFactoryMock = $this->createMock(SelectFactory::class);
         return [
             [
                 [
                     'config' => ['foo' => 'bar'],
-                    'logger' => $this->loggerMock,
-                    'selectFactory' => $this->selectFactoryMock
+                    'logger' => 'loggerMock',
+                    'selectFactory' => 'selectFactoryMock'
                 ],
                 ['foo' => 'bar'],
-                $this->loggerMock,
-                $this->selectFactoryMock
+                'loggerMock',
+                'selectFactoryMock'
             ],
             [
                 [
                     'config' => ['foo' => 'bar'],
-                    'logger' => $this->loggerMock
+                    'logger' => 'loggerMock'
                 ],
                 ['foo' => 'bar'],
-                $this->loggerMock,
+                'loggerMock',
                 null
             ],
             [
                 [
                     'config' => ['foo' => 'bar'],
-                    'selectFactory' => $this->selectFactoryMock
+                    'selectFactory' => 'selectFactoryMock'
                 ],
                 ['foo' => 'bar'],
                 null,
-                $this->selectFactoryMock
+                'selectFactoryMock'
             ],
         ];
     }
 
-    /**
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Invalid class, stdClass must extend Magento\Framework\DB\Adapter\Pdo\Mysql.
-     */
     public function testCreateInvalidClass()
     {
+        $this->expectException('InvalidArgumentException');
+        $this->expectExceptionMessage('Invalid class, stdClass must extend Magento\Framework\DB\Adapter\Pdo\Mysql.');
         $this->mysqlFactory->create(
             \stdClass::class,
             []

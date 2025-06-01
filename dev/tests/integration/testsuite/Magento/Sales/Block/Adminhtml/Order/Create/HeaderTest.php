@@ -15,7 +15,7 @@ class HeaderTest extends \PHPUnit\Framework\TestCase
     /** @var \Magento\Sales\Block\Adminhtml\Order\Create\Header */
     protected $_block;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->_block = Bootstrap::getObjectManager()->create(
             \Magento\Sales\Block\Adminhtml\Order\Create\Header::class
@@ -39,7 +39,7 @@ class HeaderTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($expectedResult, $this->_block->toHtml());
     }
 
-    public function toHtmlDataProvider()
+    public static function toHtmlDataProvider()
     {
         $customerIdFromFixture = 1;
         $defaultStoreView = 1;

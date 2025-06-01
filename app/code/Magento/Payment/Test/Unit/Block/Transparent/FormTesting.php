@@ -1,25 +1,26 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\Payment\Test\Unit\Block\Transparent;
 
 use Magento\Payment\Block\Transparent\Form;
 
 /**
  * Class FormTesting extended test class, used to substitute calls to parent methods
- * @package Magento\Payment\Test\Unit\Block\Transparent
  */
 class FormTesting extends Form
 {
     /**
      * Return values for processHtml() method
      */
-    const PROCESS_HTML_RESULT = 'parent_result';
+    public const PROCESS_HTML_RESULT = 'parent_result';
 
     /**
-     * {inheritdoc}
+     * {@inheritDoc}
      */
     protected function processHtml()
     {

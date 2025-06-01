@@ -1,3 +1,4 @@
+// phpcs:ignoreFile
 // /**
 //  * Copyright © Magento, Inc. All rights reserved.
 //  * See COPYING.txt for license details.
@@ -127,6 +128,7 @@
         display: inline-block;
         float: left;
         margin: 0 0 @indent__xs;
+        word-break: break-all;
     }
 };
 
@@ -277,7 +279,7 @@
 }
 
 //
-//  Marging for blocks & widgets
+//  Margin for blocks & widgets
 //  ---------------------------------------------
 
 & when (@media-common = true) {
@@ -1212,7 +1214,7 @@
 }
 
 //
-//  Forms: margin-bottom for small forms
+//  Ratings: vertical alignment
 //  ---------------------------------------------
 
 & when (@media-common = true) {
@@ -1436,7 +1438,7 @@
                 }
 
                 .order-status {
-                    @order-status-indent: ceil(@h1__margin-bottom/2);
+                    @order-status-indent: ceil((@h1__margin-bottom/2));
                     margin: -@order-status-indent 0 @indent__s;
                 }
             }
@@ -1449,7 +1451,7 @@
         .page-main {
             .page-title-wrapper {
                 .order-date {
-                    @order-date-indent: ceil(@h1__margin-bottom/1.5);
+                    @order-date-indent: ceil((@h1__margin-bottom/1.5));
                     margin: -@order-date-indent 0 18px;
                 }
             }
@@ -1532,6 +1534,7 @@
     .abs-block-items-counter {
         .lib-css(color, @block-items__counter__color);
         .lib-font-size(12px);
+        vertical-align: middle;
         white-space: nowrap;
 
         &:before {
@@ -1555,6 +1558,7 @@
         strong {
             font-size: @font-size__l;
             font-weight: @font-weight__light;
+            vertical-align: middle;
         }
     }
 }
@@ -1568,9 +1572,15 @@
         margin-bottom: @indent__base;
 
         .actions.main {
-            .continue,
-            .clear {
+            .continue {
                 display: none;
+            }
+
+            .clear {
+                .lib-button-as-link(
+                    @_margin: 0 @indent__base 0 0
+                );
+                font-weight: @font-weight__regular;
             }
         }
     }
@@ -1629,7 +1639,7 @@
 & when (@media-common = true) {
     .abs-field-date-input {
         .lib-css(margin-right, @indent__s);
-        width: calc(~'100% -' @icon-calendar__font-size + @indent__s);
+        width: calc(~'100% -' @icon-calendar__font-size - @indent__s);
     }
 }
 
@@ -1644,7 +1654,7 @@
 
         input {
             .lib-css(margin-right, @indent__s);
-            width: calc(~'100% -' @checkout-tooltip-icon__font-size + @indent__s + @indent__xs);
+            width: calc(~'100% -' @checkout-tooltip-icon__font-size - @indent__s - @indent__xs);
         }
     }
 }
@@ -1711,7 +1721,7 @@
 }
 
 //
-//  Shopping cart sidebar and checkout sidebar totals
+//  Mini Cart and checkout sidebar totals
 //  ---------------------------------------------
 
 & when (@media-common = true) {
@@ -1863,7 +1873,7 @@
 
             > .title {
                 strong {
-                    color: @color-blue1;
+                    color: @link__color;
                     font-weight: @font-weight__regular;
                 }
             }
@@ -1913,6 +1923,7 @@
             display: table-cell;
         }
     }
+
 }
 
 .media-width(@extremum, @break) when (@extremum = 'min') and (@break = @screen__m) {

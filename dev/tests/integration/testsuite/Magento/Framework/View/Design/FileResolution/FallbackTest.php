@@ -21,7 +21,7 @@ class FallbackTest extends \PHPUnit\Framework\TestCase
      */
     private $themeFactory;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $objectManager = Bootstrap::getObjectManager();
         /** @var \Magento\Theme\Model\Theme\Registration $registration */
@@ -71,7 +71,7 @@ class FallbackTest extends \PHPUnit\Framework\TestCase
 
         $actualFilename = $model->getFile('frontend', $themeModel, $file, $module);
         if ($expectedFilename) {
-            $this->assertInternalType('string', $actualFilename);
+            $this->assertIsString($actualFilename);
             $this->assertStringMatchesFormat($expectedFilename, $actualFilename);
             $this->assertFileExists($actualFilename);
         } else {
@@ -82,7 +82,7 @@ class FallbackTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getTemplateFileDataProvider()
+    public static function getTemplateFileDataProvider()
     {
         return [
             'non-modular: no default inheritance' => [
@@ -135,7 +135,7 @@ class FallbackTest extends \PHPUnit\Framework\TestCase
         $actualFilename = $model->getFile('frontend', $themeModel, 'i18n/' . $locale . '.csv');
 
         if ($expectedFilename) {
-            $this->assertInternalType('string', $actualFilename);
+            $this->assertIsString($actualFilename);
             $this->assertStringMatchesFormat($expectedFilename, $actualFilename);
             $this->assertFileExists($actualFilename);
         } else {
@@ -143,7 +143,7 @@ class FallbackTest extends \PHPUnit\Framework\TestCase
         }
     }
 
-    public function getLocaleFileDataProvider()
+    public static function getLocaleFileDataProvider()
     {
         return [
             'no default inheritance' => [
@@ -182,7 +182,7 @@ class FallbackTest extends \PHPUnit\Framework\TestCase
 
         $actualFilename = $model->getFile('frontend', $themeModel, $locale, $file, $module);
         if ($expectedFilename) {
-            $this->assertInternalType('string', $actualFilename);
+            $this->assertIsString($actualFilename);
             $this->assertStringMatchesFormat($expectedFilename, $actualFilename);
             $this->assertFileExists($actualFilename);
         } else {
@@ -190,7 +190,7 @@ class FallbackTest extends \PHPUnit\Framework\TestCase
         }
     }
 
-    public function getViewFileDataProvider()
+    public static function getViewFileDataProvider()
     {
         return [
             'non-modular: no default inheritance' => [
@@ -282,7 +282,7 @@ class FallbackTest extends \PHPUnit\Framework\TestCase
 
         $actualFilename = $model->getFile($area, $themeModel, $locale, $file, $module);
         if ($expectedFilename) {
-            $this->assertInternalType('string', $actualFilename);
+            $this->assertIsString($actualFilename);
             $this->assertStringMatchesFormat($expectedFilename, $actualFilename);
             $this->assertFileExists($actualFilename);
         } else {
@@ -293,7 +293,7 @@ class FallbackTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function getEmailTemplateFileDataProvider()
+    public static function getEmailTemplateFileDataProvider()
     {
         return [
             'no fallback' => [

@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
- /**
-  * Copyright © Magento, Inc. All rights reserved.
-  * See COPYING.txt for license details.
-  */
+/**
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
+ */
 -->
 
 <pages xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:mftf:Page/etc/PageObject.xsd">
-    <page name="AdminCategoryPage" url="catalog/category/" area="admin" module="Catalog">
+    <page name="AdminCategoryPage" url="catalog/category/" area="admin" module="Magento_Catalog">
         <section name="AdminCategorySidebarActionSection"/>
         <section name="AdminCategoryMainActionsSection"/>
         <section name="AdminCategorySidebarTreeSection"/>

@@ -3,30 +3,34 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Email\Test\Unit\Model\Mail;
 
 use Magento\Email\Model\Mail\TransportInterfacePlugin;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\Mail\TransportInterface;
 use Magento\Store\Model\ScopeInterface;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Covers \Magento\Email\Model\Transport
  */
-class TransportInterfacePluginTest extends \PHPUnit\Framework\TestCase
+class TransportInterfacePluginTest extends TestCase
 {
     /**
-     * @var TransportInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var TransportInterface|MockObject
      */
     private $transportMock;
 
     /**
-     * @var ScopeConfigInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ScopeConfigInterface|MockObject
      */
     private $scopeConfigMock;
 
     /**
-     * @var \Callable|\PHPUnit_Framework_MockObject_MockObject
+     * @var \Callable|MockObject
      */
     private $proceedMock;
 
@@ -40,9 +44,9 @@ class TransportInterfacePluginTest extends \PHPUnit\Framework\TestCase
      */
     private $model;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->transportMock = $this->createMock(TransportInterface::class);
+        $this->transportMock = $this->getMockForAbstractClass(TransportInterface::class);
         $this->scopeConfigMock = $this->getMockForAbstractClass(ScopeConfigInterface::class);
         $this->proceedMock = function () {
             $this->isProceedMockCalled = true;
@@ -72,7 +76,7 @@ class TransportInterfacePluginTest extends \PHPUnit\Framework\TestCase
      * Data provider for testAroundSendMessage
      * @return array
      */
-    public function sendMessageDataProvider()
+    public static function sendMessageDataProvider()
     {
         return [
             [false, true],

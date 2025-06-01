@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Analytics\ReportXml\DB;
@@ -76,7 +76,7 @@ class ColumnsResolver
             $columnName = $this->nameResolver->getName($attributeData);
             if (isset($attributeData['function'])) {
                 $prefix = '';
-                if (isset($attributeData['distinct']) && $attributeData['distinct'] == true) {
+                if (!empty($attributeData['distinct'])) {
                     $prefix = ' DISTINCT ';
                 }
                 $expression = new ColumnValueExpression(

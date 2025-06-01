@@ -1,21 +1,16 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Ui\DataProvider\Product;
 
 use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory;
 use Magento\Framework\App\ObjectManager;
+use Magento\Store\Model\Store;
 use Magento\Ui\DataProvider\Modifier\ModifierInterface;
 use Magento\Ui\DataProvider\Modifier\PoolInterface;
 
-/**
- * Class ProductDataProvider
- *
- * @api
- * @since 100.0.2
- */
 class ProductDataProvider extends \Magento\Ui\DataProvider\AbstractDataProvider
 {
     /**
@@ -60,13 +55,14 @@ class ProductDataProvider extends \Magento\Ui\DataProvider\AbstractDataProvider
         array $addFilterStrategies = [],
         array $meta = [],
         array $data = [],
-        PoolInterface $modifiersPool = null
+        ?PoolInterface $modifiersPool = null
     ) {
         parent::__construct($name, $primaryFieldName, $requestFieldName, $meta, $data);
         $this->collection = $collectionFactory->create();
         $this->addFieldStrategies = $addFieldStrategies;
         $this->addFilterStrategies = $addFilterStrategies;
         $this->modifiersPool = $modifiersPool ?: ObjectManager::getInstance()->get(PoolInterface::class);
+        $this->collection->setStoreId(Store::DEFAULT_STORE_ID);
     }
 
     /**
@@ -110,10 +106,11 @@ class ProductDataProvider extends \Magento\Ui\DataProvider\AbstractDataProvider
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function addFilter(\Magento\Framework\Api\Filter $filter)
     {
+        // @phpstan-ignore-next-line
         if (isset($this->addFilterStrategies[$filter->getField()])) {
             $this->addFilterStrategies[$filter->getField()]
                 ->addFilter(
@@ -128,6 +125,7 @@ class ProductDataProvider extends \Magento\Ui\DataProvider\AbstractDataProvider
 
     /**
      * @inheritdoc
+     * @since 103.0.0
      */
     public function getMeta()
     {

@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Bundle\Ui\DataProvider\Product\Form\Modifier;
 
@@ -34,7 +34,7 @@ class BundleAdvancedPricing extends AbstractModifier
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function modifyMeta(array $meta)
     {
@@ -63,7 +63,7 @@ class BundleAdvancedPricing extends AbstractModifier
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function modifyData(array $data)
     {
@@ -88,7 +88,8 @@ class BundleAdvancedPricing extends AbstractModifier
             $meta,
             [
                 'imports' => [
-                    'disabled' => 'ns = ${ $.ns }, index = ' . static::CODE_PRICE_TYPE . ':checked'
+                    'disabled' => 'ns = ${ $.ns }, index = ' . static::CODE_PRICE_TYPE . ':checked',
+                    '__disableTmpl' => ['disabled' => false],
                 ]
             ]
         );
@@ -103,7 +104,8 @@ class BundleAdvancedPricing extends AbstractModifier
             $meta,
             [
                 'imports' => [
-                    'disabled' => 'ns = ${ $.ns }, index = ' . static::CODE_PRICE_TYPE . ':checked'
+                    'disabled' => 'ns = ${ $.ns }, index = ' . static::CODE_PRICE_TYPE . ':checked',
+                    '__disableTmpl' => ['disabled' => false],
                 ]
             ]
         );

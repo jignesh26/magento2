@@ -9,15 +9,32 @@ use Magento\Config\Model\Config\Reader\Source\Deployed\SettingChecker;
 use Magento\Config\Model\Config\Structure\Element\Group;
 use Magento\Config\Model\Config\Structure\Element\Field;
 use Magento\Framework\App\ObjectManager;
+use Magento\Framework\App\ScopeInterface;
+use Magento\Framework\App\ScopeResolverPool;
+use Magento\Store\Model\ScopeInterface as StoreScopeInterface;
+use Magento\Store\Model\ScopeTypeNormalizer;
 
 /**
  * Backend config model
  *
  * Used to save configuration
+ *
  * @author     Magento Core Team <core@magentocommerce.com>
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  * @api
  * @since 100.0.2
+ * @method string getSection()
+ * @method void setSection(string $section)
+ * @method string getWebsite()
+ * @method void setWebsite(string $website)
+ * @method string getStore()
+ * @method void setStore(string $store)
+ * @method string getScope()
+ * @method void setScope(string $scope)
+ * @method int getScopeId()
+ * @method void setScopeId(int $scopeId)
+ * @method string getScopeCode()
+ * @method void setScopeCode(string $scopeCode)
  */
 class Config extends \Magento\Framework\DataObject
 {
@@ -57,8 +74,6 @@ class Config extends \Magento\Framework\DataObject
     protected $_objectFactory;
 
     /**
-     * TransactionFactory
-     *
      * @var \Magento\Framework\DB\TransactionFactory
      */
     protected $_transactionFactory;
@@ -88,6 +103,21 @@ class Config extends \Magento\Framework\DataObject
     private $settingChecker;
 
     /**
+     * @var ScopeResolverPool
+     */
+    private $scopeResolverPool;
+
+    /**
+     * @var ScopeTypeNormalizer
+     */
+    private $scopeTypeNormalizer;
+
+    /**
+     * @var \Magento\Framework\MessageQueue\PoisonPill\PoisonPillPutInterface
+     */
+    private $pillPut;
+
+    /**
      * @param \Magento\Framework\App\Config\ReinitableConfigInterface $config
      * @param \Magento\Framework\Event\ManagerInterface $eventManager
      * @param \Magento\Config\Model\Config\Structure $configStructure
@@ -97,6 +127,10 @@ class Config extends \Magento\Framework\DataObject
      * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param Config\Reader\Source\Deployed\SettingChecker|null $settingChecker
      * @param array $data
+     * @param ScopeResolverPool|null $scopeResolverPool
+     * @param ScopeTypeNormalizer|null $scopeTypeNormalizer
+     * @param \Magento\Framework\MessageQueue\PoisonPill\PoisonPillPutInterface|null $pillPut
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\App\Config\ReinitableConfigInterface $config,
@@ -106,8 +140,11 @@ class Config extends \Magento\Framework\DataObject
         \Magento\Config\Model\Config\Loader $configLoader,
         \Magento\Framework\App\Config\ValueFactory $configValueFactory,
         \Magento\Store\Model\StoreManagerInterface $storeManager,
-        SettingChecker $settingChecker = null,
-        array $data = []
+        ?SettingChecker $settingChecker = null,
+        array $data = [],
+        ?ScopeResolverPool $scopeResolverPool = null,
+        ?ScopeTypeNormalizer $scopeTypeNormalizer = null,
+        ?\Magento\Framework\MessageQueue\PoisonPill\PoisonPillPutInterface $pillPut = null
     ) {
         parent::__construct($data);
         $this->_eventManager = $eventManager;
@@ -117,7 +154,14 @@ class Config extends \Magento\Framework\DataObject
         $this->_configLoader = $configLoader;
         $this->_configValueFactory = $configValueFactory;
         $this->_storeManager = $storeManager;
-        $this->settingChecker = $settingChecker ?: ObjectManager::getInstance()->get(SettingChecker::class);
+        $this->settingChecker = $settingChecker
+            ?? ObjectManager::getInstance()->get(SettingChecker::class);
+        $this->scopeResolverPool = $scopeResolverPool
+            ?? ObjectManager::getInstance()->get(ScopeResolverPool::class);
+        $this->scopeTypeNormalizer = $scopeTypeNormalizer
+            ?? ObjectManager::getInstance()->get(ScopeTypeNormalizer::class);
+        $this->pillPut = $pillPut ?: \Magento\Framework\App\ObjectManager::getInstance()
+            ->get(\Magento\Framework\MessageQueue\PoisonPill\PoisonPillPutInterface::class);
     }
 
     /**
@@ -138,6 +182,10 @@ class Config extends \Magento\Framework\DataObject
             return $this;
         }
 
+        /**
+         * Reload config to make sure config data is consistent with the database at this point.
+         */
+        $this->_appConfig->reinit();
         $oldConfig = $this->_getConfig(true);
 
         /** @var \Magento\Framework\DB\Transaction $deleteTransaction */
@@ -161,9 +209,9 @@ class Config extends \Magento\Framework\DataObject
                 $deleteTransaction
             );
 
-            $groupChangedPaths = $this->getChangedPaths($sectionId, $groupId, $groupData, $oldConfig, $extraOldGroups);
-            $changedPaths = \array_merge($changedPaths, $groupChangedPaths);
+            $changedPaths[] = $this->getChangedPaths($sectionId, $groupId, $groupData, $oldConfig, $extraOldGroups);
         }
+        $changedPaths = array_merge([], ...$changedPaths);
 
         try {
             $deleteTransaction->delete();
@@ -186,6 +234,8 @@ class Config extends \Magento\Framework\DataObject
             $this->_appConfig->reinit();
             throw $e;
         }
+
+        $this->pillPut->put();
 
         return $this;
     }
@@ -239,8 +289,8 @@ class Config extends \Magento\Framework\DataObject
      *
      * @param Field $field
      * @param string $fieldId Need for support of clone_field feature
-     * @param array &$oldConfig Need for compatibility with _processGroup()
-     * @param array &$extraOldGroups Need for compatibility with _processGroup()
+     * @param array $oldConfig Need for compatibility with _processGroup()
+     * @param array $extraOldGroups Need for compatibility with _processGroup()
      * @return string
      */
     private function getFieldPath(Field $field, string $fieldId, array &$oldConfig, array &$extraOldGroups): string
@@ -289,8 +339,8 @@ class Config extends \Magento\Framework\DataObject
      * @param string $sectionId
      * @param string $groupId
      * @param array $groupData
-     * @param array &$oldConfig
-     * @param array &$extraOldGroups
+     * @param array $oldConfig
+     * @param array $extraOldGroups
      * @return array
      */
     private function getChangedPaths(
@@ -307,7 +357,7 @@ class Config extends \Magento\Framework\DataObject
                 $field = $this->getField($sectionId, $groupId, $fieldId);
                 $path = $this->getFieldPath($field, $fieldId, $oldConfig, $extraOldGroups);
                 if ($this->isValueChanged($oldConfig, $path, $fieldData)) {
-                    $changedPaths[] = $path;
+                    $changedPaths[] = [$path];
                 }
             }
         }
@@ -322,11 +372,11 @@ class Config extends \Magento\Framework\DataObject
                     $oldConfig,
                     $extraOldGroups
                 );
-                $changedPaths = \array_merge($changedPaths, $subGroupChangedPaths);
+                $changedPaths[] = $subGroupChangedPaths;
             }
         }
 
-        return $changedPaths;
+        return \array_merge([], ...$changedPaths);
     }
 
     /**
@@ -336,8 +386,8 @@ class Config extends \Magento\Framework\DataObject
      * @param array $groupData
      * @param array $groups
      * @param string $sectionPath
-     * @param array &$extraOldGroups
-     * @param array &$oldConfig
+     * @param array $extraOldGroups
+     * @param array $oldConfig
      * @param \Magento\Framework\DB\Transaction $saveTransaction
      * @param \Magento\Framework\DB\Transaction $deleteTransaction
      * @return void
@@ -387,6 +437,11 @@ class Config extends \Magento\Framework\DataObject
                 if (!isset($fieldData['value'])) {
                     $fieldData['value'] = null;
                 }
+
+                if ($field->getType() == 'multiline' && is_array($fieldData['value'])) {
+                    $fieldData['value'] = trim(implode(PHP_EOL, $fieldData['value']));
+                }
+
                 $data = [
                     'field' => $fieldId,
                     'groups' => $groups,
@@ -400,7 +455,7 @@ class Config extends \Magento\Framework\DataObject
                 $backendModel->addData($data);
                 $this->_checkSingleStoreMode($field, $backendModel);
 
-                $path = $this->getFieldPath($field, $fieldId, $extraOldGroups, $oldConfig);
+                $path = $this->getFieldPath($field, $fieldId, $oldConfig, $extraOldGroups);
                 $backendModel->setPath($path)->setValue($fieldData['value']);
 
                 $inherit = !empty($fieldData['inherit']);
@@ -479,35 +534,41 @@ class Config extends \Magento\Framework\DataObject
      */
     public function setDataByPath($path, $value)
     {
-        $path = trim($path);
+        $path = $path !== null ? trim($path) : '';
         if ($path === '') {
             throw new \UnexpectedValueException('Path must not be empty');
         }
+
         $pathParts = explode('/', $path);
         $keyDepth = count($pathParts);
-        if ($keyDepth !== 3) {
+        if ($keyDepth < 3) {
             throw new \UnexpectedValueException(
-                "Allowed depth of configuration is 3 (<section>/<group>/<field>). Your configuration depth is "
-                . $keyDepth . " for path '$path'"
+                'Minimal depth of configuration is 3. Your configuration depth is ' . $keyDepth
             );
         }
+
+        $section = array_shift($pathParts);
+        $this->setData('section', $section);
+
         $data = [
-            'section' => $pathParts[0],
-            'groups' => [
-                $pathParts[1] => [
-                    'fields' => [
-                        $pathParts[2] => ['value' => $value],
-                    ],
-                ],
+            'fields' => [
+                array_pop($pathParts) => ['value' => $value],
             ],
         ];
-        $this->addData($data);
+        while ($pathParts) {
+            $data = [
+                'groups' => [
+                    array_pop($pathParts) => $data,
+                ],
+            ];
+        }
+        $groups = array_replace_recursive((array) $this->getData('groups'), $data['groups']);
+        $this->setData('groups', $groups);
     }
 
     /**
-     * Get scope name and scopeId
+     * Set scope data
      *
-     * @todo refactor to scope resolver
      * @return void
      */
     private function initScope()
@@ -515,31 +576,66 @@ class Config extends \Magento\Framework\DataObject
         if ($this->getSection() === null) {
             $this->setSection('');
         }
+
+        $scope = $this->retrieveScope();
+        $this->setScope($this->scopeTypeNormalizer->normalize($scope->getScopeType()));
+        $this->setScopeCode($scope->getCode());
+        $this->setScopeId($scope->getId());
+
         if ($this->getWebsite() === null) {
-            $this->setWebsite('');
+            $this->setWebsite(StoreScopeInterface::SCOPE_WEBSITES === $this->getScope() ? $scope->getId() : '');
         }
         if ($this->getStore() === null) {
-            $this->setStore('');
+            $this->setStore(StoreScopeInterface::SCOPE_STORES === $this->getScope() ? $scope->getId() : '');
         }
+    }
 
-        if ($this->getStore()) {
-            $scope = 'stores';
-            $store = $this->_storeManager->getStore($this->getStore());
-            $scopeId = (int)$store->getId();
-            $scopeCode = $store->getCode();
-        } elseif ($this->getWebsite()) {
-            $scope = 'websites';
-            $website = $this->_storeManager->getWebsite($this->getWebsite());
-            $scopeId = (int)$website->getId();
-            $scopeCode = $website->getCode();
+    /**
+     * Retrieve scope from initial data
+     *
+     * @return ScopeInterface
+     */
+    private function retrieveScope(): ScopeInterface
+    {
+        $scopeType = $this->getScope();
+        if (!$scopeType) {
+            switch (true) {
+                case $this->getStore():
+                    $scopeType = StoreScopeInterface::SCOPE_STORES;
+                    $scopeIdentifier = $this->getStore();
+                    break;
+                case $this->getWebsite():
+                    $scopeType = StoreScopeInterface::SCOPE_WEBSITES;
+                    $scopeIdentifier = $this->getWebsite();
+                    break;
+                default:
+                    $scopeType = ScopeInterface::SCOPE_DEFAULT;
+                    $scopeIdentifier = null;
+                    break;
+            }
         } else {
-            $scope = 'default';
-            $scopeId = 0;
-            $scopeCode = '';
+            switch (true) {
+                case $this->getScopeId() !== null:
+                    $scopeIdentifier = $this->getScopeId();
+                    break;
+                case $this->getScopeCode() !== null:
+                    $scopeIdentifier = $this->getScopeCode();
+                    break;
+                case $this->getStore() !== null:
+                    $scopeIdentifier = $this->getStore();
+                    break;
+                case $this->getWebsite() !== null:
+                    $scopeIdentifier = $this->getWebsite();
+                    break;
+                default:
+                    $scopeIdentifier = null;
+                    break;
+            }
         }
-        $this->setScope($scope);
-        $this->setScopeId($scopeId);
-        $this->setScopeCode($scopeCode);
+        $scope = $this->scopeResolverPool->get($scopeType)
+            ->getScope($scopeIdentifier);
+
+        return $scope;
     }
 
     /**
@@ -587,7 +683,7 @@ class Config extends \Magento\Framework\DataObject
      * Get config data value
      *
      * @param string $path
-     * @param null|bool &$inherit
+     * @param null|bool $inherit
      * @param null|array $configData
      * @return \Magento\Framework\Simplexml\Element
      */

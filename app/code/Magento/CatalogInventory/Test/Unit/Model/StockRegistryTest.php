@@ -1,40 +1,46 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\CatalogInventory\Test\Unit\Model;
 
-/**
- * Class StockRegistryTest
- */
-class StockRegistryTest extends \PHPUnit\Framework\TestCase
+use Magento\CatalogInventory\Api\StockItemCriteriaInterface;
+use Magento\CatalogInventory\Api\StockItemCriteriaInterfaceFactory;
+use Magento\CatalogInventory\Model\StockRegistry;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+
+class StockRegistryTest extends TestCase
 {
     /**
-     * @var \Magento\CatalogInventory\Model\StockRegistry
+     * @var StockRegistry
      */
     protected $model;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var MockObject
      */
     protected $criteria;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->criteria = $this->getMockBuilder(\Magento\CatalogInventory\Api\StockItemCriteriaInterface::class)
+        $this->criteria = $this->getMockBuilder(StockItemCriteriaInterface::class)
             ->disableOriginalConstructor()
-            ->getMock();
+            ->getMockForAbstractClass();
 
-        $criteriaFactory = $this->getMockBuilder(\Magento\CatalogInventory\Api\StockItemCriteriaInterfaceFactory::class)
-            ->setMethods(['create'])
+        $criteriaFactory = $this->getMockBuilder(StockItemCriteriaInterfaceFactory::class)
+            ->onlyMethods(['create'])
             ->disableOriginalConstructor()
             ->getMock();
         $criteriaFactory->expects($this->once())->method('create')->willReturn($this->criteria);
 
-        $objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $objectManager = new ObjectManager($this);
         $this->model = $objectManager->getObject(
-            \Magento\CatalogInventory\Model\StockRegistry::class,
+            StockRegistry::class,
             [
                 'criteriaFactory' => $criteriaFactory
             ]

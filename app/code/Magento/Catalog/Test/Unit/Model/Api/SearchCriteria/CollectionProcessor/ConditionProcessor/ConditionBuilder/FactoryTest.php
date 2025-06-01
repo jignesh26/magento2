@@ -1,43 +1,59 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 declare(strict_types=1);
 
 namespace Magento\Catalog\Test\Unit\Model\Api\SearchCriteria\CollectionProcessor\ConditionProcessor\ConditionBuilder;
 
-use Magento\Eav\Model\Config as EavConfig;
-use Magento\Catalog\Model\ResourceModel\Product as ProductResource;
 use Magento\Catalog\Model\Api\SearchCriteria\CollectionProcessor\ConditionProcessor\ConditionBuilder\Factory;
-use Magento\Framework\Api\SearchCriteria\CollectionProcessor\ConditionProcessor\CustomConditionInterface;
-use Magento\Framework\Api\Filter;
-use Magento\Catalog\Model\ResourceModel\Eav\Attribute;
 use Magento\Catalog\Model\Product;
+use Magento\Catalog\Model\ResourceModel\Eav\Attribute;
+use Magento\Catalog\Model\ResourceModel\Product as ProductResource;
+use Magento\Eav\Model\Config as EavConfig;
+use Magento\Framework\Api\Filter;
+use Magento\Framework\Api\SearchCriteria\CollectionProcessor\ConditionProcessor\CustomConditionInterface;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\TestCase;
 
-class FactoryTest extends \PHPUnit\Framework\TestCase
+class FactoryTest extends TestCase
 {
-
+    /**
+     * @var ProductResource|MockObject
+     */
     private $productResourceMock;
 
+    /**
+     * @var EavConfig|MockObject
+     */
     private $eavConfigMock;
 
+    /**
+     * @var CustomConditionInterface|MockObject
+     */
     private $eavAttrConditionBuilderMock;
 
+    /**
+     * @var CustomConditionInterface|MockObject
+     */
     private $nativeAttrConditionBuilderMock;
 
+    /**
+     * @var Factory
+     */
     private $conditionBuilderFactory;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->productResourceMock = $this->getMockBuilder(ProductResource::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getEntityTable'])
+            ->onlyMethods(['getEntityTable'])
             ->getMock();
 
         $this->eavConfigMock = $this->getMockBuilder(EavConfig::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getAttribute'])
+            ->onlyMethods(['getAttribute'])
             ->getMock();
 
         $this->eavAttrConditionBuilderMock = $this->getMockBuilder(CustomConditionInterface::class)
@@ -48,7 +64,7 @@ class FactoryTest extends \PHPUnit\Framework\TestCase
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
 
-        $objectManagerHelper = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
+        $objectManagerHelper = new ObjectManager($this);
 
         $this->conditionBuilderFactory = $objectManagerHelper->getObject(
             Factory::class,
@@ -69,7 +85,7 @@ class FactoryTest extends \PHPUnit\Framework\TestCase
 
         $filterMock = $this->getMockBuilder(Filter::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getField'])
+            ->onlyMethods(['getField'])
             ->getMock();
 
         $filterMock
@@ -78,7 +94,7 @@ class FactoryTest extends \PHPUnit\Framework\TestCase
 
         $attributeMock = $this->getMockBuilder(Attribute::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getBackendTable'])
+            ->onlyMethods(['getBackendTable'])
             ->getMock();
 
         $this->eavConfigMock
@@ -108,7 +124,7 @@ class FactoryTest extends \PHPUnit\Framework\TestCase
 
         $filterMock = $this->getMockBuilder(Filter::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getField'])
+            ->onlyMethods(['getField'])
             ->getMock();
 
         $filterMock
@@ -117,7 +133,7 @@ class FactoryTest extends \PHPUnit\Framework\TestCase
 
         $attributeMock = $this->getMockBuilder(Attribute::class)
             ->disableOriginalConstructor()
-            ->setMethods(['getBackendTable'])
+            ->onlyMethods(['getBackendTable'])
             ->getMock();
 
         $this->eavConfigMock

@@ -1,12 +1,16 @@
 <?php
 /**
- *
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Cms\Controller\Adminhtml\Page;
 
-class NewAction extends \Magento\Backend\App\Action
+use Magento\Framework\App\Action\HttpGetActionInterface;
+
+/**
+ * Create CMS page action.
+ */
+class NewAction extends \Magento\Backend\App\Action implements HttpGetActionInterface
 {
     /**
      * Authorization level of a basic admin session

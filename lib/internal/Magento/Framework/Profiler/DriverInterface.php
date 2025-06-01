@@ -11,6 +11,7 @@ namespace Magento\Framework\Profiler;
 
 /**
  * @api
+ * @since 100.0.2
  */
 interface DriverInterface
 {
@@ -21,7 +22,7 @@ interface DriverInterface
      * @param array|null $tags
      * @return void
      */
-    public function start($timerId, array $tags = null);
+    public function start($timerId, ?array $tags = null);
 
     /**
      * Stop timer

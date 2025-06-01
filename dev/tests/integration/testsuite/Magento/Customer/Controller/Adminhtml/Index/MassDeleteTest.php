@@ -38,7 +38,7 @@ class MassDeleteTest extends AbstractBackendController
      *
      * @throws \Magento\Framework\Exception\AuthenticationException
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->customerRepository = Bootstrap::getObjectManager()->get(CustomerRepositoryInterface::class);
@@ -47,7 +47,7 @@ class MassDeleteTest extends AbstractBackendController
     /**
      * @inheritDoc
      */
-    protected function tearDown()
+    protected function tearDown(): void
     {
         /**
          * Unset customer data
@@ -129,7 +129,7 @@ class MassDeleteTest extends AbstractBackendController
      *
      * @return array
      */
-    public function failedRequestDataProvider(): array
+    public static function failedRequestDataProvider(): array
     {
         return [
             [
@@ -155,16 +155,16 @@ class MassDeleteTest extends AbstractBackendController
      *
      * @return array
      */
-    public function successRequestDataProvider(): array
+    public static function successRequestDataProvider(): array
     {
         return [
             [
-                'customerEmails' => ['customer1@example.com'],
+                'emails' => ['customer1@example.com'],
                 'constraint' => self::equalTo(['A total of 1 record(s) were deleted.']),
                 'messageType' => MessageInterface::TYPE_SUCCESS,
             ],
             [
-                'customerEmails' => ['customer2@example.com', 'customer3@example.com'],
+                'emails' => ['customer2@example.com', 'customer3@example.com'],
                 'constraint' => self::equalTo(['A total of 2 record(s) were deleted.']),
                 'messageType' => MessageInterface::TYPE_SUCCESS,
             ],

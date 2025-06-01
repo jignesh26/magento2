@@ -3,21 +3,24 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Stdlib\Test\Unit;
 
-use \Magento\Framework\Stdlib\StringUtils;
+use Magento\Framework\Stdlib\StringUtils;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Magento\Framework\Stdlib\StringUtilsTest test case
  */
-class StringUtilsTest extends \PHPUnit\Framework\TestCase
+class StringUtilsTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\Stdlib\StringUtils
+     * @var StringUtils
      */
     protected $_string;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->_string = new StringUtils();
     }
@@ -92,7 +95,7 @@ class StringUtilsTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function upperCaseWordsDataProvider()
+    public static function upperCaseWordsDataProvider()
     {
         return [
             ['test test2', 'Test_Test2'],
@@ -118,7 +121,7 @@ class StringUtilsTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function upperCaseWordsWithSeparatorsDataProvider()
+    public static function upperCaseWordsWithSeparatorsDataProvider()
     {
         return [['test test2_test3\test4|test5', '|', '\\', 'Test\Test2_test3\test4\Test5']];
     }

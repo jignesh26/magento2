@@ -8,7 +8,7 @@ declare(strict_types=1);
 namespace Magento\Framework\GraphQl\Config\Element;
 
 /**
- * Describes all the configured data of an Output or Input type in GraphQL.
+ * Class representing 'type' GraphQL config element.
  */
 class Type implements TypeInterface
 {
@@ -73,7 +73,15 @@ class Type implements TypeInterface
     /**
      * Get interfaces the type implements, if any. Return an empty array if none are configured.
      *
-     * @return string[]
+     * Example return array(
+     *     array(
+     *         'interface' => 'SomeDefinedTypeInterface',
+     *         'copyFields' => true
+     *     ),
+     *     ...
+     * ),
+     *
+     * @return array
      */
     public function getInterfaces() : array
     {

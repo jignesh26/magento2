@@ -3,6 +3,8 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\Api\Test\Unit\SearchCriteria\CollectionProcessor;
 
 use Magento\Framework\Api\SearchCriteria\CollectionProcessor\SortingProcessor;
@@ -10,8 +12,10 @@ use Magento\Framework\Api\SearchCriteriaInterface;
 use Magento\Framework\Api\SortOrder;
 use Magento\Framework\Data\Collection;
 use Magento\Framework\Data\Collection\AbstractDb;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-class SortingProcessorTest extends \PHPUnit\Framework\TestCase
+class SortingProcessorTest extends TestCase
 {
     /**
      * Return model
@@ -43,7 +47,7 @@ class SortingProcessorTest extends \PHPUnit\Framework\TestCase
 
         $model = $this->getModel($fieldMapping, $defaultOrders);
 
-        /** @var SortOrder|\PHPUnit_Framework_MockObject_MockObject $sortOrderOneMock */
+        /** @var SortOrder|MockObject $sortOrderOneMock */
         $sortOrderOneMock = $this->getMockBuilder(SortOrder::class)
             ->disableOriginalConstructor()
             ->getMock();
@@ -54,7 +58,7 @@ class SortingProcessorTest extends \PHPUnit\Framework\TestCase
             ->method('getDirection')
             ->willReturn($orderOneDirection);
 
-        /** @var SortOrder|\PHPUnit_Framework_MockObject_MockObject $sortOrderTwoMock */
+        /** @var SortOrder|MockObject $sortOrderTwoMock */
         $sortOrderTwoMock = $this->getMockBuilder(SortOrder::class)
             ->disableOriginalConstructor()
             ->getMock();
@@ -65,7 +69,7 @@ class SortingProcessorTest extends \PHPUnit\Framework\TestCase
             ->method('getDirection')
             ->willReturn($orderTwoDirection);
 
-        /** @var SortOrder|\PHPUnit_Framework_MockObject_MockObject $sortOrderThreeMock */
+        /** @var SortOrder|MockObject $sortOrderThreeMock */
         $sortOrderThreeMock = $this->getMockBuilder(SortOrder::class)
             ->disableOriginalConstructor()
             ->getMock();
@@ -76,7 +80,7 @@ class SortingProcessorTest extends \PHPUnit\Framework\TestCase
             ->method('getDirection')
             ->willReturn($orderThreeDirection);
 
-        /** @var SortOrder|\PHPUnit_Framework_MockObject_MockObject $sortOrderThreeMock */
+        /** @var SortOrder|MockObject $sortOrderThreeMock */
         $sortOrderFourMock = $this->getMockBuilder(SortOrder::class)
             ->disableOriginalConstructor()
             ->getMock();
@@ -86,7 +90,7 @@ class SortingProcessorTest extends \PHPUnit\Framework\TestCase
         $sortOrderFourMock->expects($this->never())
             ->method('getDirection');
 
-        /** @var SearchCriteriaInterface|\PHPUnit_Framework_MockObject_MockObject $searchCriteriaMock */
+        /** @var SearchCriteriaInterface|MockObject $searchCriteriaMock */
         $searchCriteriaMock = $this->getMockBuilder(SearchCriteriaInterface::class)
             ->getMock();
 
@@ -94,18 +98,34 @@ class SortingProcessorTest extends \PHPUnit\Framework\TestCase
             ->method('getSortOrders')
             ->willReturn([$sortOrderOneMock, $sortOrderTwoMock, $sortOrderThreeMock, $sortOrderFourMock]);
 
-        /** @var AbstractDb|\PHPUnit_Framework_MockObject_MockObject $collectionMock */
+        /** @var AbstractDb|MockObject $collectionMock */
         $collectionMock = $this->getMockBuilder(AbstractDb::class)
             ->disableOriginalConstructor()
             ->getMock();
 
         $collectionMock->expects($this->exactly(3))
             ->method('addOrder')
-            ->withConsecutive(
-                [$orderOneFieldMapped, $orderOneDirection],
-                [$orderTwoField, $orderTwoDirection],
-                [$orderThreeField, Collection::SORT_ORDER_DESC]
-            )->willReturnSelf();
+            ->willReturnCallback(
+                function (
+                    $arg1,
+                    $arg2
+                ) use (
+                    $orderOneFieldMapped,
+                    $orderOneDirection,
+                    $orderTwoField,
+                    $orderTwoDirection,
+                    $orderThreeField,
+                    $collectionMock
+                ) {
+                    if ($arg1 == $orderOneFieldMapped && $arg2 == $orderOneDirection) {
+                        return $collectionMock;
+                    } elseif ($arg1 == $orderTwoField && $arg2 == $orderTwoDirection) {
+                        return $collectionMock;
+                    } elseif ($arg1 == $orderThreeField && $arg2 == Collection::SORT_ORDER_DESC) {
+                        return $collectionMock;
+                    }
+                }
+            );
 
         $model->process($searchCriteriaMock, $collectionMock);
     }
@@ -132,7 +152,7 @@ class SortingProcessorTest extends \PHPUnit\Framework\TestCase
 
         $model = $this->getModel($fieldMapping, $defaultOrders);
 
-        /** @var SearchCriteriaInterface|\PHPUnit_Framework_MockObject_MockObject $searchCriteriaMock */
+        /** @var SearchCriteriaInterface|MockObject $searchCriteriaMock */
         $searchCriteriaMock = $this->getMockBuilder(SearchCriteriaInterface::class)
             ->getMock();
 
@@ -140,18 +160,32 @@ class SortingProcessorTest extends \PHPUnit\Framework\TestCase
             ->method('getSortOrders')
             ->willReturn([]);
 
-        /** @var AbstractDb|\PHPUnit_Framework_MockObject_MockObject $collectionMock */
+        /** @var AbstractDb|MockObject $collectionMock */
         $collectionMock = $this->getMockBuilder(AbstractDb::class)
             ->disableOriginalConstructor()
             ->getMock();
 
         $collectionMock->expects($this->exactly(3))
             ->method('addOrder')
-            ->withConsecutive(
-                [$defaultOneFieldMapped, $defaultOneDirection],
-                [$defaultTwoField, $defaultTwoDirection],
-                [$defaultThreeField, Collection::SORT_ORDER_DESC]
-            )->willReturnSelf();
+            ->willReturnCallback(function (
+                $arg1,
+                $arg2
+            ) use (
+                $collectionMock,
+                $defaultOneFieldMapped,
+                $defaultOneDirection,
+                $defaultTwoField,
+                $defaultTwoDirection,
+                $defaultThreeField
+            ) {
+                if ($arg1 == $defaultOneFieldMapped && $arg2 == $defaultOneDirection) {
+                    return $collectionMock;
+                } elseif ($arg1 == $defaultTwoField && $arg2 == $defaultTwoDirection) {
+                    return $collectionMock;
+                } elseif ($arg1 == $defaultThreeField && $arg2 == Collection::SORT_ORDER_DESC) {
+                    return $collectionMock;
+                }
+            });
 
         $model->process($searchCriteriaMock, $collectionMock);
     }

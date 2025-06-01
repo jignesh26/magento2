@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2011 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Rule\Model\Condition;
 
@@ -22,6 +22,8 @@ class Combine extends AbstractCondition
     protected $_logger;
 
     /**
+     * Construct
+     *
      * @param Context $context
      * @param array $data
      */
@@ -54,6 +56,8 @@ class Combine extends AbstractCondition
     /* start aggregator methods */
 
     /**
+     * Load aggregation options
+     *
      * @return $this
      */
     public function loadAggregatorOptions()
@@ -63,6 +67,8 @@ class Combine extends AbstractCondition
     }
 
     /**
+     * Return agregator selected options
+     *
      * @return array
      */
     public function getAggregatorSelectOptions()
@@ -75,6 +81,8 @@ class Combine extends AbstractCondition
     }
 
     /**
+     * Get Agregator name
+     *
      * @return string
      */
     public function getAggregatorName()
@@ -83,6 +91,8 @@ class Combine extends AbstractCondition
     }
 
     /**
+     * Return agregator element
+     *
      * @return object
      */
     public function getAggregatorElement()
@@ -112,6 +122,8 @@ class Combine extends AbstractCondition
     /* end aggregator methods */
 
     /**
+     * Load value options
+     *
      * @return $this
      */
     public function loadValueOptions()
@@ -121,6 +133,8 @@ class Combine extends AbstractCondition
     }
 
     /**
+     * Adds condition
+     *
      * @param object $condition
      * @return $this
      */
@@ -134,7 +148,7 @@ class Combine extends AbstractCondition
         $conditions[] = $condition;
 
         if (!$condition->getId()) {
-            $condition->setId($this->getId() . '--' . sizeof($conditions));
+            $condition->setId($this->getId() . '--' . count($conditions));
         }
 
         $this->setData($this->getPrefix(), $conditions);
@@ -142,6 +156,8 @@ class Combine extends AbstractCondition
     }
 
     /**
+     * Return value element type
+     *
      * @return string
      */
     public function getValueElementType()
@@ -181,6 +197,8 @@ class Combine extends AbstractCondition
     }
 
     /**
+     * As xml
+     *
      * @param string $containerKey
      * @param string $itemKey
      * @return string
@@ -202,34 +220,75 @@ class Combine extends AbstractCondition
     }
 
     /**
+     * Load array
+     *
      * @param array $arr
      * @param string $key
      * @return $this
-     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function loadArray($arr, $key = 'conditions')
     {
-        $this->setAggregator(
-            isset($arr['aggregator']) ? $arr['aggregator'] : (isset($arr['attribute']) ? $arr['attribute'] : null)
-        )->setValue(
-            isset($arr['value']) ? $arr['value'] : (isset($arr['operator']) ? $arr['operator'] : null)
-        );
+        $this->setAggregatorAndValue($arr);
+        $this->loadConditions($arr[$key] ?? [], $key);
 
-        if (!empty($arr[$key]) && is_array($arr[$key])) {
-            foreach ($arr[$key] as $conditionArr) {
-                try {
-                    $condition = $this->_conditionFactory->create($conditionArr['type']);
-                    $this->addCondition($condition);
-                    $condition->loadArray($conditionArr, $key);
-                } catch (\Exception $e) {
-                    $this->_logger->critical($e);
-                }
-            }
-        }
         return $this;
     }
 
     /**
+     * Set the aggregator and value from the array.
+     *
+     * @param array $arr
+     */
+    private function setAggregatorAndValue(array $arr): void
+    {
+        $aggregator = $arr['aggregator'] ?? $arr['attribute'] ?? null;
+        $value = $arr['value'] ?? $arr['operator'] ?? null;
+
+        $this->setAggregator($aggregator)
+            ->setValue($value);
+    }
+
+    /**
+     * Load the conditions from the array.
+     *
+     * @param array $conditions
+     * @param string $key
+     */
+    private function loadConditions(array $conditions, string $key): void
+    {
+        foreach ($conditions as $conditionArr) {
+            if (!empty($conditionArr['type'])) {
+                $this->createAndAddCondition($conditionArr, $key);
+                continue;
+            }
+
+            // Recursively load conditions if there are nested conditions
+            if (!empty($conditionArr[$key])) {
+                $this->loadConditions($conditionArr[$key], $key);
+            }
+        }
+    }
+
+    /**
+     * Create and add a condition to the object.
+     *
+     * @param array $conditionArr
+     * @param string $key
+     */
+    private function createAndAddCondition(array $conditionArr, string $key): void
+    {
+        try {
+            $condition = $this->_conditionFactory->create($conditionArr['type']);
+            $this->addCondition($condition);
+            $condition->loadArray($conditionArr, $key);
+        } catch (\Exception $e) {
+            $this->_logger->critical($e);
+        }
+    }
+
+    /**
+     * Load xml
+     *
      * @param array|string $xml
      * @return $this
      */
@@ -247,6 +306,8 @@ class Combine extends AbstractCondition
     }
 
     /**
+     * As html
+     *
      * @return string
      */
     public function asHtml()
@@ -263,6 +324,8 @@ class Combine extends AbstractCondition
     }
 
     /**
+     * Get new child element
+     *
      * @return $this
      */
     public function getNewChildElement()
@@ -282,6 +345,8 @@ class Combine extends AbstractCondition
     }
 
     /**
+     * As html recursive
+     *
      * @return string
      */
     public function asHtmlRecursive()
@@ -300,6 +365,8 @@ class Combine extends AbstractCondition
     }
 
     /**
+     * As string
+     *
      * @param string $format
      * @return string
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
@@ -311,6 +378,8 @@ class Combine extends AbstractCondition
     }
 
     /**
+     * As string recursive
+     *
      * @param int $level
      * @return string
      */
@@ -324,6 +393,8 @@ class Combine extends AbstractCondition
     }
 
     /**
+     * Validate
+     *
      * @param \Magento\Framework\Model\AbstractModel $model
      * @return bool
      */
@@ -374,6 +445,8 @@ class Combine extends AbstractCondition
     }
 
     /**
+     * Set js From object
+     *
      * @param \Magento\Framework\Data\Form $form
      * @return $this
      */

@@ -6,11 +6,12 @@
 
 /**
  * WYSIWYG widget plugin form
- *
- * @author     Magento Core Team <core@magentocommerce.com>
  */
 namespace Magento\Widget\Block\Adminhtml\Widget;
 
+/**
+ * Widget Form Block class
+ */
 class Form extends \Magento\Backend\Block\Widget\Form\Generic
 {
     /**
@@ -47,8 +48,13 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
         $form = $this->_formFactory->create();
 
         // Add messages container to fieldset
-        $fieldset = $form->addFieldset('base_fieldset', ['legend' => '<div data-role="messages"></div>',
-            'comment' => __('Inserting a widget does not create a widget instance.')]);
+        $fieldset = $form->addFieldset(
+            'base_fieldset',
+            [
+                'before_element_html' => '<div data-role="messages"></div>',
+                'comment' => __('Inserting a widget does not create a widget instance.'),
+            ]
+        );
 
         $fieldset->addField(
             'select_widget_type',
@@ -78,9 +84,12 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
      */
     protected function _getWidgetSelectOptions()
     {
+        $options = [];
+
         foreach ($this->_getAvailableWidgets(true) as $data) {
             $options[$data['type']] = $data['name'];
         }
+
         return $options;
     }
 

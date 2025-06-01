@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Catalog\Ui\DataProvider\Product\Form\Modifier;
 
@@ -11,6 +11,7 @@ use Magento\Ui\DataProvider\Modifier\ModifierInterface;
 /**
  * Class AbstractModifier
  *
+ * phpcs:disable Magento2.Classes.AbstractApi
  * @api
  *
  * @SuppressWarnings(PHPMD.NumberOfChildren)
@@ -132,7 +133,7 @@ abstract class AbstractModifier implements ModifierInterface
      */
     protected function startsWith($haystack, $needle)
     {
-        return $needle === '' || strrpos($haystack, $needle, -strlen($haystack)) !== false;
+        return $needle === '' || strrpos($haystack, (string) $needle, -strlen($haystack)) !== false;
     }
 
     /**

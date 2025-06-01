@@ -1,15 +1,12 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2017 Adobe
+ * All Rights Reserved.
  */
-
 namespace Magento\SalesRule\Model\Rule\Condition;
 
 /**
  * Product rule condition data model
- *
- * @author Magento Core Team <core@magentocommerce.com>
  */
 class Product extends \Magento\Rule\Model\Condition\Product\AbstractProduct
 {
@@ -22,11 +19,11 @@ class Product extends \Magento\Rule\Model\Condition\Product\AbstractProduct
     protected function _addSpecialAttributes(array &$attributes)
     {
         parent::_addSpecialAttributes($attributes);
-        $attributes['quote_item_qty'] = __('Quantity in cart');
+        $attributes['parent::quote_item_qty'] = __('Quantity in cart');
         $attributes['quote_item_price'] = __('Price in cart');
         $attributes['quote_item_row_total'] = __('Row total in cart');
 
-        $attributes['parent::category_ids'] = __('Category (Parent only)');
+        $attributes['parent::category_ids'] = __('Category (Parent Only)');
         $attributes['children::category_ids'] = __('Category (Children Only)');
     }
 
@@ -35,12 +32,13 @@ class Product extends \Magento\Rule\Model\Condition\Product\AbstractProduct
      *
      * @return string
      */
-    public function getAttribute()
+    public function getAttribute(): string
     {
         $attribute = $this->getData('attribute');
-        if (strpos($attribute, '::') !== false) {
-            list (, $attribute) = explode('::', $attribute);
+        if ($attribute !== null && strpos($attribute, '::') !== false) {
+            list(, $attribute) = explode('::', $attribute);
         }
+
         return $attribute;
     }
 
@@ -53,6 +51,7 @@ class Product extends \Magento\Rule\Model\Condition\Product\AbstractProduct
         if ($this->getAttributeScope()) {
             $attribute = $this->getAttributeScope() . '::' . $attribute;
         }
+
         return $this->getAttributeOption($attribute);
     }
 
@@ -73,8 +72,8 @@ class Product extends \Magento\Rule\Model\Condition\Product\AbstractProduct
             }
             $frontLabel = $attribute->getFrontendLabel();
             $attributes[$attribute->getAttributeCode()] = $frontLabel;
-            $attributes['parent::' . $attribute->getAttributeCode()] = $frontLabel . __('(Parent Only)');
-            $attributes['children::' . $attribute->getAttributeCode()] = $frontLabel . __('(Children Only)');
+            $attributes['parent::' . $attribute->getAttributeCode()] = __('%1 (Parent Only)', $frontLabel);
+            $attributes['children::' . $attribute->getAttributeCode()] = __('%1 (Children Only)', $frontLabel);
         }
 
         $this->_addSpecialAttributes($attributes);
@@ -92,6 +91,7 @@ class Product extends \Magento\Rule\Model\Condition\Product\AbstractProduct
     {
         $html = parent::getAttributeElementHtml() .
                 $this->getAttributeScopeElement()->getHtml();
+
         return $html;
     }
 
@@ -100,7 +100,7 @@ class Product extends \Magento\Rule\Model\Condition\Product\AbstractProduct
      *
      * @return \Magento\Framework\Data\Form\Element\AbstractElement
      */
-    private function getAttributeScopeElement()
+    private function getAttributeScopeElement(): \Magento\Framework\Data\Form\Element\AbstractElement
     {
         return $this->getForm()->addField(
             $this->getPrefix() . '__' . $this->getId() . '__attribute_scope',
@@ -110,7 +110,7 @@ class Product extends \Magento\Rule\Model\Condition\Product\AbstractProduct
                 'value' => $this->getAttributeScope(),
                 'no_span' => true,
                 'class' => 'hidden',
-                'data-form-part' => $this->getFormName()
+                'data-form-part' => $this->getFormName(),
             ]
         );
     }
@@ -119,8 +119,9 @@ class Product extends \Magento\Rule\Model\Condition\Product\AbstractProduct
      * Set attribute value
      *
      * @param string $value
+     * @return void
      */
-    public function setAttribute($value)
+    public function setAttribute(string $value)
     {
         if (strpos($value, '::') !== false) {
             list($scope, $attribute) = explode('::', $value);
@@ -137,7 +138,8 @@ class Product extends \Magento\Rule\Model\Condition\Product\AbstractProduct
     public function loadArray($arr)
     {
         parent::loadArray($arr);
-        $this->setAttributeScope(isset($arr['attribute_scope']) ? $arr['attribute_scope'] : null);
+        $this->setAttributeScope($arr['attribute_scope'] ?? null);
+
         return $this;
     }
 
@@ -148,6 +150,7 @@ class Product extends \Magento\Rule\Model\Condition\Product\AbstractProduct
     {
         $out = parent::asArray($arrAttributes);
         $out['attribute_scope'] = $this->getAttributeScope();
+
         return $out;
     }
 
@@ -155,7 +158,9 @@ class Product extends \Magento\Rule\Model\Condition\Product\AbstractProduct
      * Validate Product Rule Condition
      *
      * @param \Magento\Framework\Model\AbstractModel $model
+     *
      * @return bool
+     * @throws \Magento\Framework\Exception\NoSuchEntityException
      */
     public function validate(\Magento\Framework\Model\AbstractModel $model)
     {
@@ -187,7 +192,26 @@ class Product extends \Magento\Rule\Model\Condition\Product\AbstractProduct
             }
         }
 
-        return parent::validate($product);
+        /**
+         * \Magento\Rule\Model\Condition\AbstractCondition::validate() will attempt to reload the product
+         * if the attribute value is missing in the product. We need to ensure that logic is not executed
+         * because not only it is unnecessary as all attributes used in rules conditions are loaded into
+         * the product model, but it also causes performance issues.
+         * @see \Magento\Rule\Model\Condition\AbstractCondition::validate()
+         * @see \Magento\SalesRule\Model\Plugin\QuoteConfigProductAttributes::afterLoadAttributes()
+         */
+        $hasAttribute = $product->hasData($attrCode);
+        // value is most likely null if $hasAttribute === false, but it could be provided from custom attributes
+        $value = $product->getData($attrCode);
+        if (!$hasAttribute) {
+            $product->setData($attrCode, $value);
+        }
+        $isValid = parent::validate($product);
+        if (!$hasAttribute && $value === null) {
+            $product->unsetData($attrCode);
+        }
+
+        return $isValid;
     }
 
     /**

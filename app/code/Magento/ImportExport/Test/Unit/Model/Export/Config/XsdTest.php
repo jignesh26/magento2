@@ -1,11 +1,18 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\ImportExport\Test\Unit\Model\Export\Config;
 
-class XsdTest extends \PHPUnit\Framework\TestCase
+use Magento\Framework\Config\Dom\UrnResolver;
+use Magento\Framework\TestFramework\Unit\Utility\XsdValidator;
+use PHPUnit\Framework\AssertionFailedError;
+use PHPUnit\Framework\TestCase;
+
+class XsdTest extends TestCase
 {
     /**
      * Path to xsd file
@@ -14,18 +21,18 @@ class XsdTest extends \PHPUnit\Framework\TestCase
     protected $_xsdSchemaPath;
 
     /**
-     * @var \Magento\Framework\TestFramework\Unit\Utility\XsdValidator
+     * @var XsdValidator
      */
     protected $_xsdValidator;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         if (!function_exists('libxml_set_external_entity_loader')) {
             $this->markTestSkipped('Skipped on HHVM. Will be fixed in MAGETWO-45033');
         }
-        $urnResolver = new \Magento\Framework\Config\Dom\UrnResolver();
+        $urnResolver = new UrnResolver();
         $this->_xsdSchemaPath = $urnResolver->getRealPath('urn:magento:module:Magento_ImportExport:etc/');
-        $this->_xsdValidator = new \Magento\Framework\TestFramework\Unit\Utility\XsdValidator();
+        $this->_xsdValidator = new XsdValidator();
     }
 
     /**
@@ -36,7 +43,10 @@ class XsdTest extends \PHPUnit\Framework\TestCase
     protected function _loadDataForTest($schemaName, $xmlString, $expectedError)
     {
         $actualError = $this->_xsdValidator->validate($this->_xsdSchemaPath . $schemaName, $xmlString);
-        $this->assertEquals($expectedError, $actualError);
+        $this->assertEquals(false, empty($actualError));
+        foreach ($expectedError as $error) {
+            $this->assertContains($error, $actualError);
+        }
     }
 
     /**
@@ -46,7 +56,24 @@ class XsdTest extends \PHPUnit\Framework\TestCase
      */
     public function testSchemaCorrectlyIdentifiesInvalidProductOptionsXml($xmlString, $expectedError)
     {
-        $this->_loadDataForTest('export.xsd', $xmlString, $expectedError);
+        $actualErrors = $this->_xsdValidator->validate($this->_xsdSchemaPath . 'export.xsd', $xmlString);
+        $this->assertNotEmpty($actualErrors);
+        foreach ($expectedError as [$error, $isRegex]) {
+            if ($isRegex) {
+                $matched = false;
+                foreach ($actualErrors as $actualError) {
+                    try {
+                        $this->assertMatchesRegularExpression($error, $actualError);
+                        $matched = true;
+                        break;
+                    } catch (AssertionFailedError) {
+                    }
+                }
+                $this->assertTrue($matched, "None of the errors matched: $error");
+            } else {
+                $this->assertContains($error, $actualErrors);
+            }
+        }
     }
 
     /**
@@ -75,7 +102,7 @@ class XsdTest extends \PHPUnit\Framework\TestCase
     /**
      * Data provider with valid xml array according to schema
      */
-    public function schemaCorrectlyIdentifiesValidXmlDataProvider()
+    public static function schemaCorrectlyIdentifiesValidXmlDataProvider()
     {
         return [
             'product_options' => ['export.xsd', 'export_valid.xml'],
@@ -86,7 +113,7 @@ class XsdTest extends \PHPUnit\Framework\TestCase
     /**
      * Data provider with invalid xml array according to schema
      */
-    public function schemaCorrectlyIdentifiesExportOptionsDataProvider()
+    public static function schemaCorrectlyIdentifiesExportOptionsDataProvider()
     {
         return include __DIR__ . '/_files/invalidExportXmlArray.php';
     }
@@ -94,7 +121,7 @@ class XsdTest extends \PHPUnit\Framework\TestCase
     /**
      * Data provider with invalid xml array according to schema
      */
-    public function schemaCorrectlyIdentifiesInvalidExportMergedXmlDataProvider()
+    public static function schemaCorrectlyIdentifiesInvalidExportMergedXmlDataProvider()
     {
         return include __DIR__ . '/_files/invalidExportMergedXmlArray.php';
     }

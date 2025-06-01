@@ -1,76 +1,95 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe.
+ * All Rights Reserved.
  */
-namespace Magento\Setup\Test\Unit\Module\Di\Code\Scanner;
+declare(strict_types=1);
 
-require_once __DIR__ . '/../../_files/app/code/Magento/SomeModule/Helper/Test.php';
-require_once __DIR__ . '/../../_files/app/code/Magento/SomeModule/ElementFactory.php';
-require_once __DIR__ . '/../../_files/app/code/Magento/SomeModule/Model/DoubleColon.php';
-require_once __DIR__ . '/../../_files/app/code/Magento/SomeModule/Api/Data/SomeInterface.php';
+namespace Magento\Setup\Test\Unit\Module\Di\Code\Scanner;
 
 use Magento\Framework\Reflection\TypeProcessor;
 
-class PhpScannerTest extends \PHPUnit\Framework\TestCase
+require_once __DIR__ . '/../../_files/app/code/Magento/SomeModule/Helper/TestHelper.php';
+require_once __DIR__ . '/../../_files/app/code/Magento/SomeModule/ElementFactory.php';
+require_once __DIR__ . '/../../_files/app/code/Magento/SomeModule/Model/DoubleColon.php';
+require_once __DIR__ . '/../../_files/app/code/Magento/SomeModule/Api/Data/SomeInterface.php';
+require_once __DIR__ . '/../../_files/app/code/Magento/SomeModule/Model/StubWithAnonymousClass.php';
+
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use Magento\Setup\Module\Di\Code\Scanner\PhpScanner;
+use Magento\Setup\Module\Di\Compiler\Log\Log;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
+
+class PhpScannerTest extends TestCase
 {
     /**
-     * @var \Magento\Setup\Module\Di\Code\Scanner\PhpScanner
+     * @var PhpScanner
      */
-    protected $_model;
+    private $scanner;
 
     /**
      * @var string
      */
-    protected $_testDir;
+    private $testDir;
 
     /**
-     * @var array
+     * @var Log|MockObject
      */
-    protected $_testFiles = [];
+    private $log;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @inheritdoc
      */
-    protected $_logMock;
-
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->_logMock = $this->createMock(\Magento\Setup\Module\Di\Compiler\Log\Log::class);
-        $this->_model = new \Magento\Setup\Module\Di\Code\Scanner\PhpScanner($this->_logMock, new TypeProcessor());
-        $this->_testDir = str_replace('\\', '/', realpath(__DIR__ . '/../../') . '/_files');
+        $objectManagerHelper = new ObjectManager($this);
+        $objects = [
+            [
+                LoggerInterface::class,
+                $this->createMock(LoggerInterface::class)
+            ],
+        ];
+        $objectManagerHelper->prepareObjectManager($objects);
+        $this->log = $this->createMock(Log::class);
+        $this->scanner = new PhpScanner($this->log, new TypeProcessor());
+        $this->testDir = str_replace('\\', '/', realpath(__DIR__ . '/../../') . '/_files');
     }
 
-    public function testCollectEntities()
+    /**
+     * @return void
+     */
+    public function testCollectEntities(): void
     {
-        $this->_testFiles = [
-            $this->_testDir . '/app/code/Magento/SomeModule/Helper/Test.php',
-            $this->_testDir . '/app/code/Magento/SomeModule/Model/DoubleColon.php',
-            $this->_testDir . '/app/code/Magento/SomeModule/Api/Data/SomeInterface.php'
+        $testFiles = [
+            $this->testDir . '/app/code/Magento/SomeModule/Helper/TestHelper.php',
+            $this->testDir . '/app/code/Magento/SomeModule/Model/DoubleColon.php',
+            $this->testDir . '/app/code/Magento/SomeModule/Api/Data/SomeInterface.php',
+            $this->testDir . '/app/code/Magento/SomeModule/Model/StubWithAnonymousClass.php'
         ];
 
-        $this->_logMock->expects(
-            $this->at(0)
-        )->method(
-            'add'
-        )->with(
-            4,
-            'Magento\SomeModule\Module\Factory',
-            'Invalid Factory for nonexistent class Magento\SomeModule\Module in file ' . $this->_testFiles[0]
-        );
-        $this->_logMock->expects(
-            $this->at(1)
-        )->method(
-            'add'
-        )->with(
-            4,
-            'Magento\SomeModule\Element\Factory',
-            'Invalid Factory declaration for class Magento\SomeModule\Element in file ' . $this->_testFiles[0]
-        );
+        $this->log
+            ->method('add')
+            ->willReturnCallback(function ($arg1, $arg2, $arg3) use ($testFiles) {
+                if ($arg1 == 4 && $arg2 == 'Magento\SomeModule\Module\Factory'
+                    && $arg3 == 'Invalid Factory for nonexistent class Magento\SomeModule\Module in file '
+                    . $testFiles[0]
+                ) {
+                    return null;
+                } elseif ($arg1 == 4 && $arg2 == 'Magento\SomeModule\Element\Factory'
+                    && $arg3 == 'Invalid Factory declaration for class Magento\SomeModule\Element in file '
+                    . $testFiles[0]
+                ) {
+                    return null;
+                }
+            });
 
-        $this->assertEquals(
+        $result = $this->scanner->collectEntities($testFiles);
+
+        self::assertEquals(
             ['\\' . \Magento\Eav\Api\Data\AttributeExtensionInterface::class],
-            $this->_model->collectEntities($this->_testFiles)
+            $result
         );
     }
 }

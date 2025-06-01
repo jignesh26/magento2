@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <!--
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2018 Adobe
+ * All Rights Reserved.
  */
 -->
 <page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
@@ -11,7 +11,7 @@
             <block class="Magento\AdvancedSearch\Block\Adminhtml\Search\Grid" name="search.edit.grid" as="grid">
                 <arguments>
                     <argument name="id" xsi:type="string">catalog_search_grid</argument>
-                    <argument name="dataSource" xsi:type="object">Magento\AdvancedSearch\Model\ResourceModel\Search\Grid\Collection</argument>
+                    <argument name="dataSource" xsi:type="object" shared="false">Magento\AdvancedSearch\Model\ResourceModel\Search\Grid\Collection</argument>
                     <argument name="default_sort" xsi:type="string">name</argument>
                     <argument name="default_dir" xsi:type="string">ASC</argument>
                     <argument name="save_parameters_in_session" xsi:type="string">1</argument>

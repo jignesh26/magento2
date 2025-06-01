@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 namespace Magento\Backend\Model;
 
@@ -13,6 +13,7 @@ use Magento\Framework\App\ObjectManager;
  * Class \Magento\Backend\Model\UrlInterface
  *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @SuppressWarnings(PHPMD.CookieAndSessionMisuse)
  * @api
  * @since 100.0.2
  */
@@ -23,7 +24,7 @@ class Url extends \Magento\Framework\Url implements \Magento\Backend\Model\UrlIn
      *
      * @bug Currently, this constant is slightly misleading: it says "form key", but in fact it is used by URLs, too
      */
-    const XML_PATH_USE_SECURE_KEY = 'admin/security/use_form_key';
+    public const XML_PATH_USE_SECURE_KEY = 'admin/security/use_form_key';
 
     /**
      * Authentication session
@@ -50,8 +51,6 @@ class Url extends \Magento\Framework\Url implements \Magento\Backend\Model\UrlIn
     protected $_backendHelper;
 
     /**
-     * Menu config
-     *
      * @var \Magento\Backend\Model\Menu\Config
      */
     protected $_menuConfig;
@@ -127,8 +126,8 @@ class Url extends \Magento\Framework\Url implements \Magento\Backend\Model\UrlIn
         \Magento\Store\Model\StoreFactory $storeFactory,
         \Magento\Framework\Data\Form\FormKey $formKey,
         array $data = [],
-        HostChecker $hostChecker = null,
-        Json $serializer = null
+        ?HostChecker $hostChecker = null,
+        ?Json $serializer = null
     ) {
         $this->_encryptor = $encryptor;
         $hostChecker = $hostChecker ?: ObjectManager::getInstance()->get(HostChecker::class);
@@ -348,7 +347,7 @@ class Url extends \Magento\Framework\Url implements \Magento\Backend\Model\UrlIn
             if ($user) {
                 $user->setHasAvailableResources(false);
             }
-            $action = '*/*/denied';
+            $action = '*/denied';
         }
         return $action;
     }
@@ -364,6 +363,20 @@ class Url extends \Magento\Framework\Url implements \Magento\Backend\Model\UrlIn
             $this->_menu = $this->_menuConfig->getMenu();
         }
         return $this->_menu;
+    }
+
+    /**
+     * Set scope entity
+     *
+     * @param mixed $scopeId
+     * @return \Magento\Framework\UrlInterface
+     * @since 101.0.3
+     */
+    public function setScope($scopeId)
+    {
+        parent::setScope($scopeId);
+        $this->_scope = $this->_scopeResolver->getScope($scopeId);
+        return $this;
     }
 
     /**
@@ -402,13 +415,13 @@ class Url extends \Magento\Framework\Url implements \Magento\Backend\Model\UrlIn
     }
 
     /**
-     * Retrieve action path.
-     * Add backend area front name as a prefix to action path
+     * Retrieve action path, add backend area front name as a prefix to action path
      *
      * @return string
      */
     protected function _getActionPath()
     {
+
         $path = parent::_getActionPath();
         if ($path) {
             if ($this->getAreaFrontName()) {
@@ -448,8 +461,7 @@ class Url extends \Magento\Framework\Url implements \Magento\Backend\Model\UrlIn
     }
 
     /**
-     * Get config data by path
-     * Use only global config values for backend
+     * Get config data by path, use only global config values for backend
      *
      * @param string $path
      * @return null|string

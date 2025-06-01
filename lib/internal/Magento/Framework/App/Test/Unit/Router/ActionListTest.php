@@ -3,41 +3,69 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
+declare(strict_types=1);
+
 namespace Magento\Framework\App\Test\Unit\Router;
 
-class ActionListTest extends \PHPUnit\Framework\TestCase
+use Magento\Framework\App\ActionInterface;
+use Magento\Framework\App\Router\ActionList;
+use Magento\Framework\App\Utility\ReflectionClassFactory;
+use Magento\Framework\Config\CacheInterface;
+use Magento\Framework\Module\Dir\Reader;
+use Magento\Framework\Serialize\SerializerInterface;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+use ReflectionClass;
+
+class ActionListTest extends TestCase
 {
     /**
-     * @var \Magento\Framework\TestFramework\Unit\Helper\ObjectManager
+     * @var ObjectManager
      */
     private $objectManager;
 
     /**
-     * @var \Magento\Framework\Config\CacheInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var CacheInterface|MockObject
      */
     private $cacheMock;
 
     /**
-     * @var \Magento\Framework\Module\Dir\Reader|\PHPUnit_Framework_MockObject_MockObject
+     * @var Reader|MockObject
      */
     private $readerMock;
 
     /**
-     * @var \Magento\Framework\App\Router\ActionList
+     * @var ActionList
      */
     private $actionList;
 
     /**
-     * @var \Magento\Framework\Serialize\SerializerInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var SerializerInterface|MockObject
      */
     private $serializerMock;
 
-    protected function setUp()
+    /**
+     * @var MockObject|ReflectionClass
+     */
+    private $reflectionClass;
+
+    /**
+     * @var ReflectionClassFactory|MockObject
+     */
+    private $reflectionClassFactory;
+
+    protected function setUp(): void
     {
-        $this->objectManager = new \Magento\Framework\TestFramework\Unit\Helper\ObjectManager($this);
-        $this->cacheMock = $this->createMock(\Magento\Framework\Config\CacheInterface::class);
-        $this->readerMock = $this->createMock(\Magento\Framework\Module\Dir\Reader::class);
-        $this->serializerMock = $this->createMock(\Magento\Framework\Serialize\SerializerInterface::class);
+        $this->objectManager = new ObjectManager($this);
+        $this->cacheMock = $this->getMockForAbstractClass(CacheInterface::class);
+        $this->readerMock = $this->createMock(Reader::class);
+        $this->serializerMock = $this->getMockForAbstractClass(SerializerInterface::class);
+        $this->reflectionClass = $this->createStub(ReflectionClass::class);
+        $this->reflectionClassFactory = $this->getMockBuilder(ReflectionClassFactory::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+        $this->reflectionClassFactory->method('create')->willReturn($this->reflectionClass);
     }
 
     public function testConstructActionsCached()
@@ -65,8 +93,7 @@ class ActionListTest extends \PHPUnit\Framework\TestCase
             ->method('save');
         $this->readerMock->expects($this->once())
             ->method('getActionFiles')
-            ->willReturn('data')
-        ;
+            ->willReturn('data');
         $this->createActionListInstance();
     }
 
@@ -79,57 +106,89 @@ class ActionListTest extends \PHPUnit\Framework\TestCase
      * @param string|null $expected
      * @dataProvider getDataProvider
      */
-    public function testGet($module, $area, $namespace, $action, $data, $expected)
+    public function testGet($module, $area, $namespace, $action, $data, $isInstantiable, $expected)
     {
+        if (is_callable($expected)) {
+            $expected = $expected($this);
+        }
+        if (is_object($expected)) {
+            $expected = get_class($expected);
+        }
+        $this->reflectionClass->method('isInstantiable')->willReturn($isInstantiable);
+
         $this->cacheMock->expects($this->once())
             ->method('load')
-            ->will($this->returnValue(false));
+            ->willReturn(false);
         $this->cacheMock->expects($this->once())
             ->method('save');
         $this->readerMock->expects($this->once())
             ->method('getActionFiles')
             ->willReturn($data);
         $this->createActionListInstance();
-        $this->assertEquals($expected, $this->actionList->get($module, $area, $namespace, $action));
+        $this->assertEquals($expected, $this->actionList->get(
+            $module,
+            $area,
+            $namespace,
+            $action
+        ));
     }
 
     /**
      * @return array
      */
-    public function getDataProvider()
+    public static function getDataProvider()
     {
-        $mockClassName = 'Mock_Action_Class';
-        $actionClass = $this->getMockClass(
-            \Magento\Framework\App\ActionInterface::class,
-            ['execute', 'getResponse'],
-            [],
-            $mockClassName
-        );
-
         return [
             [
                 'Magento_Module',
                 'Area',
                 'Namespace',
                 'Index',
-                ['magento\module\controller\area\namespace\index' => $mockClassName],
-                $actionClass
+                ['magento\module\controller\area\namespace\index' => 'Mock_Action_Class_1'],
+                true,
+                static fn (self $testCase) => $testCase->getMockForAbstractClass(
+                    ActionInterface::class,
+                    [],
+                    'Mock_Action_Class_1',
+                    true,
+                    true,
+                    true,
+                    ['execute', 'getResponse']
+                )
             ],
             [
                 'Magento_Module',
                 '',
                 'Namespace',
                 'Index',
-                ['magento\module\controller\namespace\index' => $mockClassName],
-                $actionClass
+                ['magento\module\controller\namespace\index' => 'Mock_Action_Class_2'],
+                true,
+                static fn (self $testCase) => $testCase->getMockForAbstractClass(
+                    ActionInterface::class,
+                    [],
+                    'Mock_Action_Class_2',
+                    true,
+                    true,
+                    true,
+                    ['execute', 'getResponse']
+                )
             ],
             [
                 'Magento_Module',
                 'Area',
                 'Namespace',
                 'Catch',
-                ['magento\module\controller\area\namespace\catchaction' => $mockClassName],
-                $actionClass
+                ['magento\module\controller\area\namespace\catchaction' => 'Mock_Action_Class_3'],
+                true,
+                static fn (self $testCase) => $testCase->getMockForAbstractClass(
+                    ActionInterface::class,
+                    [],
+                    'Mock_Action_Class_3',
+                    true,
+                    true,
+                    true,
+                    ['execute', 'getResponse']
+                )
             ],
             [
                 'Magento_Module',
@@ -137,6 +196,7 @@ class ActionListTest extends \PHPUnit\Framework\TestCase
                 'Namespace',
                 'Index',
                 ['magento\module\controller\area\namespace\index' => 'Not_Exist_Class'],
+                false,
                 null
             ],
             [
@@ -145,6 +205,7 @@ class ActionListTest extends \PHPUnit\Framework\TestCase
                 'Namespace',
                 'Index',
                 [],
+                false,
                 null
             ],
             [
@@ -152,7 +213,8 @@ class ActionListTest extends \PHPUnit\Framework\TestCase
                 null,
                 'adminhtml_product',
                 'index',
-                'magento\module\controller\adminhtml\product\index' => '$mockClassName',
+                ['magento\module\controller\adminhtml\product\index' => '$mockClassName'],
+                false,
                 null
             ],
         ];
@@ -161,11 +223,12 @@ class ActionListTest extends \PHPUnit\Framework\TestCase
     private function createActionListInstance()
     {
         $this->actionList = $this->objectManager->getObject(
-            \Magento\Framework\App\Router\ActionList::class,
+            ActionList::class,
             [
                 'cache' => $this->cacheMock,
                 'moduleReader' => $this->readerMock,
                 'serializer' => $this->serializerMock,
+                'reflectionClassFactory' => $this->reflectionClassFactory
             ]
         );
     }

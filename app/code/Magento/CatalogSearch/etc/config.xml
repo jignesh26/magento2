@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <!--
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2013 Adobe
+ * All Rights Reserved.
  */
 -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
@@ -12,8 +12,7 @@
                 <search_terms>1</search_terms>
             </seo>
             <search>
-                <engine>mysql</engine>
-                <min_query_length>1</min_query_length>
+                <min_query_length>3</min_query_length>
                 <max_query_length>128</max_query_length>
                 <max_count_cacheable_search_terms>100</max_count_cacheable_search_terms>
                 <autocomplete_limit>8</autocomplete_limit>

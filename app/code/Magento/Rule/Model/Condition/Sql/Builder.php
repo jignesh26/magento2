@@ -1,7 +1,7 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Rule\Model\Condition\Sql;
@@ -69,7 +69,7 @@ class Builder
      */
     public function __construct(
         ExpressionFactory $expressionFactory,
-        AttributeRepositoryInterface $attributeRepository = null
+        ?AttributeRepositoryInterface $attributeRepository = null
     ) {
         $this->_expressionFactory = $expressionFactory;
         $this->attributeRepository = $attributeRepository ?:
@@ -144,6 +144,7 @@ class Builder
      * @return string
      * @throws \Magento\Framework\Exception\LocalizedException
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     protected function _getMappedSqlCondition(
         AbstractCondition $condition,
@@ -152,9 +153,11 @@ class Builder
     ): string {
         $argument = $condition->getMappedSqlField();
 
-        // If rule hasn't valid argument - create negative expression to prevent incorrect rule behavior.
+        // If rule hasn't valid argument - prevent incorrect rule behavior.
         if (empty($argument)) {
             return $this->_expressionFactory->create(['expression' => '1 = -1']);
+        } elseif (preg_match('/[^a-z0-9\-_\.\`]/i', $argument) > 0 && !$argument instanceof \Zend_Db_Expr) {
+            throw new \Magento\Framework\Exception\LocalizedException(__('Invalid field'));
         }
 
         $conditionOperator = $condition->getOperatorForValidate();
@@ -163,7 +166,6 @@ class Builder
             throw new \Magento\Framework\Exception\LocalizedException(__('Unknown condition operator'));
         }
 
-        $defaultValue = 0;
         //operator 'contains {}' is mapped to 'IN()' query that cannot work with substrings
         // adding mapping to 'LIKE %%'
         if ($condition->getInputType() === 'string'
@@ -171,7 +173,7 @@ class Builder
         ) {
             $sql = str_replace(
                 ':field',
-                $this->_connection->getIfNullSql($this->_connection->quoteIdentifier($argument), $defaultValue),
+                (string)$this->_connection->quoteIdentifier($argument),
                 $this->stringConditionOperatorMap[$conditionOperator]
             );
             $bindValue = $condition->getBindArgumentValue();
@@ -179,7 +181,7 @@ class Builder
         } else {
             $sql = str_replace(
                 ':field',
-                $this->_connection->getIfNullSql($this->_connection->quoteIdentifier($argument), $defaultValue),
+                (string)$this->_connection->quoteIdentifier($argument),
                 $this->_conditionOperatorMap[$conditionOperator]
             );
             $bindValue = $condition->getBindArgumentValue();
@@ -187,15 +189,17 @@ class Builder
         }
         // values for multiselect attributes can be saved in comma-separated format
         // below is a solution for matching such conditions with selected values
-        if (is_array($bindValue) && \in_array($conditionOperator, ['()', '{}'], true)) {
-            foreach ($bindValue as $item) {
-                $expression .= $this->_connection->quoteInto(
-                    " OR (FIND_IN_SET (?, {$this->_connection->quoteIdentifier($argument)}) > 0)",
-                    $item
-                );
+        $attribute = $condition->getAttributeObject();
+        if ($attribute && $attribute->getFrontendInput() === 'multiselect') {
+            if (is_array($bindValue) && \in_array($conditionOperator, ['()', '{}'], true)) {
+                foreach ($bindValue as $item) {
+                    $expression .= $this->_connection->quoteInto(
+                        " OR (FIND_IN_SET (?, {$this->_connection->quoteIdentifier($argument)}) > 0)",
+                        $item
+                    );
+                }
             }
         }
-
         return $this->_expressionFactory->create(
             ['expression' => $expression]
         );
@@ -241,6 +245,7 @@ class Builder
      * @param AbstractCollection $collection
      * @param Combine $combine
      * @return void
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function attachConditionToCollection(
         AbstractCollection $collection,
@@ -250,8 +255,43 @@ class Builder
         $this->_joinTablesToCollection($collection, $combine);
         $whereExpression = (string)$this->_getMappedSqlCombination($combine);
         if (!empty($whereExpression)) {
-            // Select ::where method adds braces even on empty expression
             $collection->getSelect()->where($whereExpression);
+            $this->buildConditions($collection, $combine);
+        }
+    }
+
+    /**
+     * Build sql conditions from combination.
+     *
+     * @param AbstractCollection $collection
+     * @param Combine $combine
+     * @return void
+     */
+    private function buildConditions(AbstractCollection $collection, Combine $combine) : void
+    {
+        if (!empty($combine->getConditions())) {
+            $conditions = '';
+            $attributeField = '';
+            foreach ($combine->getConditions() as $condition) {
+                if ($condition->getData('attribute') === \Magento\Catalog\Api\Data\ProductInterface::SKU
+                    && $condition->getData('operator') === '()'
+                ) {
+                    $conditions = $condition->getData('value');
+                    $attributeField = $this->_connection->quoteIdentifier($condition->getMappedSqlField());
+                }
+            }
+
+            if (!empty($conditions) && !empty($attributeField)) {
+                $conditions = $this->_connection->quote(
+                    array_map('trim', explode(',', $conditions))
+                );
+                $collection->getSelect()->reset(Select::ORDER);
+                $collection->getSelect()->order(
+                    $this->_expressionFactory->create(
+                        ['expression' => "FIELD($attributeField, $conditions)"]
+                    )
+                );
+            }
         }
     }
 }

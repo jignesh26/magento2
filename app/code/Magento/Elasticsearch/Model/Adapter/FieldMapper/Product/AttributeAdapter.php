@@ -11,6 +11,10 @@ use Magento\Framework\Api\CustomAttributesDataInterface;
 
 /**
  * Product attribute adapter for elasticsearch context.
+ * @see this class will be responsible for ES only
+ *
+ * @api
+ * @deprecated Elasticsearch is no longer supported by Adobe
  */
 class AttributeAdapter
 {
@@ -116,6 +120,18 @@ class AttributeAdapter
     }
 
     /**
+     * Check if attribute is text type
+     *
+     * @return bool
+     */
+    public function isTextType(): bool
+    {
+        return in_array($this->getAttribute()->getBackendType(), ['varchar', 'static'], true)
+            && in_array($this->getFrontendInput(), ['text'], true)
+            && $this->getAttribute()->getIsVisible();
+    }
+
+    /**
      * Check if attribute has boolean type.
      *
      * @return bool
@@ -123,7 +139,7 @@ class AttributeAdapter
     public function isComplexType(): bool
     {
         return in_array($this->getAttribute()->getFrontendInput(), ['select', 'multiselect'], true)
-            || $this->getAttribute()->usesSource();
+            || ($this->getAttribute()->usesSource() && $this->getAttribute()->getFrontendInput() !== 'boolean');
     }
 
     /**
@@ -147,11 +163,21 @@ class AttributeAdapter
     }
 
     /**
+     * Check if attribute is sortable.
+     *
+     * @return bool
+     */
+    public function isSortable(): bool
+    {
+        return (int)$this->getAttribute()->getUsedForSortBy() === 1;
+    }
+
+    /**
      * Check if attribute is defined by user.
      *
-     * @return string
+     * @return bool|null
      */
-    public function isUserDefined(): string
+    public function isUserDefined()
     {
         return $this->getAttribute()->getIsUserDefined();
     }

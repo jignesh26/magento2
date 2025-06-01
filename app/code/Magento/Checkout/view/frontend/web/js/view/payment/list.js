@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2015 Adobe
+ * All Rights Reserved.
  */
 
 define([
@@ -203,7 +203,7 @@ define([
          */
         isPaymentMethodsAvailable: function () {
             return _.some(this.paymentGroupsList(), function (group) {
-                return this.getRegion(group.displayArea)().length;
+                return this.regionHasElements(group.displayArea);
             }, this);
         },
 

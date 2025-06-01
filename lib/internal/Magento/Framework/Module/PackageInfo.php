@@ -8,8 +8,9 @@ namespace Magento\Framework\Module;
 use Magento\Framework\Component\ComponentRegistrar;
 
 /**
- * Provide information of dependencies and conflicts in composer.json files, mapping of package name to module name,
- * and mapping of module name to package version
+ * Provide information of dependencies and conflicts in composer.json files.
+ *
+ * Mapping of package name to module name, and mapping of module name to package version.
  */
 class PackageInfo
 {
@@ -72,7 +73,7 @@ class PackageInfo
     public function __construct(
         Dir\Reader $reader,
         ComponentRegistrar $componentRegistrar,
-        \Magento\Framework\Serialize\Serializer\Json $serializer = null
+        ?\Magento\Framework\Serialize\Serializer\Json $serializer = null
     ) {
         $this->reader = $reader;
         $this->componentRegistrar = $componentRegistrar;
@@ -176,8 +177,7 @@ class PackageInfo
     protected function convertPackageNameToModuleName($packageName)
     {
         $moduleName = str_replace('magento/module-', '', $packageName);
-        $moduleName = str_replace('-', ' ', $moduleName);
-        $moduleName = str_replace(' ', '', ucwords($moduleName));
+        $moduleName = str_replace('-', '', ucwords($moduleName, '-'));
 
         return 'Magento_' . $moduleName;
     }
@@ -190,7 +190,7 @@ class PackageInfo
      */
     protected function isMagentoPackage($packageName)
     {
-        return strpos($packageName, 'magento/module-') === 0;
+        return $packageName !== null && strpos($packageName, 'magento/module-') === 0;
     }
 
     /**

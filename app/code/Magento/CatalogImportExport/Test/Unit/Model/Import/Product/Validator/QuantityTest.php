@@ -1,25 +1,25 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
+declare(strict_types=1);
+
 namespace Magento\CatalogImportExport\Test\Unit\Model\Import\Product\Validator;
 
 use Magento\CatalogImportExport\Model\Import\Product;
 use Magento\CatalogImportExport\Model\Import\Product\Validator\Quantity;
 use Magento\ImportExport\Model\Import;
+use PHPUnit\Framework\TestCase;
 
-/**
- * Class QuantityTest
- */
-class QuantityTest extends \PHPUnit\Framework\TestCase
+class QuantityTest extends TestCase
 {
     /**
      * @var Quantity
      */
     private $quantity;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->quantity = new Quantity();
 
@@ -30,7 +30,7 @@ class QuantityTest extends \PHPUnit\Framework\TestCase
             ->method('getEmptyAttributeValueConstant')
             ->willReturn(Import::DEFAULT_EMPTY_ATTRIBUTE_VALUE_CONSTANT);
 
-        $contextStub->method('retrieveMessageTemplate')->willReturn(null);
+        $contextStub->method('retrieveMessageTemplate')->willReturn('some template');
         $this->quantity->init($contextStub);
     }
 
@@ -48,7 +48,7 @@ class QuantityTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function isValidDataProvider()
+    public static function isValidDataProvider()
     {
         return [
             [true, ['qty' => 0]],

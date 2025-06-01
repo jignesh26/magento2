@@ -6,8 +6,6 @@
 
 /**
  * Admin tax rate save toolbar
- *
- * @author      Magento Core Team <core@magentocommerce.com>
  */
 namespace Magento\Tax\Block\Adminhtml\Rate\Toolbar;
 
@@ -133,7 +131,7 @@ class Save extends \Magento\Backend\Block\Template implements \Magento\Backend\B
                     ) . '\', \'' . $this->getUrl(
                         'tax/*/delete',
                         ['rate' => $rate]
-                    ) . '\')',
+                    ) . '\', {data: {}})',
                     'class' => 'delete'
                 ]
             );

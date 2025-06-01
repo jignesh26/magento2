@@ -36,7 +36,7 @@
             class="action-select admin__action-multiselect"
             data-role="advanced-select"
             data-bind="
-            css: {_active: multiselectFocus},
+            css: {_active: listVisible},
             click: function(data, event) {
                 toggleListVisible(data, event)
             }
@@ -63,7 +63,7 @@
              visible="validationLoading"
              if="validationLoading">
             <div class="spinner">
-                <span repeat="8"/>
+                <span repeat="8"></span>
             </div>
         </div>
     </div>
@@ -73,7 +73,7 @@
             class="action-select admin__action-multiselect"
             data-role="advanced-select"
             data-bind="
-            css: {_active: multiselectFocus},
+            css: {_active: listVisible},
             click: function(data, event) {
                 toggleListVisible(data, event)
             }
@@ -107,7 +107,7 @@
            visible="loading"
            if="loading">
         <div class="spinner">
-            <span repeat="8"/>
+            <span repeat="8"></span>
         </div>
     </div>
         <!-- ko if: filterOptions -->
@@ -124,8 +124,7 @@
                     id: uid+2,
                     placeholder: filterPlaceholder
                 },
-                valueUpdate: 'afterkeydown',
-                value: filterInputValue,
+                textInput: filterInputValue,
                 hasFocus: filterOptionsFocus
                 ">
             <label
@@ -141,13 +140,12 @@
         </div>
         <div ifnot="options().length"
              class="admin__action-multiselect-empty-area">
-            <ul data-bind="html: emptyOptionsHtml"/>
+            <ul html="getEmptyOptionsUnsanitizedHtml()"></ul>
         </div>
         <!-- /ko -->
         <ul class="admin__action-multiselect-menu-inner _root"
             data-bind="
                 event: {
-                    mousemove: function(data, event){onMousemove($data, $index(), event)},
                     scroll: function(data, event){onScrollDown(data, event)}
                 }
             ">
@@ -160,7 +158,7 @@
                         css: {
                             _selected: $parent.isSelectedValue(option),
                             _hover: $parent.isHovered(option, $element),
-                            _expended: $parent.getLevelVisibility($data),
+                            _expended: $parent.getLevelVisibility($data) && $parent.showLevels($data),
                             _unclickable: $parent.isLabelDecoration($data),
                             _last: $parent.addLastElement($data),
                             '_with-checkbox': $parent.showCheckbox
@@ -174,6 +172,7 @@
                     <div class="admin__action-multiselect-dropdown"
                          data-bind="
                             click: function(event){
+                                $parent.showLevels($data);
                                 $parent.openChildLevel($data, $element, event);
                             },
                             clickBubble: false

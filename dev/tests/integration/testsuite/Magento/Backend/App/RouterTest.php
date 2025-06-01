@@ -21,7 +21,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
      */
     protected $objectManager;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
         $this->model = $this->objectManager->create(\Magento\Backend\App\Router::class);
@@ -30,7 +30,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
     public function testRouterCanProcessRequestsWithProperPathInfo()
     {
         $request = $this->createMock(\Magento\Framework\App\Request\Http::class);
-        $request->expects($this->once())->method('getPathInfo')->will($this->returnValue('backend/admin/dashboard'));
+        $request->expects($this->once())->method('getPathInfo')->willReturn('backend/admin/dashboard');
 
         $this->assertInstanceOf(\Magento\Backend\Controller\Adminhtml\Dashboard::class, $this->model->match($request));
     }
@@ -47,7 +47,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($className, $this->model->getActionClassName($module, $controller));
     }
 
-    public function getControllerClassNameDataProvider()
+    public static function getControllerClassNameDataProvider()
     {
         return [
             ['Magento_TestModule', 'controller', \Magento\TestModule\Controller\Adminhtml\Controller::class],
@@ -69,7 +69,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
         ];
 
         $routeConfig = $this->getMockBuilder(\Magento\Framework\App\Route\Config::class)
-            ->setMethods(['_getRoutes'])
+            ->onlyMethods(['_getRoutes'])
             ->setConstructorArgs(
                 [
                     'reader' => $this->objectManager->get(\Magento\Framework\App\Route\Config\Reader::class),
@@ -81,7 +81,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
             )
             ->getMock();
 
-        $routeConfig->expects($this->any())->method('_getRoutes')->will($this->returnValue($routers));
+        $routeConfig->expects($this->any())->method('_getRoutes')->willReturn($routers);
 
         $defaultRouter = $this->objectManager->create(
             \Magento\Backend\App\Router::class,

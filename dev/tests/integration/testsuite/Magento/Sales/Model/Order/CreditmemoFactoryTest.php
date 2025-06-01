@@ -35,7 +35,7 @@ class CreditmemoFactoryTest extends \PHPUnit\Framework\TestCase
     /**
      * {@inheritdoc}
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = Bootstrap::getObjectManager();
         $this->creditmemoFactory = $this->objectManager->create(CreditmemoFactory::class);
@@ -60,7 +60,7 @@ class CreditmemoFactoryTest extends \PHPUnit\Framework\TestCase
     /**
      * @return array
      */
-    public function createByOrderDataProvider(): array
+    public static function createByOrderDataProvider(): array
     {
         return [
             [

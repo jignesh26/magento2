@@ -1,11 +1,14 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2016 Adobe
+ * All Rights Reserved.
  */
 
 namespace Magento\Catalog\Model\ResourceModel\Product;
 
+/**
+ * Collect Select object for list of products
+ */
 class LinkedProductSelectBuilderComposite implements LinkedProductSelectBuilderInterface
 {
     /**
@@ -22,14 +25,15 @@ class LinkedProductSelectBuilderComposite implements LinkedProductSelectBuilderI
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
-    public function build($productId)
+    public function build(int $productId, int $storeId) : array
     {
         $selects = [];
         foreach ($this->linkedProductSelectBuilder as $productSelectBuilder) {
-            $selects = array_merge($selects, $productSelectBuilder->build($productId));
+            $selects[] = $productSelectBuilder->build($productId, $storeId);
         }
+        $selects = array_merge([], ...$selects);
 
         return $selects;
     }

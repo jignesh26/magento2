@@ -1,6 +1,6 @@
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
  */
 
 /**
@@ -8,7 +8,7 @@
  */
 define([
     'jquery',
-    'jquery/ui'
+    'jquery-ui-modules/widget'
 ], function ($) {
     'use strict';
 
@@ -85,7 +85,7 @@ define([
             $('html, body').animate({
                 scrollTop: $(this.options.bundleOptionsContainer).offset().top
             }, 600);
-            $('#product-options-wrapper > fieldset').focus();
+            $('#product-options-wrapper > fieldset').trigger('focus');
         },
 
         /**
